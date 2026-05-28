@@ -13,6 +13,18 @@ import {
   Trash2,
   Upload,
   XCircle,
+  TrendingUp,
+  Truck,
+  Globe,
+  Search,
+  Filter,
+  DollarSign,
+  User,
+  Phone,
+  MapPin,
+  Calendar,
+  AlertCircle,
+  FileCheck2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useLanguage } from "@/lib/language-context";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
 
@@ -75,8 +88,8 @@ const MOCK_ORDERS: Order[] = [
     customer: { name: "Aut Meesuk", phone: "062-111-9999", address: "รับเองที่ D1 — เวลา 14:00 น." },
     items: [{ productId: "mock-3", name: "ชุดกันฝน Pro Set", price: 550, quantity: 1, subtotal: 550 }],
     total: 550,
-    status: "pending_payment",
-    slip: { status: "none" },
+    status: "payment_review",
+    slip: { imageUrl: "https://picsum.photos/seed/slip3/400/600", amount: 550, status: "pending" },
     createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
   },
   {
@@ -91,7 +104,7 @@ const MOCK_ORDERS: Order[] = [
 ];
 
 const ORDER_STATUSES: OrderStatus[] = [
-  "pending_payment", "payment_review", "paid", "packing", "shipped", "completed", "cancelled",
+  "paid", "packing", "shipped", "completed",
 ];
 
 /* ─── Helpers ─────────────────────────────────────────────────────────────── */
@@ -100,34 +113,24 @@ function money(v: number) {
   return new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 }).format(v);
 }
 
-function timeAgo(iso: string) {
+function timeAgo(iso: string, lang: "th" | "en") {
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return "เมื่อกี้";
-  if (m < 60) return `${m} นาทีที่แล้ว`;
+  if (m < 1) return lang === "th" ? "เมื่อกี้" : "just now";
+  if (m < 60) return lang === "th" ? `${m} นาทีที่แล้ว` : `${m}m ago`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h} ชั่วโมงที่แล้ว`;
-  return `${Math.floor(h / 24)} วันที่แล้ว`;
+  if (h < 24) return lang === "th" ? `${h} ชั่วโมงที่แล้ว` : `${h}h ago`;
+  return lang === "th" ? `${Math.floor(h / 24)} วันที่แล้ว` : `${Math.floor(h / 24)}d ago`;
 }
 
-const STATUS_LABEL: Record<OrderStatus, string> = {
-  pending_payment: "รอชำระ",
-  payment_review: "รอตรวจสลิป",
-  paid: "ชำระแล้ว",
-  packing: "กำลังแพ็ก",
-  shipped: "จัดส่งแล้ว",
-  completed: "เสร็จสิ้น",
-  cancelled: "ยกเลิก",
-};
-
 const STATUS_COLOR: Record<OrderStatus, string> = {
-  pending_payment: "bg-amber-100 text-amber-700 border-amber-200",
-  payment_review: "bg-orange-100 text-orange-700 border-orange-200",
-  paid: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  packing: "bg-blue-100 text-blue-700 border-blue-200",
-  shipped: "bg-indigo-100 text-indigo-700 border-indigo-200",
-  completed: "bg-green-100 text-green-700 border-green-200",
-  cancelled: "bg-red-100 text-red-700 border-red-200",
+  pending_payment: "bg-amber-50 text-amber-700 border-amber-200/60",
+  payment_review: "bg-orange-50 text-orange-700 border-orange-200/60",
+  paid: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
+  packing: "bg-blue-50 text-blue-700 border-blue-200/60",
+  shipped: "bg-indigo-50 text-indigo-700 border-indigo-200/60",
+  completed: "bg-green-50 text-green-700 border-green-200/60",
+  cancelled: "bg-red-50 text-red-700 border-red-200/60",
 };
 
 /* ─── Main ────────────────────────────────────────────────────────────────── */
@@ -136,14 +139,37 @@ export function AdminPresentation() {
   const [orders, setOrders] = React.useState<Order[]>(MOCK_ORDERS);
   const [products, setProducts] = React.useState<Product[]>([]);
   const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all">("all");
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [shippingFilter, setShippingFilter] = React.useState<"all" | "delivery" | "pickup">("all");
   const [toast, setToast] = React.useState("");
   const [confirm, setConfirm] = React.useState<{ orderId: string; approved: boolean } | null>(null);
+  const [statusConfirm, setStatusConfirm] = React.useState<{ orderId: string; status: OrderStatus } | null>(null);
   const [lightbox, setLightbox] = React.useState<string | null>(null);
+  const { lang, setLang, t } = useLanguage();
 
   const notify = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
 
   const pendingSlips = orders.filter((o) => o.slip.status === "pending");
-  const filteredOrders = orders.filter((o) => statusFilter === "all" || o.status === statusFilter);
+
+  // Advanced search and shipping filter implementation
+  const filteredOrders = orders.filter((o) => {
+    const displayStatus = o.status === "payment_review" ? "paid" : o.status;
+    const matchStatus = statusFilter === "all" || displayStatus === statusFilter;
+    
+    const q = searchQuery.toLowerCase().trim();
+    const matchSearch = !q || 
+      o.customer.name.toLowerCase().includes(q) || 
+      o.customer.phone.includes(q) || 
+      o.id.toLowerCase().includes(q);
+
+    const isPickup = o.customer.address.includes("รับเอง");
+    const matchShipping = 
+      shippingFilter === "all" ||
+      (shippingFilter === "pickup" && isPickup) ||
+      (shippingFilter === "delivery" && !isPickup);
+
+    return matchStatus && matchSearch && matchShipping;
+  });
 
   function approveSlip(orderId: string, approved: boolean) {
     setConfirm({ orderId, approved });
@@ -156,12 +182,23 @@ export function AdminPresentation() {
         ? { ...o, status: confirm.approved ? "paid" : o.status, slip: { ...o.slip, status: confirm.approved ? "approved" : "rejected" } }
         : o
     ));
-    notify(confirm.approved ? "✓ อนุมัติสลิปแล้ว" : "✗ ปฏิเสธสลิปแล้ว");
+    notify(confirm.approved ? t("admin.toast.slip_approved") : t("admin.toast.slip_rejected"));
     setConfirm(null);
   }
 
   function updateStatus(orderId: string, status: OrderStatus) {
     setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status } : o));
+    notify(t("admin.toast.product_updated"));
+  }
+
+  function triggerStatusConfirm(orderId: string, status: OrderStatus) {
+    setStatusConfirm({ orderId, status });
+  }
+
+  function confirmStatusChange() {
+    if (!statusConfirm) return;
+    updateStatus(statusConfirm.orderId, statusConfirm.status);
+    setStatusConfirm(null);
   }
 
   function addProduct(formData: FormData) {
@@ -179,44 +216,87 @@ export function AdminPresentation() {
       imageUrl: String(formData.get("imageUrl") ?? "").trim() || undefined,
       active: true,
     }, ...prev]);
-    notify("เพิ่มสินค้าแล้ว");
+    notify(t("admin.toast.product_added"));
   }
 
   function updateProduct(updated: Product) {
     setProducts((prev) => prev.map((p) => p.id === updated.id ? updated : p));
-    notify("อัปเดตสินค้าแล้ว");
+    notify(t("admin.toast.product_updated"));
   }
 
   function deleteProduct(id: string) {
     setProducts((prev) => prev.filter((p) => p.id !== id));
-    notify("ลบสินค้าแล้ว");
+    notify(t("admin.toast.product_deleted"));
   }
 
+  // Stats dashboard data aggregates
+  const statsRevenue = orders.reduce((sum, o) => ["paid", "packing", "shipped", "completed"].includes(o.status) ? sum + o.total : sum, 0);
+  const statsPending = pendingSlips.length;
+  const statsActive = orders.filter(o => ["packing", "shipped"].includes(o.status)).length;
+  const statsTotal = orders.length;
+
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-[#f8fafc]">
       {/* Confirm modal */}
       {confirm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl border border-gray-100 animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
             <div className="text-center">
               <div className="text-4xl mb-3">{confirm.approved ? "✅" : "❌"}</div>
               <h3 className="font-bold text-lg text-gray-900">
-                {confirm.approved ? "ยืนยันการอนุมัติ?" : "ยืนยันการปฏิเสธ?"}
+                {confirm.approved ? t("admin.modal.approve_title") : t("admin.modal.reject_title")}
               </h3>
-              <p className="text-sm text-gray-500 mt-1">
-                {confirm.approved
-                  ? "สลิปจะถูกอนุมัติ และ status เปลี่ยนเป็น paid"
-                  : "สลิปจะถูกปฏิเสธ กรุณาแจ้งลูกค้าใหม่"}
+              <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                {confirm.approved ? t("admin.modal.approve_desc") : t("admin.modal.reject_desc")}
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 mt-2">
               <button onClick={() => setConfirm(null)}
-                className="flex-1 py-3 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50">
-                ยกเลิก
+                className="flex-1 py-3 rounded-2xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 cursor-pointer transition-colors">
+                {t("admin.modal.cancel")}
               </button>
               <button onClick={confirmApprove}
-                className={`flex-1 py-3 rounded-2xl text-sm font-bold text-white ${confirm.approved ? "bg-emerald-500 hover:bg-emerald-600" : "bg-red-500 hover:bg-red-600"}`}>
-                {confirm.approved ? "อนุมัติ" : "ปฏิเสธ"}
+                className={`flex-1 py-3 rounded-2xl text-xs font-bold text-white cursor-pointer transition-all shadow-md active:scale-98 ${confirm.approved ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20" : "bg-red-500 hover:bg-red-600 shadow-red-500/20"}`}>
+                {confirm.approved ? t("admin.slip.approve") : t("admin.slip.reject")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Change Confirmation Modal */}
+      {statusConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl border border-gray-100 animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
+            <div className="text-center flex flex-col items-center">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${
+                statusConfirm.status === "cancelled" ? "bg-red-50 text-red-500 border border-red-100" : "bg-emerald-50 text-emerald-500 border border-emerald-100"
+              }`}>
+                {statusConfirm.status === "cancelled" ? <XCircle className="w-6 h-6 animate-pulse" /> : <CheckCircle2 className="w-6 h-6" />}
+              </div>
+              <h3 className="font-extrabold text-gray-900 text-sm">
+                {statusConfirm.status === "cancelled" 
+                  ? t("admin.modal.cancel_title") 
+                  : t("admin.modal.status_title")}
+              </h3>
+              <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
+                {statusConfirm.status === "cancelled"
+                  ? t("admin.modal.cancel_desc")
+                  : t("admin.modal.status_desc", { status: t(`admin.status.${statusConfirm.status}`) })}
+              </p>
+            </div>
+            <div className="flex gap-3 mt-2.5">
+              <button onClick={() => setStatusConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 cursor-pointer transition-colors">
+                {t("admin.modal.cancel")}
+              </button>
+              <button onClick={confirmStatusChange}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold text-white cursor-pointer transition-all shadow-md active:scale-98 ${
+                  statusConfirm.status === "cancelled" 
+                    ? "bg-red-500 hover:bg-red-600 shadow-red-500/20" 
+                    : "bg-[#85241F] hover:bg-[#B72D2A] shadow-[#85241F]/20"
+                }`}>
+                {t("admin.modal.confirm")}
               </button>
             </div>
           </div>
@@ -225,128 +305,240 @@ export function AdminPresentation() {
 
       {/* Lightbox */}
       {lightbox && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
-          <button className="absolute top-4 right-4 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
+          <button className="absolute top-4 right-4 w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white cursor-pointer transition-colors">
             <XCircle className="w-5 h-5" />
           </button>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={lightbox} alt="slip" className="max-w-full max-h-[90vh] rounded-2xl object-contain" />
+          <img src={lightbox} alt="slip" className="max-w-full max-h-[90vh] rounded-2xl object-contain shadow-2xl border border-white/10" />
         </div>
       )}
 
       {toast && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-2xl shadow-lg animate-in fade-in slide-in-from-top-2">
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 backdrop-blur-md text-white text-xs font-bold px-5 py-3 rounded-2xl shadow-xl border border-white/10 flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           {toast}
         </div>
       )}
 
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#85241F] flex items-center justify-center shrink-0">
-              <Package className="w-4 h-4 text-white" />
+      <div className="bg-white border-b border-slate-100 sticky top-0 z-40 shadow-xs">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#85241F] flex items-center justify-center shrink-0 shadow-lg shadow-[#85241F]/20">
+              <Package className="w-4.5 h-4.5 text-white" />
             </div>
-            <span className="font-bold text-gray-900">HLLC Admin</span>
+            <div>
+              <span className="font-black text-gray-900 tracking-tight text-base leading-none block">{t("admin.header")}</span>
+              <span className="text-[10px] text-gray-400 mt-1 block">
+                {t("admin.stats_summary", { orders: orders.length, products: products.length })}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {pendingSlips.length > 0 && (
-              <span className="flex items-center gap-1.5 bg-orange-100 text-orange-700 text-xs font-semibold px-3 py-1.5 rounded-full">
+              <span className="flex items-center gap-1.5 bg-orange-50 text-orange-700 text-[10px] font-bold px-2.5 py-1.5 rounded-full border border-orange-100">
                 <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse" />
-                รอตรวจ {pendingSlips.length} รายการ
+                {t("admin.pending_badge", { count: pendingSlips.length })}
               </span>
             )}
-            <span className="text-xs text-gray-400 hidden sm:block">
-              {orders.length} orders · {products.length} products
-            </span>
+            
+            {/* Header Language Switcher */}
+            <div className="flex items-center gap-1 bg-gray-50 border border-gray-200/50 p-1 rounded-xl shadow-xs">
+              <Globe className="w-3.5 h-3.5 text-gray-400 ml-1.5 shrink-0" />
+              <button
+                onClick={() => setLang("th")}
+                className={`px-2 py-0.5 rounded-lg text-[9px] font-black transition-all cursor-pointer ${
+                  lang === "th"
+                    ? "bg-[#85241F] text-white shadow-xs"
+                    : "text-gray-400 hover:text-gray-700"
+                }`}
+              >
+                TH
+              </button>
+              <button
+                onClick={() => setLang("en")}
+                className={`px-2 py-0.5 rounded-lg text-[9px] font-black transition-all cursor-pointer ${
+                  lang === "en"
+                    ? "bg-[#85241F] text-white shadow-xs"
+                    : "text-gray-400 hover:text-gray-700"
+                }`}
+              >
+                EN
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-5 flex flex-col gap-6">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
         <Tabs defaultValue="orders">
-          <TabsList className="w-full grid grid-cols-2 bg-white border border-gray-100 rounded-2xl p-1 h-auto shadow-sm">
-            <TabsTrigger value="orders" className="h-10 rounded-xl data-[state=active]:bg-[#85241F] data-[state=active]:text-white gap-2">
+          <TabsList className="w-full grid grid-cols-2 bg-white border border-slate-100 rounded-2xl p-1.5 h-auto shadow-xs">
+            <TabsTrigger value="orders" className="h-11 rounded-xl data-[state=active]:bg-[#85241F] data-[state=active]:text-white font-bold text-xs gap-2 transition-all cursor-pointer">
               <ClipboardList className="w-4 h-4" />
-              คำสั่งซื้อ
+              {t("admin.tab.orders")}
               {pendingSlips.length > 0 && (
-                <span className="bg-orange-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                <span className="bg-orange-500 text-white text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center animate-pulse">
                   {pendingSlips.length}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="products" className="h-10 rounded-xl data-[state=active]:bg-[#85241F] data-[state=active]:text-white gap-2">
+            <TabsTrigger value="products" className="h-11 rounded-xl data-[state=active]:bg-[#85241F] data-[state=active]:text-white font-bold text-xs gap-2 transition-all cursor-pointer">
               <Package className="w-4 h-4" />
-              สินค้า
+              {t("admin.tab.products")}
             </TabsTrigger>
           </TabsList>
 
           {/* ── Orders Tab ── */}
-          <TabsContent value="orders" className="mt-4 flex flex-col gap-5">
-
-            {/* Zone 1: Pending slip review */}
-            {pendingSlips.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
-                  <h2 className="font-bold text-gray-900">รอตรวจสลิป ({pendingSlips.length})</h2>
+          <TabsContent value="orders" className="mt-5 flex flex-col gap-6 animate-in fade-in duration-200">
+            
+            {/* Redesigned Executive Stats Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+              <div className="bg-white border border-emerald-100/80 rounded-2xl p-4.5 shadow-xs flex items-center gap-3.5 hover:shadow-md hover:border-emerald-200 transition-all group">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100 transition-transform group-hover:scale-105">
+                  <TrendingUp className="w-5 h-5" />
                 </div>
-                <div className="flex flex-col gap-3">
-                  {pendingSlips.map((order) => (
-                    <SlipReviewCard key={order.id} order={order} onApprove={approveSlip} onViewSlip={setLightbox} />
-                  ))}
+                <div className="min-w-0">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">{t("admin.stats.revenue")}</span>
+                  <span className="text-base font-black text-gray-900 block mt-0.5 tracking-tight truncate">{money(statsRevenue)}</span>
                 </div>
               </div>
-            )}
+
+              <div className={`bg-white border rounded-2xl p-4.5 shadow-xs flex items-center gap-3.5 hover:shadow-md transition-all group relative overflow-hidden ${statsPending > 0 ? "border-orange-200 ring-2 ring-orange-500/5" : "border-gray-100 hover:border-orange-200"}`}>
+                {statsPending > 0 && <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping" />}
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border transition-transform group-hover:scale-105 ${statsPending > 0 ? "bg-orange-50 text-orange-600 border-orange-100" : "bg-gray-50 text-gray-500 border-gray-100"}`}>
+                  <FileCheck2 className="w-5 h-5 animate-pulse" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">{t("admin.stats.pending")}</span>
+                  <span className={`text-base font-black block mt-0.5 tracking-tight truncate ${statsPending > 0 ? "text-orange-600" : "text-gray-900"}`}>{statsPending}</span>
+                </div>
+              </div>
+
+              <div className="bg-white border border-blue-100/80 rounded-2xl p-4.5 shadow-xs flex items-center gap-3.5 hover:shadow-md hover:border-blue-200 transition-all group">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100 transition-transform group-hover:scale-105">
+                  <Truck className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">{t("admin.stats.active")}</span>
+                  <span className="text-base font-black text-gray-900 block mt-0.5 tracking-tight truncate">{statsActive}</span>
+                </div>
+              </div>
+
+              <div className="bg-white border border-slate-100/80 rounded-2xl p-4.5 shadow-xs flex items-center gap-3.5 hover:shadow-md hover:border-slate-200 transition-all group">
+                <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-700 flex items-center justify-center shrink-0 border border-slate-100 transition-transform group-hover:scale-105">
+                  <ClipboardList className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">{t("admin.stats.completed")}</span>
+                  <span className="text-base font-black text-gray-900 block mt-0.5 tracking-tight truncate">{statsTotal}</span>
+                </div>
+              </div>
+            </div>
+
+
 
             {/* Zone 2: All orders */}
             <div>
-              <h2 className="font-bold text-gray-900 mb-3">คำสั่งซื้อทั้งหมด</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3.5">
+                <h2 className="font-bold text-gray-900 text-sm">{t("admin.orders.all")}</h2>
+                
+                {/* Advanced Search & Filtering Controls */}
+                <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                  {/* Shipping mode toggle */}
+                  <div className="flex bg-white border border-gray-200/70 p-0.5 rounded-xl shadow-2xs shrink-0 self-start sm:self-auto">
+                    {([
+                      { key: "all", labelKey: "admin.orders.filter_all" },
+                      { key: "delivery", labelKey: "admin.orders.filter_delivery" },
+                      { key: "pickup", labelKey: "admin.orders.filter_pickup" }
+                    ] as const).map((opt) => (
+                      <button
+                        key={opt.key}
+                        onClick={() => setShippingFilter(opt.key)}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                          shippingFilter === opt.key
+                            ? "bg-slate-900 text-white shadow-xs"
+                            : "text-gray-500 hover:text-gray-900"
+                        }`}
+                      >
+                        {t(opt.labelKey)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Advanced Search Input Bar */}
+              <div className="bg-white border border-gray-200/60 rounded-2xl px-4.5 py-3 shadow-2xs mb-4.5 flex items-center gap-3 focus-within:border-[#85241F] focus-within:ring-2 focus-within:ring-[#85241F]/5 transition-all">
+                <Search className="w-4 h-4 text-gray-400 shrink-0" />
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t("admin.orders.search_placeholder")}
+                  className="flex-1 bg-transparent border-none text-xs outline-none text-gray-800 placeholder:text-gray-400"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className="text-gray-400 hover:text-gray-600 cursor-pointer">
+                    <XCircle className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
 
               {/* Status filter chips */}
-              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none mb-3">
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none mb-3.5 border-b border-gray-100">
                 {(["all", ...ORDER_STATUSES] as const).map((s) => {
-                  const count = s === "all" ? orders.length : orders.filter((o) => o.status === s).length;
+                  const count = s === "all" 
+                    ? orders.length 
+                    : orders.filter((o) => {
+                        const displayStatus = o.status === "payment_review" ? "paid" : o.status;
+                        return displayStatus === s;
+                      }).length;
                   if (count === 0 && s !== "all") return null;
                   return (
                     <button
                       key={s}
                       onClick={() => setStatusFilter(s)}
-                      className={`shrink-0 h-8 px-3 rounded-full text-xs font-medium border transition-colors ${
+                      className={`shrink-0 h-8 px-3 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${
                         statusFilter === s
-                          ? "bg-[#85241F] text-white border-[#85241F]"
-                          : "bg-white text-gray-600 border-gray-200 hover:border-[#85241F]/30"
+                          ? "bg-[#85241F] text-white border-[#85241F] shadow-sm shadow-[#85241F]/10"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-[#85241F]/30 hover:bg-gray-50"
                       }`}
                     >
-                      {s === "all" ? "ทั้งหมด" : STATUS_LABEL[s as OrderStatus]} ({count})
+                      {s === "all" ? t("admin.orders.filter_all") : t(`admin.status.${s as OrderStatus}`)} ({count})
                     </button>
                   );
                 })}
               </div>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 {filteredOrders.map((order) => (
-                  <OrderRow key={order.id} order={order} onStatusChange={updateStatus} />
+                  <OrderRow key={order.id} order={order} onStatusChange={triggerStatusConfirm} onApproveSlip={approveSlip} t={t} onViewSlip={setLightbox} />
                 ))}
                 {filteredOrders.length === 0 && (
-                  <p className="text-center text-sm text-gray-400 py-8">ไม่มีคำสั่งซื้อ</p>
+                  <div className="bg-white border border-gray-100 rounded-3xl py-12 flex flex-col items-center justify-center text-center shadow-2xs">
+                    <AlertCircle className="w-8 h-8 text-gray-300 animate-pulse mb-2" />
+                    <p className="text-xs text-gray-400 font-semibold">{t("admin.orders.empty")}</p>
+                  </div>
                 )}
               </div>
             </div>
           </TabsContent>
 
           {/* ── Products Tab ── */}
-          <TabsContent value="products" className="mt-4 flex flex-col gap-4">
-            <AddProductForm onSubmit={addProduct} notify={notify} />
+          <TabsContent value="products" className="mt-4 flex flex-col gap-4 animate-in fade-in duration-200">
+            <AddProductForm onSubmit={addProduct} notify={notify} t={t} />
             {products.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
                 {products.map((p) => (
-                  <ProductCard key={p.id} product={p} onUpdate={updateProduct} onDelete={deleteProduct} />
+                  <ProductCard key={p.id} product={p} onUpdate={updateProduct} onDelete={deleteProduct} t={t} />
                 ))}
               </div>
             )}
             {products.length === 0 && (
-              <p className="text-center text-sm text-gray-400 py-8">ยังไม่มีสินค้า — เพิ่มได้ด้านบน</p>
+              <div className="bg-white border border-gray-100 rounded-3xl py-12 flex flex-col items-center justify-center text-center shadow-2xs">
+                <Package className="w-8 h-8 text-gray-300 mb-2" />
+                <p className="text-xs text-gray-400 font-semibold">{t("admin.products.empty")}</p>
+              </div>
             )}
           </TabsContent>
         </Tabs>
@@ -355,157 +547,307 @@ export function AdminPresentation() {
   );
 }
 
-/* ─── Slip Review Card ───────────────────────────────────────────────────── */
 
-function SlipReviewCard({ order, onApprove, onViewSlip }: {
-  order: Order;
-  onApprove: (id: string, approved: boolean) => void;
-  onViewSlip: (url: string) => void;
-}) {
-  return (
-    <div className="bg-white rounded-2xl border border-orange-100 overflow-hidden shadow-sm">
-      <div className="flex gap-4 p-4">
-        {/* Slip image — กดดูรูปเต็ม */}
-        <button
-          onClick={() => order.slip.imageUrl && onViewSlip(order.slip.imageUrl)}
-          className="w-24 h-32 sm:w-32 sm:h-44 rounded-xl overflow-hidden bg-gray-100 shrink-0 relative group"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={order.slip.imageUrl} alt="slip" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-            <span className="opacity-0 group-hover:opacity-100 text-white text-xs font-semibold bg-black/50 px-2 py-1 rounded-lg transition-opacity">
-              ดูรูป
-            </span>
-          </div>
-        </button>
 
-        {/* Info + actions */}
-        <div className="flex-1 flex flex-col justify-between min-w-0">
-          <div>
-            <div className="flex items-start justify-between gap-2 mb-1">
-              <span className="text-xs text-gray-400 font-mono">#{order.id.slice(-6).toUpperCase()}</span>
-              <span className="text-xs text-gray-400">{timeAgo(order.createdAt)}</span>
-            </div>
-            <p className="font-bold text-gray-900 truncate">{order.customer.name}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{order.customer.phone}</p>
-            <div className="mt-2 bg-gray-50 rounded-xl p-2 text-xs text-gray-600">
-              {order.items.map((i) => (
-                <div key={i.productId}>{i.name} × {i.quantity}</div>
-              ))}
-            </div>
-            <p className="font-black text-[#85241F] text-lg mt-2">{money(order.total)}</p>
-          </div>
+/* ─── Order Row with Stepper timeline & mock parcel ────────────────────────── */
 
-          {/* Approve / Reject */}
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={() => onApprove(order.id, true)}
-              className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
-            >
-              <CheckCircle2 className="w-4 h-4" /> อนุมัติ
-            </button>
-            <button
-              onClick={() => onApprove(order.id, false)}
-              className="flex-1 flex items-center justify-center gap-1.5 bg-red-500 hover:bg-red-600 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
-            >
-              <XCircle className="w-4 h-4" /> ปฏิเสธ
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Order Row ──────────────────────────────────────────────────────────── */
-
-function OrderRow({ order, onStatusChange }: {
+function OrderRow({ order, onStatusChange, onApproveSlip, t, onViewSlip }: {
   order: Order;
   onStatusChange: (id: string, s: OrderStatus) => void;
+  onApproveSlip: (orderId: string, approved: boolean) => void;
+  t: (key: string, replacements?: Record<string, string | number>) => string;
+  onViewSlip: (url: string) => void;
 }) {
   const [open, setOpen] = React.useState(false);
+  const { lang } = useLanguage();
+
+  const isPickup = order.customer.address.includes("รับเอง");
+
+  // Premium Logistics Stepper States
+  const timelineSteps: OrderStatus[] = [
+    "paid",
+    "packing",
+    "shipped",
+    "completed",
+  ];
+
+  const stepperStatus = order.status === "payment_review" ? "paid" : order.status;
+  const currentIdx = timelineSteps.indexOf(stepperStatus);
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+    <div className={`bg-white rounded-3xl border shadow-2xs overflow-hidden transition-all duration-200 ${
+      open ? "border-slate-200/80 ring-3 ring-slate-100" : "border-slate-100 hover:border-slate-200"
+    }`}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center gap-3 p-3.5 text-left hover:bg-slate-50/50 transition-colors cursor-pointer"
       >
         {/* Status dot */}
-        <div className={`w-2 h-2 rounded-full shrink-0 ${
-          ["paid", "completed"].includes(order.status) ? "bg-emerald-500" :
-          order.status === "cancelled" ? "bg-red-500" :
-          order.status === "payment_review" ? "bg-orange-500" :
-          order.status === "pending_payment" ? "bg-amber-400" : "bg-blue-400"
+        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+          order.status === "completed" ? "bg-green-500" :
+          order.status === "paid" ? "bg-emerald-500 animate-pulse" :
+          order.status === "payment_review" ? "bg-orange-500 animate-bounce" :
+          "bg-blue-400"
         }`} />
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-sm text-gray-900">{order.customer.name}</span>
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_COLOR[order.status]}`}>
-              {STATUS_LABEL[order.status]}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-extrabold text-xs text-gray-900 leading-none">{order.customer.name}</span>
+            <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border ${STATUS_COLOR[order.status]}`}>
+              {t(`admin.status.${order.status}`)}
             </span>
             {order.slip.status === "pending" && (
-              <span className="text-[10px] font-bold bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">
-                รอตรวจสลิป
+              <span className="text-[8px] font-black bg-orange-100 text-orange-600 px-2 py-0.5 rounded-md border border-orange-200 animate-pulse">
+                {t("admin.status.payment_review")}
               </span>
             )}
+            <span className="text-[9px] text-gray-300 font-bold font-mono">
+              #{order.id.slice(-6).toUpperCase()}
+            </span>
           </div>
-          <p className="text-xs text-gray-400 mt-0.5 truncate">
-            {order.items.map((i) => `${i.name} ×${i.quantity}`).join(", ")}
+          <p className="text-[10px] text-gray-400 mt-1 font-semibold truncate">
+            {order.items.map((i) => {
+              const trName = t(`product.${i.productId}.name`);
+              const name = trName === `product.${i.productId}.name` ? i.name : trName;
+              return `${name} ×${i.quantity}`;
+            }).join(", ")}
           </p>
         </div>
 
-        <div className="text-right shrink-0">
-          <p className="font-bold text-sm text-gray-900">{money(order.total)}</p>
-          <p className="text-[10px] text-gray-400">{timeAgo(order.createdAt)}</p>
+        <div className="text-right shrink-0 mr-1">
+          <p className="font-black text-xs text-gray-950">{money(order.total)}</p>
+          <p className="text-[9px] text-gray-400 font-bold mt-1">{timeAgo(order.createdAt, lang)}</p>
         </div>
 
         {open ? <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />}
       </button>
 
       {open && (
-        <div className="border-t border-gray-100 p-3 flex flex-col gap-3">
-          {/* Customer info */}
-          <div className="bg-gray-50 rounded-xl p-3 text-sm">
-            <p className="text-xs text-gray-400 mb-1">ที่อยู่จัดส่ง</p>
-            <p className="text-gray-700">{order.customer.address}</p>
-            <p className="text-gray-500 text-xs mt-1">{order.customer.phone}</p>
+        <div className="border-t border-slate-100 p-4.5 bg-slate-50/20 flex flex-col gap-5 animate-in slide-in-from-top-2 duration-200">
+          
+          {/* Redesigned Premium Logistics Stepper */}
+          <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-3xs">
+            <div className="flex items-center justify-between relative">
+              {/* Connector line */}
+              <div className="absolute top-3.5 left-6 right-6 h-0.5 bg-gray-100 z-0" />
+              <div 
+                className="absolute top-3.5 left-6 h-0.5 bg-emerald-500 z-0 transition-all duration-500" 
+                style={{ width: `${(Math.max(0, currentIdx) / (timelineSteps.length - 1)) * 92}%` }}
+              />
+
+              {timelineSteps.map((s, idx) => {
+                const done = idx < currentIdx || order.status === "completed";
+                const active = idx === currentIdx;
+                
+                return (
+                  <div key={s} className="flex flex-col items-center z-10">
+                    <div className={`w-7.5 h-7.5 rounded-full flex items-center justify-center border-2 transition-all duration-300 font-black text-[10px] shadow-sm ${
+                      done ? "bg-emerald-500 border-emerald-500 text-white" :
+                      active ? "bg-white border-[#85241F] text-[#85241F] scale-110 ring-4 ring-[#85241F]/5" :
+                      "bg-white border-gray-200 text-gray-300"
+                    }`}>
+                      {done ? "✓" : idx + 1}
+                    </div>
+                    <span className={`text-[8px] font-bold mt-2 text-center max-w-[65px] truncate block ${
+                      active ? "text-[#85241F] font-black" : done ? "text-emerald-600" : "text-gray-400"
+                    }`}>
+                      {t(`admin.status.${s}`)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Slip thumbnail if exists */}
-          {order.slip.imageUrl && order.slip.status !== "pending" && (
-            <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
-              <div className="w-12 h-16 rounded-lg overflow-hidden shrink-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={order.slip.imageUrl} alt="slip" className="w-full h-full object-cover" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            {/* Redesigned Mock Parcel Label details block */}
+            <div className="bg-linear-to-br from-amber-50/20 to-amber-100/10 border-2 border-dashed border-amber-200/80 rounded-2xl p-4 shadow-3xs relative overflow-hidden flex flex-col justify-between">
+              {/* Corner Stamp */}
+              <div className="absolute -top-3 -right-3 w-16 h-16 bg-amber-500/10 border border-amber-500/20 rounded-full flex items-center justify-center text-[8px] font-black text-amber-600/40 rotate-12 uppercase pointer-events-none select-none">
+                HLLC POST
               </div>
+              
               <div>
-                <p className="text-xs text-gray-400">สลิป</p>
-                <Badge variant={order.slip.status === "approved" ? "success" : "destructive"}>
-                  {order.slip.status === "approved" ? "อนุมัติแล้ว" : "ปฏิเสธแล้ว"}
-                </Badge>
+                <div className="flex items-center justify-between border-b border-amber-200/50 pb-2 mb-3.5">
+                  <div className="flex items-center gap-1.5 text-amber-800 text-[10px] font-black">
+                    <Truck className="w-3.5 h-3.5" />
+                    <span>{isPickup ? t("admin.order.pickup_label") : t("admin.order.shipping_label")}</span>
+                  </div>
+                  <span className="text-[8px] text-amber-500 font-bold font-mono">CODE: #{order.id.slice(-6).toUpperCase()}</span>
+                </div>
+
+                {/* Simulated Barcode */}
+                <div className="flex gap-0.5 justify-center py-1 bg-white border border-amber-200/40 rounded-lg mb-3 max-w-[180px] mx-auto select-none opacity-80 pointer-events-none">
+                  {[1,3,1,2,1,4,1,2,3,1,2,1,1,3,1,2,4,1,2,1].map((w, i) => (
+                    <div key={i} className="bg-amber-950 h-5" style={{ width: `${w}px` }} />
+                  ))}
+                </div>
+
+                <div className="text-xs text-gray-700 space-y-2 leading-normal font-semibold">
+                  <div>
+                    <span className="text-[9px] text-gray-400 block mb-0.5">{isPickup ? t("admin.order.pickup_details") : t("admin.order.address")}</span>
+                    <p className="text-gray-800 leading-relaxed pl-1 border-l-2 border-amber-300">{order.customer.address}</p>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2 pl-1">
+                    <span className="text-[9px] text-gray-400 block shrink-0">{t("admin.order.phone")}</span>
+                    <span className="text-gray-700 font-mono">{order.customer.phone}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dotted cut line */}
+              <div className="border-t border-dashed border-amber-200/60 pt-3 mt-3 flex items-center justify-between text-[8px] font-bold text-amber-600/80">
+                <span>THANK YOU FOR SHOPPING!</span>
+                <span>D1 DEPOT</span>
               </div>
             </div>
-          )}
 
-          {/* Status changer */}
-          <div>
-            <p className="text-xs text-gray-400 mb-1.5">เปลี่ยน status</p>
-            <div className="flex flex-wrap gap-1.5">
-              {ORDER_STATUSES.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => onStatusChange(order.id, s)}
-                  className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
-                    order.status === s
-                      ? "bg-[#85241F] text-white border-[#85241F]"
-                      : "bg-white text-gray-600 border-gray-200 hover:border-[#85241F]/30"
-                  }`}
-                >
-                  {STATUS_LABEL[s]}
-                </button>
-              ))}
+            {/* Slip display / status changer */}
+            <div className="flex flex-col gap-4">
+              {/* Slip thumbnail if exists and reviewed */}
+              {order.slip.imageUrl && order.slip.status !== "pending" && (
+                <div className="flex items-center gap-4 bg-white border border-gray-100 rounded-2xl p-3.5 shadow-3xs">
+                  <button
+                    onClick={() => order.slip.imageUrl && onViewSlip(order.slip.imageUrl)}
+                    className="w-12 h-16 rounded-xl overflow-hidden shrink-0 bg-gray-50 shadow-xs relative group border border-gray-100 cursor-pointer"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={order.slip.imageUrl} alt="slip" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center transition-colors">
+                      <span className="opacity-0 group-hover:opacity-100 text-white text-[8px] font-black bg-black/55 px-1.5 py-0.5 rounded-md">
+                        {t("admin.slip.view")}
+                      </span>
+                    </div>
+                  </button>
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-gray-400 font-bold mb-1">{t("admin.order.slip_status")}</p>
+                    <Badge variant={order.slip.status === "approved" ? "success" : "destructive"} className="text-[9px] font-black rounded-lg">
+                      {order.slip.status === "approved" ? t("admin.order.shipping_label") === "ใบจ่าหน้าพัสดุ" ? "อนุมัติแล้ว" : "Approved" : "ปฏิเสธแล้ว"}
+                    </Badge>
+                  </div>
+                </div>
+              )}
+
+              {/* Integrated interactive Slip Approval Card for Pending Slips */}
+              {order.slip.imageUrl && order.slip.status === "pending" && (
+                <div className="bg-orange-50/70 border border-orange-100 rounded-2xl p-4 shadow-3xs flex flex-col gap-3 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between border-b border-orange-200/40 pb-2 mb-1">
+                    <span className="text-[10px] text-orange-800 font-extrabold uppercase tracking-wider flex items-center gap-1.5">
+                      <FileCheck2 className="w-3.5 h-3.5 text-orange-600" />
+                      {t("admin.status.payment_review")}
+                    </span>
+                    <span className="text-[9px] text-orange-600 font-mono font-bold">{t("admin.order.slip_status")}</span>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => order.slip.imageUrl && onViewSlip(order.slip.imageUrl)}
+                      className="w-16 h-20 rounded-xl overflow-hidden shrink-0 bg-gray-50 shadow-xs relative group border border-orange-200/50 cursor-pointer"
+                    >
+                      <img src={order.slip.imageUrl} alt="slip" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center transition-colors">
+                        <span className="opacity-0 group-hover:opacity-100 text-white text-[8px] font-black bg-black/55 px-1.5 py-0.5 rounded-md">
+                          {t("admin.slip.view")}
+                        </span>
+                      </div>
+                    </button>
+                    <div className="flex-1 flex flex-col justify-between py-0.5">
+                      <div>
+                        <span className="text-[9px] text-orange-600 font-bold block">{t("checkout.payment_amount")}</span>
+                        <span className="text-sm font-black text-orange-950 block mt-0.5">{money(order.slip.amount || order.total)}</span>
+                      </div>
+                      <div className="flex gap-2 mt-1">
+                        <button
+                          onClick={() => onApproveSlip(order.id, true)}
+                          className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold py-2 px-2.5 rounded-xl text-[10px] shadow-sm active:scale-97 transition-all cursor-pointer text-center"
+                        >
+                          {t("admin.slip.approve")}
+                        </button>
+                        <button
+                          onClick={() => onApproveSlip(order.id, false)}
+                          className="flex-1 bg-white border border-red-200 hover:bg-red-50 text-red-600 font-extrabold py-2 px-2.5 rounded-xl text-[10px] active:scale-97 transition-all cursor-pointer text-center"
+                        >
+                          {t("admin.slip.reject")}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Status changer — Premium linear next-step action layout */}
+              <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-3xs flex-1 flex flex-col justify-between">
+                <div>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">{t("admin.order.change_status")}</p>
+                  
+                  {(() => {
+                    const stepperStatus = order.status === "payment_review" ? "paid" : order.status;
+                    const currentIdx = timelineSteps.indexOf(stepperStatus);
+                    const prevStatus = currentIdx > 0 ? timelineSteps[currentIdx - 1] : null;
+                    const nextStatus = currentIdx !== -1 && currentIdx < timelineSteps.length - 1 ? timelineSteps[currentIdx + 1] : null;
+
+                    if (order.status === "completed") {
+                      return (
+                        <div className="flex flex-col gap-3">
+                          <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3.5 flex items-center gap-2.5 text-emerald-800 text-xs font-bold shadow-3xs">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <span>{t("admin.order.is_completed")}</span>
+                          </div>
+                          {prevStatus && (
+                            <button
+                              onClick={() => onStatusChange(order.id, prevStatus)}
+                              className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-500 hover:text-gray-800 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer mt-1"
+                            >
+                              <span className="text-[11px] font-semibold">⮌</span>
+                              <span>{t("admin.order.prev_stage")}</span>
+                              <span className="bg-gray-100 px-2 py-0.5 rounded-lg text-[9px] font-extrabold uppercase text-gray-600">
+                                {t(`admin.status.${prevStatus}`)}
+                              </span>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="flex flex-col gap-3">
+                        {/* Proceed to Next State CTA */}
+                        {nextStatus && (
+                          <button
+                            onClick={() => onStatusChange(order.id, nextStatus)}
+                            className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-[#85241F]/15 active:scale-98 transition-all cursor-pointer"
+                          >
+                            <span>{t("admin.order.next_stage")}</span>
+                            <span className="bg-white/20 px-2 py-0.5 rounded-lg text-[9px] font-extrabold uppercase">
+                              {t(`admin.status.${nextStatus}`)}
+                            </span>
+                            <span className="ml-1 text-sm font-light">➔</span>
+                          </button>
+                        )}
+
+                        {/* Back to Previous State CTA */}
+                        {prevStatus && (
+                          <button
+                            onClick={() => onStatusChange(order.id, prevStatus)}
+                            className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-500 hover:text-gray-800 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer"
+                          >
+                            <span className="text-[11px] font-semibold">⮌</span>
+                            <span>{t("admin.order.prev_stage")}</span>
+                            <span className="bg-gray-100 px-2 py-0.5 rounded-lg text-[9px] font-extrabold uppercase text-gray-600">
+                              {t(`admin.status.${prevStatus}`)}
+                            </span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                <div className="border-t border-gray-50 pt-3 mt-3 flex items-center justify-between text-[10px] font-bold text-gray-400">
+                  <span>{t("admin.order.item")}</span>
+                  <span>{order.items.length} {t("shop.items_count")}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -516,9 +858,10 @@ function OrderRow({ order, onStatusChange }: {
 
 /* ─── Add Product Form ───────────────────────────────────────────────────── */
 
-function AddProductForm({ onSubmit, notify }: {
+function AddProductForm({ onSubmit, notify, t }: {
   onSubmit: (fd: FormData) => void;
   notify: (msg: string) => void;
+  t: (key: string, replacements?: Record<string, string | number>) => string;
 }) {
   const [open, setOpen] = React.useState(false);
   const [imagePreview, setImagePreview] = React.useState("");
@@ -545,27 +888,27 @@ function AddProductForm({ onSubmit, notify }: {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-xs">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-2">
           <PackagePlus className="w-5 h-5 text-[#85241F]" />
-          <span className="font-semibold text-gray-900">เพิ่มสินค้าใหม่</span>
+          <span className="font-extrabold text-xs text-gray-900">{t("admin.products.add_title")}</span>
         </div>
         {open ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
       </button>
 
       {open && (
-        <div className="border-t border-gray-100 p-4">
-          <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <div className="border-t border-gray-100 p-4 animate-in slide-in-from-top-2 duration-200">
+          <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-3.5">
             {/* Image toggle */}
             <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
               {(["upload", "url"] as const).map((m) => (
                 <button key={m} type="button" onClick={() => { setImageMode(m); setImagePreview(""); }}
-                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors ${imageMode === m ? "bg-white text-[#85241F] shadow-sm" : "text-gray-500"}`}>
-                  {m === "upload" ? "📁 อัพโหลด" : "🔗 URL"}
+                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-colors cursor-pointer ${imageMode === m ? "bg-white text-[#85241F] shadow-xs" : "text-gray-500"}`}>
+                  {m === "upload" ? t("admin.products.upload") : t("admin.products.url")}
                 </button>
               ))}
             </div>
@@ -578,53 +921,53 @@ function AddProductForm({ onSubmit, notify }: {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={imagePreview} alt="preview" className="w-full h-36 object-cover rounded-xl border border-gray-200" />
                     <button type="button" onClick={() => setImagePreview("")}
-                      className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center">
+                      className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center cursor-pointer">
                       <XCircle className="w-4 h-4 text-gray-400" />
                     </button>
                   </div>
                 ) : (
                   <button type="button" onClick={() => fileRef.current?.click()}
-                    className="w-full border-2 border-dashed border-gray-200 rounded-xl py-6 flex flex-col items-center gap-1.5 hover:border-[#85241F]/30 transition-colors">
+                    className="w-full border-2 border-dashed border-gray-200 rounded-xl py-6 flex flex-col items-center gap-1.5 hover:border-[#85241F]/30 transition-colors cursor-pointer">
                     <Upload className="w-5 h-5 text-gray-400" />
-                    <span className="text-sm text-gray-400">แตะเพื่ออัพโหลด</span>
+                    <span className="text-xs text-gray-400 font-bold">{t("admin.products.upload_tap")}</span>
                   </button>
                 )}
               </>
             ) : (
               <Input name="imageUrl" placeholder="https://..." value={imagePreview}
                 onChange={(e) => setImagePreview(e.target.value)}
-                className="rounded-xl border-gray-200" />
+                className="rounded-xl border-gray-200 text-xs" />
             )}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
-                <Label className="text-xs mb-1 block">ชื่อสินค้า *</Label>
-                <Input name="name" required className="rounded-xl border-gray-200" />
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.name")}</Label>
+                <Input name="name" required className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
               <div>
-                <Label className="text-xs mb-1 block">ราคา (฿)</Label>
-                <Input name="price" type="number" min="0" className="rounded-xl border-gray-200" />
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.price")}</Label>
+                <Input name="price" type="number" min="0" required className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
               <div>
-                <Label className="text-xs mb-1 block">สต็อก</Label>
-                <Input name="stock" type="number" min="0" className="rounded-xl border-gray-200" />
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.stock")}</Label>
+                <Input name="stock" type="number" min="0" required className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
               <div className="col-span-2">
-                <Label className="text-xs mb-1 block">ส่วนลด (%)</Label>
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.discount")}</Label>
                 <div className="relative">
                   <Input name="discount" type="number" min="0" max="100" placeholder="0"
-                    className="rounded-xl border-gray-200 pr-8" />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">%</span>
+                    className="rounded-xl border-gray-200 pr-8 text-xs h-10" />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
                 </div>
               </div>
               <div className="col-span-2">
-                <Label className="text-xs mb-1 block">คำอธิบาย</Label>
-                <Textarea name="description" rows={2} className="rounded-xl border-gray-200 resize-none" />
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.description")}</Label>
+                <Textarea name="description" rows={2} className="rounded-xl border-gray-200 text-xs resize-none" />
               </div>
             </div>
 
-            <Button type="submit" className="bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-11 w-full">
-              <PackagePlus className="w-4 h-4" /> เพิ่มสินค้า
+            <Button type="submit" className="bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-11 w-full text-xs font-bold shadow-md shadow-[#85241F]/10 cursor-pointer transition-all active:scale-98">
+              <PackagePlus className="w-4 h-4 mr-1" /> {t("admin.products.add_title")}
             </Button>
           </form>
         </div>
@@ -635,15 +978,18 @@ function AddProductForm({ onSubmit, notify }: {
 
 /* ─── Product Card ───────────────────────────────────────────────────────── */
 
-function ProductCard({ product, onUpdate, onDelete }: {
+function ProductCard({ product, onUpdate, onDelete, t }: {
   product: Product;
   onUpdate: (p: Product) => void;
   onDelete: (id: string) => void;
+  t: (key: string, replacements?: Record<string, string | number>) => string;
 }) {
   const [editing, setEditing] = React.useState(false);
   const [form, setForm] = React.useState({ ...product });
   const [imagePreview, setImagePreview] = React.useState(product.imageUrl ?? "");
   const fileRef = React.useRef<HTMLInputElement>(null);
+
+  const translatedName = t(`product.${product.id}.name`) === `product.${product.id}.name` ? product.name : t(`product.${product.id}.name`);
 
   const discountedPrice = form.discount ? Math.round(form.price * (1 - form.discount / 100)) : null;
 
@@ -666,54 +1012,54 @@ function ProductCard({ product, onUpdate, onDelete }: {
 
   if (editing) {
     return (
-      <div className="bg-white rounded-2xl border border-[#85241F]/30 overflow-hidden shadow-sm col-span-2 sm:col-span-1">
+      <div className="bg-white rounded-3xl border border-[#85241F]/30 overflow-hidden shadow-md col-span-2 sm:col-span-1 animate-in zoom-in-95 duration-200">
         {/* Image preview */}
-        <div className="relative aspect-square bg-gray-100 overflow-hidden">
+        <div className="relative aspect-square bg-gray-50 overflow-hidden">
           {imagePreview
             ? <img src={imagePreview} alt="" className="w-full h-full object-cover" />
             : <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-8 h-8 text-gray-300" /></div>}
           <button type="button" onClick={() => fileRef.current?.click()}
-            className="absolute bottom-2 right-2 bg-white rounded-full px-2.5 py-1 text-xs font-medium shadow flex items-center gap-1">
-            <Upload className="w-3 h-3" /> เปลี่ยนรูป
+            className="absolute bottom-2 right-2 bg-white/95 backdrop-blur-xs rounded-full px-2.5 py-1.5 text-[9px] font-black shadow-sm flex items-center gap-1 border border-gray-100 cursor-pointer hover:bg-gray-50">
+            <Upload className="w-3 h-3 text-[#85241F]" /> {t("admin.products.edit.change_image")}
           </button>
           <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
         </div>
 
-        <div className="p-3 flex flex-col gap-2">
+        <div className="p-3 flex flex-col gap-2.5">
           <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            placeholder="ชื่อสินค้า" className="rounded-xl border-gray-200 text-sm h-9" />
+            placeholder="ชื่อสินค้า" className="rounded-xl border-gray-200 text-xs h-9 font-semibold" />
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label className="text-[10px] text-gray-400">ราคา (฿)</Label>
+              <Label className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">{t("admin.products.label.price")}</Label>
               <Input type="number" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: Number(e.target.value) }))}
-                className="rounded-xl border-gray-200 text-sm h-9" />
+                className="rounded-xl border-gray-200 text-xs h-9" />
             </div>
             <div>
-              <Label className="text-[10px] text-gray-400">สต็อก</Label>
+              <Label className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">{t("admin.products.label.stock")}</Label>
               <Input type="number" value={form.stock} onChange={(e) => setForm((f) => ({ ...f, stock: Number(e.target.value) }))}
-                className="rounded-xl border-gray-200 text-sm h-9" />
+                className="rounded-xl border-gray-200 text-xs h-9" />
             </div>
           </div>
           <div>
-            <Label className="text-[10px] text-gray-400">ส่วนลด (%)</Label>
+            <Label className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">{t("admin.products.label.discount")}</Label>
             <div className="relative">
               <Input type="number" min="0" max="100" value={form.discount ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, discount: e.target.value ? Number(e.target.value) : undefined }))}
-                placeholder="0" className="rounded-xl border-gray-200 text-sm h-9 pr-7" />
+                placeholder="0" className="rounded-xl border-gray-200 text-xs h-9 pr-7" />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
             </div>
             {form.discount ? (
-              <p className="text-xs text-emerald-600 mt-1">
-                ราคาหลังลด: <span className="font-bold">{money(Math.round(form.price * (1 - form.discount / 100)))}</span>
+              <p className="text-[10px] text-emerald-600 mt-1.5 font-bold">
+                {t("admin.products.edit.discounted")} <span className="font-extrabold">{money(Math.round(form.price * (1 - form.discount / 100)))}</span>
               </p>
             ) : null}
           </div>
-          <div className="flex gap-2 mt-1">
-            <Button onClick={handleSave} className="flex-1 bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-9 text-xs">
-              บันทึก
+          <div className="flex gap-2 mt-1 border-t border-gray-50 pt-2.5">
+            <Button onClick={handleSave} className="flex-1 bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-9 text-[10px] font-bold shadow-sm cursor-pointer transition-all active:scale-97">
+              {t("admin.products.edit.save")}
             </Button>
-            <Button onClick={() => setEditing(false)} variant="outline" className="flex-1 rounded-xl h-9 text-xs">
-              ยกเลิก
+            <Button onClick={() => setEditing(false)} variant="outline" className="flex-1 rounded-xl h-9 text-[10px] font-bold cursor-pointer transition-all active:scale-97">
+              {t("admin.modal.cancel")}
             </Button>
           </div>
         </div>
@@ -722,42 +1068,42 @@ function ProductCard({ product, onUpdate, onDelete }: {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-      <div className="relative aspect-square bg-gray-100 overflow-hidden">
+    <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-xs hover:shadow-md hover:border-gray-200/80 transition-all duration-200 flex flex-col group">
+      <div className="relative aspect-square bg-gray-50 overflow-hidden">
         {imagePreview
-          ? <img src={imagePreview} alt={product.name} className="w-full h-full object-cover" />
+          ? <img src={imagePreview} alt={translatedName} className="w-full h-full object-cover" />
           : <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-8 h-8 text-gray-300" /></div>}
         {product.discount ? (
-          <span className="absolute top-2 left-2 bg-[#85241F] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-lg">
+          <span className="absolute top-2.5 left-2.5 bg-[#85241F] text-white text-[9px] font-black px-2 py-0.5 rounded-lg shadow-sm">
             -{product.discount}%
           </span>
         ) : null}
-        {/* Action buttons */}
-        <div className="absolute top-2 right-2 flex gap-1">
+        {/* Action buttons with nice group hover reveal */}
+        <div className="absolute top-2.5 right-2.5 flex gap-1.5 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
           <button onClick={() => setEditing(true)}
-            className="w-7 h-7 bg-white rounded-full shadow flex items-center justify-center hover:bg-gray-50">
+            className="w-7.5 h-7.5 bg-white/95 backdrop-blur-xs rounded-full shadow flex items-center justify-center hover:bg-gray-100 border border-gray-100 cursor-pointer transition-colors shadow-slate-200/50">
             <Pencil className="w-3.5 h-3.5 text-gray-600" />
           </button>
-          <button onClick={() => { if (confirm("ลบสินค้านี้?")) onDelete(product.id); }}
-            className="w-7 h-7 bg-white rounded-full shadow flex items-center justify-center hover:bg-red-50">
-            <Trash2 className="w-3.5 h-3.5 text-red-400" />
+          <button onClick={() => { if (confirm(t("admin.products.edit.delete_confirm"))) onDelete(product.id); }}
+            className="w-7.5 h-7.5 bg-white/95 backdrop-blur-xs rounded-full shadow flex items-center justify-center hover:bg-red-50 border border-gray-100 cursor-pointer transition-colors shadow-slate-200/50">
+            <Trash2 className="w-3.5 h-3.5 text-red-500" />
           </button>
         </div>
       </div>
-      <div className="p-3">
-        <p className="font-semibold text-sm truncate">{product.name}</p>
-        <div className="flex items-center justify-between mt-1">
+      <div className="p-3.5 flex-1 flex flex-col justify-between">
+        <p className="font-extrabold text-xs text-gray-800 truncate leading-tight">{translatedName}</p>
+        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
           <div>
             {discountedPrice ? (
               <div>
-                <span className="font-black text-[#85241F] text-sm">{money(discountedPrice)}</span>
-                <span className="text-[10px] text-gray-400 line-through ml-1">{money(product.price)}</span>
+                <span className="font-black text-[#85241F] text-xs">{money(discountedPrice)}</span>
+                <span className="text-[9px] text-gray-400 line-through ml-1.5 font-bold">{money(product.price)}</span>
               </div>
             ) : (
-              <span className="font-black text-[#85241F] text-sm">{money(product.price)}</span>
+              <span className="font-black text-[#85241F] text-xs">{money(product.price)}</span>
             )}
           </div>
-          <span className="text-xs text-gray-400">{product.stock} ชิ้น</span>
+          <span className="text-[10px] text-gray-400 font-bold bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-lg">{product.stock} {t("admin.products.edit.units")}</span>
         </div>
       </div>
     </div>
