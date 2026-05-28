@@ -3,785 +3,763 @@
 import * as React from "react";
 import {
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   ClipboardList,
   Image as ImageIcon,
-  Mail,
   Package,
   PackagePlus,
-  Search,
-  Settings2,
+  Pencil,
+  Trash2,
+  Upload,
   XCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
+/* ─── Types ──────────────────────────────────────────────────────────────── */
+
 type OrderStatus =
-  | "pending slip"
-  | "paid"
-  | "cancelled";
+  | "pending_payment" | "payment_review" | "paid"
+  | "packing" | "shipped" | "completed" | "cancelled";
+
+type SlipStatus = "none" | "pending" | "approved" | "rejected";
 
 type Product = {
-  id: string;
-  name: string;
-  sku: string;
-  imageUrl: string;
-  description: string;
-  price: number;
-  stock: number;
+  id: string; name: string; slug: string;
+  description?: string; price: number; stock: number;
+  discount?: number; // percent 0-100
+  imageUrl?: string; active: boolean;
 };
 
 type Order = {
   id: string;
-  customerName: string;
-  customerEmail: string;
+  customer: { name: string; phone: string; address: string };
+  items: { productId: string; name: string; price: number; quantity: number; subtotal: number }[];
   total: number;
   status: OrderStatus;
-  productName: string;
-  slipUrl: string;
-  slipStatus: "pending" | "approved" | "rejected";
+  slip: { imageUrl?: string; amount?: number; status: SlipStatus };
   createdAt: string;
 };
 
-const orderStatuses: OrderStatus[] = ["pending slip", "paid", "cancelled"];
+/* ─── Mock Data ───────────────────────────────────────────────────────────── */
 
-const initialProducts: Product[] = [
+const MOCK_ORDERS: Order[] = [
   {
-    id: "prd-001",
-    name: "HLLC Signature Hoodie",
-    sku: "HLLC-HD-001",
-    imageUrl:
-      "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=900&q=80",
-    description: "Regular fit hoodie with heavyweight fabric and logo embroidery.",
-    price: 1290,
-    stock: 18,
+    id: "demo-001",
+    customer: { name: "Best Rakdee", phone: "081-234-5678", address: "123 ถ.สุขุมวิท แขวงคลองเตย กรุงเทพมหานคร 10110" },
+    items: [{ productId: "mock-1", name: "เสื้อกันฝน Classic", price: 290, quantity: 2, subtotal: 580 }],
+    total: 580,
+    status: "payment_review",
+    slip: { imageUrl: "https://picsum.photos/seed/slip1/400/600", amount: 580, status: "pending" },
+    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
   },
   {
-    id: "prd-002",
-    name: "Minimal Logo Tee",
-    sku: "HLLC-TS-014",
-    imageUrl:
-      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=80",
-    description: "100% cotton daily tee with a small logo print.",
-    price: 590,
-    stock: 42,
+    id: "demo-002",
+    customer: { name: "Smaet Jaidee", phone: "089-876-5432", address: "456 ถ.เพชรบุรี แขวงมักกะสัน กรุงเทพมหานคร 10400" },
+    items: [
+      { productId: "mock-2", name: "ร่มพับ Ultra Light", price: 180, quantity: 1, subtotal: 180 },
+      { productId: "mock-4", name: "ร่มกอล์ฟ XL", price: 380, quantity: 1, subtotal: 380 },
+    ],
+    total: 560,
+    status: "paid",
+    slip: { imageUrl: "https://picsum.photos/seed/slip2/400/600", amount: 560, status: "approved" },
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
   },
   {
-    id: "prd-003",
-    name: "Canvas Tote Bag",
-    sku: "HLLC-BG-006",
-    imageUrl:
-      "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=900&q=80",
-    description: "Durable canvas tote with a large main compartment.",
-    price: 390,
-    stock: 25,
+    id: "demo-003",
+    customer: { name: "Aut Meesuk", phone: "062-111-9999", address: "รับเองที่ D1 — เวลา 14:00 น." },
+    items: [{ productId: "mock-3", name: "ชุดกันฝน Pro Set", price: 550, quantity: 1, subtotal: 550 }],
+    total: 550,
+    status: "pending_payment",
+    slip: { status: "none" },
+    createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
+  },
+  {
+    id: "demo-004",
+    customer: { name: "Best Sadsai", phone: "095-555-0001", address: "789 ถ.ลาดพร้าว แขวงจตุจักร กรุงเทพมหานคร 10900" },
+    items: [{ productId: "mock-7", name: "รองเท้ากันน้ำ", price: 590, quantity: 1, subtotal: 590 }],
+    total: 590,
+    status: "packing",
+    slip: { imageUrl: "https://picsum.photos/seed/slip4/400/600", amount: 590, status: "approved" },
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
   },
 ];
 
-const initialOrders: Order[] = [
-  {
-    id: "ORD-2401",
-    customerName: "Narin Ch.",
-    customerEmail: "narin@example.com",
-    total: 1880,
-    status: "pending slip",
-    productName: "HLLC Signature Hoodie, Minimal Logo Tee",
-    slipUrl: "/image.png",
-    slipStatus: "pending",
-    createdAt: "28 May 2026, 10:12",
-  },
-  {
-    id: "ORD-2402",
-    customerName: "Ploy K.",
-    customerEmail: "ploy@example.com",
-    total: 390,
-    status: "paid",
-    productName: "Canvas Tote Bag",
-    slipUrl: "/image.png",
-    slipStatus: "approved",
-    createdAt: "28 May 2026, 09:48",
-  },
-  {
-    id: "ORD-2403",
-    customerName: "Win T.",
-    customerEmail: "win@example.com",
-    total: 1290,
-    status: "paid",
-    productName: "HLLC Signature Hoodie",
-    slipUrl: "/image.png",
-    slipStatus: "approved",
-    createdAt: "27 May 2026, 18:20",
-  },
+const ORDER_STATUSES: OrderStatus[] = [
+  "pending_payment", "payment_review", "paid", "packing", "shipped", "completed", "cancelled",
 ];
 
-function money(value: number) {
-  return new Intl.NumberFormat("th-TH", {
-    style: "currency",
-    currency: "THB",
-    maximumFractionDigits: 0,
-  }).format(value);
+/* ─── Helpers ─────────────────────────────────────────────────────────────── */
+
+function money(v: number) {
+  return new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 }).format(v);
 }
 
-function statusVariant(status: OrderStatus | Order["slipStatus"]) {
-  if (["paid", "approved"].includes(status)) return "success";
-  if (["cancelled", "rejected"].includes(status)) return "destructive";
-  if (["pending slip", "pending"].includes(status)) return "warning";
-  return "secondary";
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "เมื่อกี้";
+  if (m < 60) return `${m} นาทีที่แล้ว`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} ชั่วโมงที่แล้ว`;
+  return `${Math.floor(h / 24)} วันที่แล้ว`;
 }
+
+const STATUS_LABEL: Record<OrderStatus, string> = {
+  pending_payment: "รอชำระ",
+  payment_review: "รอตรวจสลิป",
+  paid: "ชำระแล้ว",
+  packing: "กำลังแพ็ก",
+  shipped: "จัดส่งแล้ว",
+  completed: "เสร็จสิ้น",
+  cancelled: "ยกเลิก",
+};
+
+const STATUS_COLOR: Record<OrderStatus, string> = {
+  pending_payment: "bg-amber-100 text-amber-700 border-amber-200",
+  payment_review: "bg-orange-100 text-orange-700 border-orange-200",
+  paid: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  packing: "bg-blue-100 text-blue-700 border-blue-200",
+  shipped: "bg-indigo-100 text-indigo-700 border-indigo-200",
+  completed: "bg-green-100 text-green-700 border-green-200",
+  cancelled: "bg-red-100 text-red-700 border-red-200",
+};
+
+/* ─── Main ────────────────────────────────────────────────────────────────── */
 
 export function AdminPresentation() {
-  const [products, setProducts] = React.useState(initialProducts);
-  const [orders, setOrders] = React.useState(initialOrders);
-  const [search, setSearch] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all">(
-    "all",
-  );
+  const [orders, setOrders] = React.useState<Order[]>(MOCK_ORDERS);
+  const [products, setProducts] = React.useState<Product[]>([]);
+  const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all">("all");
+  const [toast, setToast] = React.useState("");
+  const [confirm, setConfirm] = React.useState<{ orderId: string; approved: boolean } | null>(null);
+  const [lightbox, setLightbox] = React.useState<string | null>(null);
 
-  const filteredOrders = orders.filter((order) =>
-    [order.id, order.customerName, order.productName]
-      .join(" ")
-      .toLowerCase()
-      .includes(search.toLowerCase()),
-  ).filter((order) => statusFilter === "all" || order.status === statusFilter);
+  const notify = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
+
+  const pendingSlips = orders.filter((o) => o.slip.status === "pending");
+  const filteredOrders = orders.filter((o) => statusFilter === "all" || o.status === statusFilter);
+
+  function approveSlip(orderId: string, approved: boolean) {
+    setConfirm({ orderId, approved });
+  }
+
+  function confirmApprove() {
+    if (!confirm) return;
+    setOrders((prev) => prev.map((o) =>
+      o.id === confirm.orderId
+        ? { ...o, status: confirm.approved ? "paid" : o.status, slip: { ...o.slip, status: confirm.approved ? "approved" : "rejected" } }
+        : o
+    ));
+    notify(confirm.approved ? "✓ อนุมัติสลิปแล้ว" : "✗ ปฏิเสธสลิปแล้ว");
+    setConfirm(null);
+  }
+
+  function updateStatus(orderId: string, status: OrderStatus) {
+    setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status } : o));
+  }
 
   function addProduct(formData: FormData) {
     const name = String(formData.get("name") ?? "").trim();
-    const sku = String(formData.get("sku") ?? "").trim();
-    const imageUrl = String(formData.get("imageUrl") ?? "").trim();
-    const description = String(formData.get("description") ?? "").trim();
-    const price = Number(formData.get("price"));
-    const stock = Number(formData.get("stock"));
-
-    if (!name || !sku || !price) {
-      return;
-    }
-
-    setProducts((current) => [
-      {
-        id: `prd-${String(current.length + 1).padStart(3, "0")}`,
-        name,
-        sku,
-        imageUrl,
-        description,
-        price,
-        stock,
-      },
-      ...current,
-    ]);
+    if (!name) return;
+    const discount = Number(formData.get("discount")) || undefined;
+    setProducts((prev) => [{
+      id: `p-${Date.now()}`,
+      name,
+      slug: name.toLowerCase().replace(/\s+/g, "-"),
+      description: String(formData.get("description") ?? "").trim() || undefined,
+      price: Number(formData.get("price")) || 0,
+      stock: Number(formData.get("stock")) || 0,
+      discount,
+      imageUrl: String(formData.get("imageUrl") ?? "").trim() || undefined,
+      active: true,
+    }, ...prev]);
+    notify("เพิ่มสินค้าแล้ว");
   }
 
-  function updateOrder(orderId: string, status: OrderStatus) {
-    setOrders((current) =>
-      current.map((order) =>
-        order.id === orderId ? { ...order, status } : order,
-      ),
-    );
+  function updateProduct(updated: Product) {
+    setProducts((prev) => prev.map((p) => p.id === updated.id ? updated : p));
+    notify("อัปเดตสินค้าแล้ว");
   }
 
-  function reviewSlip(orderId: string, approved: boolean) {
-    setOrders((current) =>
-      current.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              slipStatus: approved ? "approved" : "rejected",
-              status: approved ? "paid" : "pending slip",
-            }
-          : order,
-      ),
-    );
-  }
-
-  function mockSendEmail(order: Order) {
-    console.info(`Mock email sent to ${order.customerEmail} for ${order.id}.`);
+  function deleteProduct(id: string) {
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+    notify("ลบสินค้าแล้ว");
   }
 
   return (
-    <main className="min-h-screen bg-[#dcecff] text-slate-950">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-3 pb-24 pt-3 sm:px-4 sm:py-6 md:px-8">
-        <header className="sticky top-0 z-20 -mx-3 border-b border-white/70 bg-[#dcecff]/95 px-3 pb-3 pt-2 backdrop-blur sm:static sm:mx-0 sm:border-b-0 sm:bg-transparent sm:px-0 sm:pb-4 sm:pt-0 md:flex md:items-end md:justify-between">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="grid size-11 place-items-center rounded-full bg-white shadow-sm ring-1 ring-blue-100">
-                <Package className="size-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-slate-500">
-                  Welcome back
-                </p>
-                <h1 className="text-xl font-semibold tracking-normal text-slate-950 sm:text-3xl">
-                  HLLC Admin
-                </h1>
-              </div>
+    <main className="min-h-screen bg-gray-50">
+      {/* Confirm modal */}
+      {confirm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl">
+            <div className="text-center">
+              <div className="text-4xl mb-3">{confirm.approved ? "✅" : "❌"}</div>
+              <h3 className="font-bold text-lg text-gray-900">
+                {confirm.approved ? "ยืนยันการอนุมัติ?" : "ยืนยันการปฏิเสธ?"}
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                {confirm.approved
+                  ? "สลิปจะถูกอนุมัติ และ status เปลี่ยนเป็น paid"
+                  : "สลิปจะถูกปฏิเสธ กรุณาแจ้งลูกค้าใหม่"}
+              </p>
             </div>
-            <Button className="rounded-full bg-white text-slate-900 shadow-sm hover:bg-blue-50 md:hidden" size="icon" variant="ghost">
-              <Settings2 className="size-5" />
-            </Button>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirm(null)}
+                className="flex-1 py-3 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50">
+                ยกเลิก
+              </button>
+              <button onClick={confirmApprove}
+                className={`flex-1 py-3 rounded-2xl text-sm font-bold text-white ${confirm.approved ? "bg-emerald-500 hover:bg-emerald-600" : "bg-red-500 hover:bg-red-600"}`}>
+                {confirm.approved ? "อนุมัติ" : "ปฏิเสธ"}
+              </button>
+            </div>
           </div>
-          <div className="mt-4 grid grid-cols-3 gap-2 text-sm sm:gap-3 md:mt-0">
-            <Metric label="Orders" tone="blue" value={orders.length} />
-            <Metric label="Products" tone="violet" value={products.length} />
-            <Metric
-              label="Pending"
-              tone="amber"
-              value={orders.filter((order) => order.slipStatus === "pending").length}
-            />
-          </div>
-        </header>
+        </div>
+      )}
 
+      {/* Lightbox */}
+      {lightbox && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
+          <button className="absolute top-4 right-4 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white">
+            <XCircle className="w-5 h-5" />
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={lightbox} alt="slip" className="max-w-full max-h-[90vh] rounded-2xl object-contain" />
+        </div>
+      )}
+
+      {toast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-2xl shadow-lg animate-in fade-in slide-in-from-top-2">
+          {toast}
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="bg-white border-b border-gray-100 sticky top-0 z-40">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-[#85241F] flex items-center justify-center shrink-0">
+              <Package className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-bold text-gray-900">HLLC Admin</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {pendingSlips.length > 0 && (
+              <span className="flex items-center gap-1.5 bg-orange-100 text-orange-700 text-xs font-semibold px-3 py-1.5 rounded-full">
+                <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse" />
+                รอตรวจ {pendingSlips.length} รายการ
+              </span>
+            )}
+            <span className="text-xs text-gray-400 hidden sm:block">
+              {orders.length} orders · {products.length} products
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-5 flex flex-col gap-6">
         <Tabs defaultValue="orders">
-          <TabsList className="hidden h-auto w-full grid-cols-2 gap-1 rounded-full bg-white/80 p-1 shadow-sm ring-1 ring-blue-100 sm:grid md:w-96">
-            <TabsTrigger
-              className="h-10 rounded-full data-[state=active]:bg-blue-600"
-              value="orders"
-            >
-              <ClipboardList className="size-4" />
-              <span className="text-sm">Orders</span>
+          <TabsList className="w-full grid grid-cols-2 bg-white border border-gray-100 rounded-2xl p-1 h-auto shadow-sm">
+            <TabsTrigger value="orders" className="h-10 rounded-xl data-[state=active]:bg-[#85241F] data-[state=active]:text-white gap-2">
+              <ClipboardList className="w-4 h-4" />
+              คำสั่งซื้อ
+              {pendingSlips.length > 0 && (
+                <span className="bg-orange-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                  {pendingSlips.length}
+                </span>
+              )}
             </TabsTrigger>
-            <TabsTrigger
-              className="h-10 rounded-full"
-              value="products"
-            >
-              <Package className="size-4" />
-              <span className="text-sm">Products</span>
+            <TabsTrigger value="products" className="h-10 rounded-xl data-[state=active]:bg-[#85241F] data-[state=active]:text-white gap-2">
+              <Package className="w-4 h-4" />
+              สินค้า
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="orders">
-            <Card className="border-white/80 bg-white/90 shadow-sm shadow-blue-200/40">
-              <CardHeader>
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <CardTitle className="text-xl">Order Management</CardTitle>
-                    <CardDescription>
-                      Review slips, update status, and notify customers.
-                    </CardDescription>
-                  </div>
-                  <div className="relative w-full md:w-80">
-                    <Search className="pointer-events-none absolute left-3 top-3 size-4 text-blue-400" />
-                    <Input
-                      className="rounded-full border-white bg-white pl-9 shadow-sm ring-1 ring-blue-100 focus:border-blue-300"
-                      onChange={(event) => setSearch(event.target.value)}
-                      placeholder="Search order, customer, product"
-                      value={search}
-                    />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <OrderFilterNav
-                  orders={orders}
-                  statusFilter={statusFilter}
-                  setStatusFilter={setStatusFilter}
-                />
+          {/* ── Orders Tab ── */}
+          <TabsContent value="orders" className="mt-4 flex flex-col gap-5">
 
-                <div className="mt-4 grid gap-3 lg:hidden">
-                  {filteredOrders.map((order) => (
-                    <OrderCard
-                      key={order.id}
-                      mockSendEmail={mockSendEmail}
-                      order={order}
-                      reviewSlip={reviewSlip}
-                      updateOrder={updateOrder}
-                    />
+            {/* Zone 1: Pending slip review */}
+            {pendingSlips.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+                  <h2 className="font-bold text-gray-900">รอตรวจสลิป ({pendingSlips.length})</h2>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {pendingSlips.map((order) => (
+                    <SlipReviewCard key={order.id} order={order} onApprove={approveSlip} onViewSlip={setLightbox} />
                   ))}
                 </div>
+              </div>
+            )}
 
-                <div className="mt-4 hidden lg:block">
-                  <OrderTable
-                    mockSendEmail={mockSendEmail}
-                    orders={filteredOrders}
-                    reviewSlip={reviewSlip}
-                    updateOrder={updateOrder}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+            {/* Zone 2: All orders */}
+            <div>
+              <h2 className="font-bold text-gray-900 mb-3">คำสั่งซื้อทั้งหมด</h2>
 
-          <TabsContent value="products">
-            <div className="grid gap-4 xl:grid-cols-[390px_1fr]">
-              <Card className="border-white/80 bg-white/90 shadow-sm shadow-blue-200/40">
-                <CardHeader>
-                  <CardTitle>Add Product</CardTitle>
-                  <CardDescription>
-                    Mock product form for image, detail, price, and stock.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form action={addProduct} className="grid gap-3">
-                    <Field label="Product name" name="name" />
-                    <Field label="SKU" name="sku" />
-                    <Field label="Image URL" name="imageUrl" />
-                    <Field label="Description" name="description" textarea />
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <Field label="Price" name="price" type="number" />
-                      <Field label="Stock" name="stock" type="number" />
-                    </div>
-                    <Button type="submit">
-                      <PackagePlus className="size-4" />
-                      Add Product
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
+              {/* Status filter chips */}
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none mb-3">
+                {(["all", ...ORDER_STATUSES] as const).map((s) => {
+                  const count = s === "all" ? orders.length : orders.filter((o) => o.status === s).length;
+                  if (count === 0 && s !== "all") return null;
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => setStatusFilter(s)}
+                      className={`shrink-0 h-8 px-3 rounded-full text-xs font-medium border transition-colors ${
+                        statusFilter === s
+                          ? "bg-[#85241F] text-white border-[#85241F]"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-[#85241F]/30"
+                      }`}
+                    >
+                      {s === "all" ? "ทั้งหมด" : STATUS_LABEL[s as OrderStatus]} ({count})
+                    </button>
+                  );
+                })}
+              </div>
 
-              <section className="grid gap-3 sm:grid-cols-2">
-                {products.map((product) => (
-                  <Card className="border-white/80 bg-white/90 shadow-sm shadow-blue-200/40" key={product.id}>
-                    <CardContent className="grid gap-3 p-3 sm:gap-4 sm:p-4">
-                      <div className="flex aspect-[16/10] items-center justify-center overflow-hidden rounded-md border border-zinc-200 bg-zinc-100 text-zinc-400">
-                        {product.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            alt={product.name}
-                            className="h-full w-full object-cover"
-                            src={product.imageUrl}
-                          />
-                        ) : (
-                          <ImageIcon className="size-8" />
-                        )}
-                      </div>
-                      <div className="grid gap-2">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h3 className="font-semibold">{product.name}</h3>
-                            <p className="text-xs text-zinc-500">{product.sku}</p>
-                          </div>
-                          <Badge variant="outline">Stock {product.stock}</Badge>
-                        </div>
-                        <p className="text-sm leading-6 text-zinc-600">
-                          {product.description}
-                        </p>
-                        <strong>{money(product.price)}</strong>
-                      </div>
-                    </CardContent>
-                  </Card>
+              <div className="flex flex-col gap-2">
+                {filteredOrders.map((order) => (
+                  <OrderRow key={order.id} order={order} onStatusChange={updateStatus} />
                 ))}
-              </section>
+                {filteredOrders.length === 0 && (
+                  <p className="text-center text-sm text-gray-400 py-8">ไม่มีคำสั่งซื้อ</p>
+                )}
+              </div>
             </div>
           </TabsContent>
 
-          <TabsList className="fixed inset-x-4 bottom-4 z-30 grid h-16 grid-cols-2 rounded-[28px] bg-white/95 p-2 shadow-xl shadow-blue-300/40 ring-1 ring-blue-100 backdrop-blur sm:hidden">
-            <TabsTrigger className="h-12 flex-col gap-1 rounded-2xl" value="orders">
-              <ClipboardList className="size-5" />
-              <span className="text-[11px]">Orders</span>
-            </TabsTrigger>
-            <TabsTrigger className="h-12 flex-col gap-1 rounded-2xl" value="products">
-              <Package className="size-5" />
-              <span className="text-[11px]">Products</span>
-            </TabsTrigger>
-          </TabsList>
+          {/* ── Products Tab ── */}
+          <TabsContent value="products" className="mt-4 flex flex-col gap-4">
+            <AddProductForm onSubmit={addProduct} notify={notify} />
+            {products.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {products.map((p) => (
+                  <ProductCard key={p.id} product={p} onUpdate={updateProduct} onDelete={deleteProduct} />
+                ))}
+              </div>
+            )}
+            {products.length === 0 && (
+              <p className="text-center text-sm text-gray-400 py-8">ยังไม่มีสินค้า — เพิ่มได้ด้านบน</p>
+            )}
+          </TabsContent>
         </Tabs>
       </div>
     </main>
   );
 }
 
-function OrderFilterNav({
-  orders,
-  setStatusFilter,
-  statusFilter,
-}: {
-  orders: Order[];
-  setStatusFilter: (status: OrderStatus | "all") => void;
-  statusFilter: OrderStatus | "all";
-}) {
-  const filters: Array<OrderStatus | "all"> = ["all", ...orderStatuses];
+/* ─── Slip Review Card ───────────────────────────────────────────────────── */
 
-  return (
-    <nav className="-mx-5 overflow-x-auto px-5 pb-1">
-      <div className="flex min-w-max gap-2">
-        {filters.map((filter) => {
-          const active = statusFilter === filter;
-          const count =
-            filter === "all"
-              ? orders.length
-              : orders.filter((order) => order.status === filter).length;
-
-          return (
-            <button
-              className={`flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium shadow-sm transition-colors ${
-                active
-                  ? "bg-blue-600 text-white shadow-blue-300/50"
-                  : "bg-white/90 text-slate-600 ring-1 ring-blue-100 hover:bg-blue-50"
-              }`}
-              key={filter}
-              onClick={() => setStatusFilter(filter)}
-              type="button"
-            >
-              {filter !== "all" ? <span className={statusDot(filter)} /> : null}
-              <span className="capitalize">{filter}</span>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs ${
-                  active ? "bg-white/20 text-white" : "bg-blue-50 text-blue-700"
-                }`}
-              >
-                {count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </nav>
-  );
-}
-
-function OrderTable({
-  mockSendEmail,
-  orders,
-  reviewSlip,
-  updateOrder,
-}: {
-  mockSendEmail: (order: Order) => void;
-  orders: Order[];
-  reviewSlip: (orderId: string, approved: boolean) => void;
-  updateOrder: (orderId: string, status: OrderStatus) => void;
-}) {
-  return (
-    <section className="overflow-hidden rounded-3xl border border-blue-100 bg-white/75">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Order</TableHead>
-            <TableHead>Customer</TableHead>
-            <TableHead>Items</TableHead>
-            <TableHead>Total</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Slip</TableHead>
-            <TableHead>Action</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {orders.map((order) => (
-            <React.Fragment key={order.id}>
-              <TableRow className={orderRowTone(order.status)}>
-                <TableCell>
-                  <div className="font-medium">{order.id}</div>
-                  <div className="text-xs text-zinc-500">{order.createdAt}</div>
-                </TableCell>
-                <TableCell>
-                  <div>{order.customerName}</div>
-                  <div className="text-xs text-zinc-500">
-                    {order.customerEmail}
-                  </div>
-                </TableCell>
-                <TableCell className="max-w-56 text-zinc-600">
-                  {order.productName}
-                </TableCell>
-                <TableCell>{money(order.total)}</TableCell>
-                <TableCell>
-                  <Badge variant={statusVariant(order.status)}>
-                    {order.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={statusVariant(order.slipStatus)}>
-                    {order.slipStatus}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <StatusSelect order={order} updateOrder={updateOrder} />
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell colSpan={7}>
-                  <SlipReview
-                    compact
-                    mockSendEmail={mockSendEmail}
-                    order={order}
-                    reviewSlip={reviewSlip}
-                  />
-                </TableCell>
-              </TableRow>
-            </React.Fragment>
-          ))}
-        </TableBody>
-      </Table>
-      {!orders.length ? (
-        <div className="p-6 text-center text-sm text-slate-500">
-          No orders match this filter.
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-function orderRowTone(status: OrderStatus) {
-  if (status === "paid") return "bg-emerald-50/70 hover:bg-emerald-50";
-  if (status === "cancelled") return "bg-red-50/70 hover:bg-red-50";
-  return "bg-amber-50/70 hover:bg-amber-50";
-}
-
-function statusDot(status: OrderStatus) {
-  if (status === "paid") return "size-3 rounded-full bg-emerald-500";
-  if (status === "cancelled") return "size-3 rounded-full bg-red-500";
-  if (status === "pending slip") return "size-3 rounded-full bg-amber-500";
-  return "size-3 rounded-full bg-blue-500";
-}
-
-function orderTone(status: OrderStatus) {
-  if (status === "paid") {
-    return {
-      card: "border-emerald-100 bg-emerald-50/95 shadow-emerald-200/50",
-      summary: "bg-white/80",
-      items: "bg-emerald-100/70",
-      label: "text-emerald-600",
-      total: "text-emerald-700",
-    };
-  }
-
-  if (status === "cancelled") {
-    return {
-      card: "border-red-100 bg-red-50/95 shadow-red-200/50",
-      summary: "bg-white/80",
-      items: "bg-red-100/70",
-      label: "text-red-600",
-      total: "text-red-700",
-    };
-  }
-
-  return {
-    card: "border-amber-100 bg-amber-50/95 shadow-amber-200/50",
-    summary: "bg-white/80",
-    items: "bg-amber-100/70",
-    label: "text-amber-600",
-    total: "text-amber-700",
-  };
-}
-
-function OrderCard({
-  mockSendEmail,
-  order,
-  reviewSlip,
-  updateOrder,
-}: {
-  mockSendEmail: (order: Order) => void;
+function SlipReviewCard({ order, onApprove, onViewSlip }: {
   order: Order;
-  reviewSlip: (orderId: string, approved: boolean) => void;
-  updateOrder: (orderId: string, status: OrderStatus) => void;
-}) {
-  const tone = orderTone(order.status);
-
-  return (
-    <div className={`rounded-3xl border p-4 shadow-sm ${tone.card}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-base font-semibold">{order.id}</div>
-          <div className="text-xs text-zinc-500">{order.createdAt}</div>
-        </div>
-        <Badge variant={statusVariant(order.status)}>{order.status}</Badge>
-      </div>
-
-      <div className="mt-4 grid gap-3 text-sm">
-        <div className={`rounded-2xl p-3 ${tone.summary}`}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xs font-medium uppercase text-slate-400">
-                Customer
-              </div>
-              <div className="mt-1 font-medium">{order.customerName}</div>
-              <div className="text-xs text-slate-500">{order.customerEmail}</div>
-            </div>
-            <div className="text-right">
-              <div className="text-xs font-medium uppercase text-slate-400">
-                Total
-              </div>
-              <strong className={`mt-1 block ${tone.total}`}>
-                {money(order.total)}
-              </strong>
-            </div>
-          </div>
-        </div>
-
-        <div className={`rounded-2xl p-3 ${tone.items}`}>
-          <div className={`text-xs font-medium uppercase ${tone.label}`}>
-            Items
-          </div>
-          <div className="mt-1 text-slate-700">{order.productName}</div>
-        </div>
-
-        <div className="grid gap-2">
-          <Label>Status</Label>
-          <StatusSelect order={order} updateOrder={updateOrder} />
-        </div>
-
-        <SlipReview
-          mockSendEmail={mockSendEmail}
-          order={order}
-          reviewSlip={reviewSlip}
-        />
-      </div>
-    </div>
-  );
-}
-
-function StatusSelect({
-  order,
-  updateOrder,
-}: {
-  order: Order;
-  updateOrder: (orderId: string, status: OrderStatus) => void;
+  onApprove: (id: string, approved: boolean) => void;
+  onViewSlip: (url: string) => void;
 }) {
   return (
-    <Select
-      onValueChange={(value) => updateOrder(order.id, value as OrderStatus)}
-      value={order.status}
-    >
-      <SelectTrigger>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {orderStatuses.map((status) => (
-          <SelectItem key={status} value={status}>
-            <span className="flex items-center gap-2">
-              <span
-                className={`size-2 rounded-full ${
-                  status === "paid"
-                    ? "bg-emerald-500"
-                    : status === "cancelled"
-                      ? "bg-red-500"
-                      : status === "pending slip"
-                        ? "bg-amber-500"
-                        : "bg-blue-500"
-                }`}
-              />
-              {status}
+    <div className="bg-white rounded-2xl border border-orange-100 overflow-hidden shadow-sm">
+      <div className="flex gap-4 p-4">
+        {/* Slip image — กดดูรูปเต็ม */}
+        <button
+          onClick={() => order.slip.imageUrl && onViewSlip(order.slip.imageUrl)}
+          className="w-24 h-32 sm:w-32 sm:h-44 rounded-xl overflow-hidden bg-gray-100 shrink-0 relative group"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={order.slip.imageUrl} alt="slip" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+            <span className="opacity-0 group-hover:opacity-100 text-white text-xs font-semibold bg-black/50 px-2 py-1 rounded-lg transition-opacity">
+              ดูรูป
             </span>
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
-function SlipReview({
-  compact,
-  mockSendEmail,
-  order,
-  reviewSlip,
-}: {
-  compact?: boolean;
-  mockSendEmail: (order: Order) => void;
-  order: Order;
-  reviewSlip: (orderId: string, approved: boolean) => void;
-}) {
-  return (
-    <div
-      className={`mt-1 grid gap-3 rounded-3xl border border-zinc-200 bg-zinc-50 p-3 ${
-        compact ? "lg:grid-cols-[220px_1fr]" : ""
-      } border-blue-100 bg-blue-50/70`}
-    >
-      <div className="overflow-hidden rounded-2xl border border-white bg-white shadow-sm">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          alt={`Slip for ${order.id}`}
-          className="h-44 w-full object-cover"
-          src={order.slipUrl}
-        />
-      </div>
-      <div className="grid content-start gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <div className="text-sm font-medium">Payment slip</div>
-            <div className="text-xs text-zinc-500">{money(order.total)}</div>
           </div>
-          <Badge variant={statusVariant(order.slipStatus)}>
-            {order.slipStatus}
-          </Badge>
-        </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex">
-          <Button onClick={() => reviewSlip(order.id, true)} size="sm">
-            <CheckCircle2 className="size-4" />
-            Approve
-          </Button>
-          <Button
-            onClick={() => reviewSlip(order.id, false)}
-            size="sm"
-            variant="destructive"
-          >
-            <XCircle className="size-4" />
-            Reject
-          </Button>
-          <Button onClick={() => mockSendEmail(order)} size="sm" variant="outline">
-            <Mail className="size-4" />
-            Email
-          </Button>
+        </button>
+
+        {/* Info + actions */}
+        <div className="flex-1 flex flex-col justify-between min-w-0">
+          <div>
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <span className="text-xs text-gray-400 font-mono">#{order.id.slice(-6).toUpperCase()}</span>
+              <span className="text-xs text-gray-400">{timeAgo(order.createdAt)}</span>
+            </div>
+            <p className="font-bold text-gray-900 truncate">{order.customer.name}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{order.customer.phone}</p>
+            <div className="mt-2 bg-gray-50 rounded-xl p-2 text-xs text-gray-600">
+              {order.items.map((i) => (
+                <div key={i.productId}>{i.name} × {i.quantity}</div>
+              ))}
+            </div>
+            <p className="font-black text-[#85241F] text-lg mt-2">{money(order.total)}</p>
+          </div>
+
+          {/* Approve / Reject */}
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={() => onApprove(order.id, true)}
+              className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
+            >
+              <CheckCircle2 className="w-4 h-4" /> อนุมัติ
+            </button>
+            <button
+              onClick={() => onApprove(order.id, false)}
+              className="flex-1 flex items-center justify-center gap-1.5 bg-red-500 hover:bg-red-600 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
+            >
+              <XCircle className="w-4 h-4" /> ปฏิเสธ
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function Metric({
-  label,
-  tone,
-  value,
-}: {
-  label: string;
-  tone: "amber" | "blue" | "violet";
-  value: number;
+/* ─── Order Row ──────────────────────────────────────────────────────────── */
+
+function OrderRow({ order, onStatusChange }: {
+  order: Order;
+  onStatusChange: (id: string, s: OrderStatus) => void;
 }) {
-  const styles = {
-    amber: "from-amber-50 to-orange-100 text-amber-700 ring-amber-200",
-    blue: "from-blue-50 to-sky-100 text-blue-700 ring-blue-200",
-    violet: "from-violet-50 to-fuchsia-100 text-violet-700 ring-violet-200",
-  };
+  const [open, setOpen] = React.useState(false);
 
   return (
-    <div
-      className={`rounded-2xl bg-gradient-to-br px-3 py-3 shadow-sm ring-1 ${styles[tone]} sm:px-4`}
-    >
-      <div className="text-xs font-medium opacity-75">{label}</div>
-      <div className="mt-1 text-xl font-semibold sm:text-2xl">{value}</div>
+    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 transition-colors"
+      >
+        {/* Status dot */}
+        <div className={`w-2 h-2 rounded-full shrink-0 ${
+          ["paid", "completed"].includes(order.status) ? "bg-emerald-500" :
+          order.status === "cancelled" ? "bg-red-500" :
+          order.status === "payment_review" ? "bg-orange-500" :
+          order.status === "pending_payment" ? "bg-amber-400" : "bg-blue-400"
+        }`} />
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm text-gray-900">{order.customer.name}</span>
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_COLOR[order.status]}`}>
+              {STATUS_LABEL[order.status]}
+            </span>
+            {order.slip.status === "pending" && (
+              <span className="text-[10px] font-bold bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">
+                รอตรวจสลิป
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-gray-400 mt-0.5 truncate">
+            {order.items.map((i) => `${i.name} ×${i.quantity}`).join(", ")}
+          </p>
+        </div>
+
+        <div className="text-right shrink-0">
+          <p className="font-bold text-sm text-gray-900">{money(order.total)}</p>
+          <p className="text-[10px] text-gray-400">{timeAgo(order.createdAt)}</p>
+        </div>
+
+        {open ? <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />}
+      </button>
+
+      {open && (
+        <div className="border-t border-gray-100 p-3 flex flex-col gap-3">
+          {/* Customer info */}
+          <div className="bg-gray-50 rounded-xl p-3 text-sm">
+            <p className="text-xs text-gray-400 mb-1">ที่อยู่จัดส่ง</p>
+            <p className="text-gray-700">{order.customer.address}</p>
+            <p className="text-gray-500 text-xs mt-1">{order.customer.phone}</p>
+          </div>
+
+          {/* Slip thumbnail if exists */}
+          {order.slip.imageUrl && order.slip.status !== "pending" && (
+            <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
+              <div className="w-12 h-16 rounded-lg overflow-hidden shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={order.slip.imageUrl} alt="slip" className="w-full h-full object-cover" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">สลิป</p>
+                <Badge variant={order.slip.status === "approved" ? "success" : "destructive"}>
+                  {order.slip.status === "approved" ? "อนุมัติแล้ว" : "ปฏิเสธแล้ว"}
+                </Badge>
+              </div>
+            </div>
+          )}
+
+          {/* Status changer */}
+          <div>
+            <p className="text-xs text-gray-400 mb-1.5">เปลี่ยน status</p>
+            <div className="flex flex-wrap gap-1.5">
+              {ORDER_STATUSES.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => onStatusChange(order.id, s)}
+                  className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
+                    order.status === s
+                      ? "bg-[#85241F] text-white border-[#85241F]"
+                      : "bg-white text-gray-600 border-gray-200 hover:border-[#85241F]/30"
+                  }`}
+                >
+                  {STATUS_LABEL[s]}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function Field({
-  label,
-  name,
-  textarea,
-  type = "text",
-}: {
-  label: string;
-  name: string;
-  textarea?: boolean;
-  type?: string;
+/* ─── Add Product Form ───────────────────────────────────────────────────── */
+
+function AddProductForm({ onSubmit, notify }: {
+  onSubmit: (fd: FormData) => void;
+  notify: (msg: string) => void;
 }) {
+  const [open, setOpen] = React.useState(false);
+  const [imagePreview, setImagePreview] = React.useState("");
+  const [imageMode, setImageMode] = React.useState<"upload" | "url">("upload");
+  const fileRef = React.useRef<HTMLInputElement>(null);
+  const formRef = React.useRef<HTMLFormElement>(null);
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setImagePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    if (imageMode === "upload" && imagePreview) fd.set("imageUrl", imagePreview);
+    onSubmit(fd);
+    formRef.current?.reset();
+    setImagePreview("");
+    setOpen(false);
+  }
+
   return (
-    <div className="grid gap-2">
-      <Label htmlFor={name}>{label}</Label>
-      {textarea ? (
-        <Textarea id={name} name={name} />
-      ) : (
-        <Input id={name} name={name} type={type} />
+    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <PackagePlus className="w-5 h-5 text-[#85241F]" />
+          <span className="font-semibold text-gray-900">เพิ่มสินค้าใหม่</span>
+        </div>
+        {open ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+      </button>
+
+      {open && (
+        <div className="border-t border-gray-100 p-4">
+          <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-3">
+            {/* Image toggle */}
+            <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
+              {(["upload", "url"] as const).map((m) => (
+                <button key={m} type="button" onClick={() => { setImageMode(m); setImagePreview(""); }}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors ${imageMode === m ? "bg-white text-[#85241F] shadow-sm" : "text-gray-500"}`}>
+                  {m === "upload" ? "📁 อัพโหลด" : "🔗 URL"}
+                </button>
+              ))}
+            </div>
+
+            {imageMode === "upload" ? (
+              <>
+                <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+                {imagePreview ? (
+                  <div className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={imagePreview} alt="preview" className="w-full h-36 object-cover rounded-xl border border-gray-200" />
+                    <button type="button" onClick={() => setImagePreview("")}
+                      className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center">
+                      <XCircle className="w-4 h-4 text-gray-400" />
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => fileRef.current?.click()}
+                    className="w-full border-2 border-dashed border-gray-200 rounded-xl py-6 flex flex-col items-center gap-1.5 hover:border-[#85241F]/30 transition-colors">
+                    <Upload className="w-5 h-5 text-gray-400" />
+                    <span className="text-sm text-gray-400">แตะเพื่ออัพโหลด</span>
+                  </button>
+                )}
+              </>
+            ) : (
+              <Input name="imageUrl" placeholder="https://..." value={imagePreview}
+                onChange={(e) => setImagePreview(e.target.value)}
+                className="rounded-xl border-gray-200" />
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <Label className="text-xs mb-1 block">ชื่อสินค้า *</Label>
+                <Input name="name" required className="rounded-xl border-gray-200" />
+              </div>
+              <div>
+                <Label className="text-xs mb-1 block">ราคา (฿)</Label>
+                <Input name="price" type="number" min="0" className="rounded-xl border-gray-200" />
+              </div>
+              <div>
+                <Label className="text-xs mb-1 block">สต็อก</Label>
+                <Input name="stock" type="number" min="0" className="rounded-xl border-gray-200" />
+              </div>
+              <div className="col-span-2">
+                <Label className="text-xs mb-1 block">ส่วนลด (%)</Label>
+                <div className="relative">
+                  <Input name="discount" type="number" min="0" max="100" placeholder="0"
+                    className="rounded-xl border-gray-200 pr-8" />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">%</span>
+                </div>
+              </div>
+              <div className="col-span-2">
+                <Label className="text-xs mb-1 block">คำอธิบาย</Label>
+                <Textarea name="description" rows={2} className="rounded-xl border-gray-200 resize-none" />
+              </div>
+            </div>
+
+            <Button type="submit" className="bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-11 w-full">
+              <PackagePlus className="w-4 h-4" /> เพิ่มสินค้า
+            </Button>
+          </form>
+        </div>
       )}
+    </div>
+  );
+}
+
+/* ─── Product Card ───────────────────────────────────────────────────────── */
+
+function ProductCard({ product, onUpdate, onDelete }: {
+  product: Product;
+  onUpdate: (p: Product) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [editing, setEditing] = React.useState(false);
+  const [form, setForm] = React.useState({ ...product });
+  const [imagePreview, setImagePreview] = React.useState(product.imageUrl ?? "");
+  const fileRef = React.useRef<HTMLInputElement>(null);
+
+  const discountedPrice = form.discount ? Math.round(form.price * (1 - form.discount / 100)) : null;
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string;
+      setImagePreview(result);
+      setForm((f) => ({ ...f, imageUrl: result }));
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleSave() {
+    onUpdate({ ...form, imageUrl: imagePreview || undefined });
+    setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <div className="bg-white rounded-2xl border border-[#85241F]/30 overflow-hidden shadow-sm col-span-2 sm:col-span-1">
+        {/* Image preview */}
+        <div className="relative aspect-square bg-gray-100 overflow-hidden">
+          {imagePreview
+            ? <img src={imagePreview} alt="" className="w-full h-full object-cover" />
+            : <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-8 h-8 text-gray-300" /></div>}
+          <button type="button" onClick={() => fileRef.current?.click()}
+            className="absolute bottom-2 right-2 bg-white rounded-full px-2.5 py-1 text-xs font-medium shadow flex items-center gap-1">
+            <Upload className="w-3 h-3" /> เปลี่ยนรูป
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+        </div>
+
+        <div className="p-3 flex flex-col gap-2">
+          <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            placeholder="ชื่อสินค้า" className="rounded-xl border-gray-200 text-sm h-9" />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-[10px] text-gray-400">ราคา (฿)</Label>
+              <Input type="number" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: Number(e.target.value) }))}
+                className="rounded-xl border-gray-200 text-sm h-9" />
+            </div>
+            <div>
+              <Label className="text-[10px] text-gray-400">สต็อก</Label>
+              <Input type="number" value={form.stock} onChange={(e) => setForm((f) => ({ ...f, stock: Number(e.target.value) }))}
+                className="rounded-xl border-gray-200 text-sm h-9" />
+            </div>
+          </div>
+          <div>
+            <Label className="text-[10px] text-gray-400">ส่วนลด (%)</Label>
+            <div className="relative">
+              <Input type="number" min="0" max="100" value={form.discount ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, discount: e.target.value ? Number(e.target.value) : undefined }))}
+                placeholder="0" className="rounded-xl border-gray-200 text-sm h-9 pr-7" />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+            </div>
+            {form.discount ? (
+              <p className="text-xs text-emerald-600 mt-1">
+                ราคาหลังลด: <span className="font-bold">{money(Math.round(form.price * (1 - form.discount / 100)))}</span>
+              </p>
+            ) : null}
+          </div>
+          <div className="flex gap-2 mt-1">
+            <Button onClick={handleSave} className="flex-1 bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-9 text-xs">
+              บันทึก
+            </Button>
+            <Button onClick={() => setEditing(false)} variant="outline" className="flex-1 rounded-xl h-9 text-xs">
+              ยกเลิก
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+      <div className="relative aspect-square bg-gray-100 overflow-hidden">
+        {imagePreview
+          ? <img src={imagePreview} alt={product.name} className="w-full h-full object-cover" />
+          : <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-8 h-8 text-gray-300" /></div>}
+        {product.discount ? (
+          <span className="absolute top-2 left-2 bg-[#85241F] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-lg">
+            -{product.discount}%
+          </span>
+        ) : null}
+        {/* Action buttons */}
+        <div className="absolute top-2 right-2 flex gap-1">
+          <button onClick={() => setEditing(true)}
+            className="w-7 h-7 bg-white rounded-full shadow flex items-center justify-center hover:bg-gray-50">
+            <Pencil className="w-3.5 h-3.5 text-gray-600" />
+          </button>
+          <button onClick={() => { if (confirm("ลบสินค้านี้?")) onDelete(product.id); }}
+            className="w-7 h-7 bg-white rounded-full shadow flex items-center justify-center hover:bg-red-50">
+            <Trash2 className="w-3.5 h-3.5 text-red-400" />
+          </button>
+        </div>
+      </div>
+      <div className="p-3">
+        <p className="font-semibold text-sm truncate">{product.name}</p>
+        <div className="flex items-center justify-between mt-1">
+          <div>
+            {discountedPrice ? (
+              <div>
+                <span className="font-black text-[#85241F] text-sm">{money(discountedPrice)}</span>
+                <span className="text-[10px] text-gray-400 line-through ml-1">{money(product.price)}</span>
+              </div>
+            ) : (
+              <span className="font-black text-[#85241F] text-sm">{money(product.price)}</span>
+            )}
+          </div>
+          <span className="text-xs text-gray-400">{product.stock} ชิ้น</span>
+        </div>
+      </div>
     </div>
   );
 }
