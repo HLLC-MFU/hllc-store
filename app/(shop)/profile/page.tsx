@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-
-export default function Root() {
+export default function ProfilePage() {
   redirect("/home");
 }
