@@ -86,7 +86,7 @@ const initialProducts: Product[] = [
     name: "Minimal Logo Tee",
     sku: "HLLC-TS-014",
     imageUrl:
-      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=80",
+      "https://www.stussy.com/cdn/shop/files/1975000_NAVY_2_3e24bff1-1fba-4b0c-bf42-381795cf6f33.jpg?v=1760565675&width=1600",
     description: "100% cotton daily tee with a small logo print.",
     price: 590,
     stock: 42,
@@ -157,10 +157,13 @@ function statusVariant(status: OrderStatus | Order["slipStatus"]) {
 export function AdminPresentation() {
   const [products, setProducts] = React.useState(initialProducts);
   const [orders, setOrders] = React.useState(initialOrders);
+  const [pendingCount, setPendingCount] = React.useState<number | null>(null);
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all">(
     "all",
   );
+  const pendingNotification =
+    pendingCount ?? orders.filter((order) => order.slipStatus === "pending").length;
 
   const filteredOrders = orders.filter((order) =>
     [order.id, order.customerName, order.productName]
@@ -204,22 +207,49 @@ export function AdminPresentation() {
   }
 
   function reviewSlip(orderId: string, approved: boolean) {
+    const wasPending =
+      orders.find((order) => order.id === orderId)?.slipStatus === "pending";
+
     setOrders((current) =>
       current.map((order) =>
         order.id === orderId
           ? {
-              ...order,
-              slipStatus: approved ? "approved" : "rejected",
-              status: approved ? "paid" : "pending slip",
-            }
+            ...order,
+            slipStatus: approved ? "approved" : "rejected",
+            status: approved ? "paid" : "pending slip",
+          }
           : order,
       ),
+    );
+    setPendingCount((current) =>
+      current === null || !wasPending ? current : Math.max(0, current - 1),
     );
   }
 
   function mockSendEmail(order: Order) {
     console.info(`Mock email sent to ${order.customerEmail} for ${order.id}.`);
   }
+
+  React.useEffect(() => {
+    let active = true;
+
+    fetch("/api/backend/admin/orders/pending")
+      .then((response) => response.json())
+      .then((payload: { data?: { pending?: number } }) => {
+        if (!active) return;
+
+        if (typeof payload.data?.pending === "number") {
+          setPendingCount(payload.data.pending);
+        }
+      })
+      .catch(() => {
+        if (active) setPendingCount(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <main className="min-h-screen bg-[#dcecff] text-slate-950">
@@ -249,7 +279,7 @@ export function AdminPresentation() {
             <Metric
               label="Pending"
               tone="amber"
-              value={orders.filter((order) => order.slipStatus === "pending").length}
+              value={pendingNotification}
             />
           </div>
         </header>
@@ -262,6 +292,11 @@ export function AdminPresentation() {
             >
               <ClipboardList className="size-4" />
               <span className="text-sm">Orders</span>
+              {pendingNotification > 0 ? (
+                <span className="ml-1 grid min-w-5 place-items-center rounded-full bg-red-500 px-1.5 text-xs font-semibold text-white">
+                  {pendingNotification}
+                </span>
+              ) : null}
             </TabsTrigger>
             <TabsTrigger
               className="h-10 rounded-full"
@@ -389,7 +424,14 @@ export function AdminPresentation() {
 
           <TabsList className="fixed inset-x-4 bottom-4 z-30 grid h-16 grid-cols-2 rounded-[28px] bg-white/95 p-2 shadow-xl shadow-blue-300/40 ring-1 ring-blue-100 backdrop-blur sm:hidden">
             <TabsTrigger className="h-12 flex-col gap-1 rounded-2xl" value="orders">
-              <ClipboardList className="size-5" />
+              <span className="relative">
+                <ClipboardList className="size-5" />
+                {pendingNotification > 0 ? (
+                  <span className="absolute -right-2 -top-2 grid min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-4 text-white">
+                    {pendingNotification}
+                  </span>
+                ) : null}
+              </span>
               <span className="text-[11px]">Orders</span>
             </TabsTrigger>
             <TabsTrigger className="h-12 flex-col gap-1 rounded-2xl" value="products">
@@ -426,11 +468,10 @@ function OrderFilterNav({
 
           return (
             <button
-              className={`flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium shadow-sm transition-colors ${
-                active
-                  ? "bg-blue-600 text-white shadow-blue-300/50"
-                  : "bg-white/90 text-slate-600 ring-1 ring-blue-100 hover:bg-blue-50"
-              }`}
+              className={`flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium shadow-sm transition-colors ${active
+                ? "bg-blue-600 text-white shadow-blue-300/50"
+                : "bg-white/90 text-slate-600 ring-1 ring-blue-100 hover:bg-blue-50"
+                }`}
               key={filter}
               onClick={() => setStatusFilter(filter)}
               type="button"
@@ -438,9 +479,8 @@ function OrderFilterNav({
               {filter !== "all" ? <span className={statusDot(filter)} /> : null}
               <span className="capitalize">{filter}</span>
               <span
-                className={`rounded-full px-2 py-0.5 text-xs ${
-                  active ? "bg-white/20 text-white" : "bg-blue-50 text-blue-700"
-                }`}
+                className={`rounded-full px-2 py-0.5 text-xs ${active ? "bg-white/20 text-white" : "bg-blue-50 text-blue-700"
+                  }`}
               >
                 {count}
               </span>
@@ -661,15 +701,14 @@ function StatusSelect({
           <SelectItem key={status} value={status}>
             <span className="flex items-center gap-2">
               <span
-                className={`size-2 rounded-full ${
-                  status === "paid"
-                    ? "bg-emerald-500"
-                    : status === "cancelled"
-                      ? "bg-red-500"
-                      : status === "pending slip"
-                        ? "bg-amber-500"
-                        : "bg-blue-500"
-                }`}
+                className={`size-2 rounded-full ${status === "paid"
+                  ? "bg-emerald-500"
+                  : status === "cancelled"
+                    ? "bg-red-500"
+                    : status === "pending slip"
+                      ? "bg-amber-500"
+                      : "bg-blue-500"
+                  }`}
               />
               {status}
             </span>
@@ -693,9 +732,8 @@ function SlipReview({
 }) {
   return (
     <div
-      className={`mt-1 grid gap-3 rounded-3xl border border-zinc-200 bg-zinc-50 p-3 ${
-        compact ? "lg:grid-cols-[220px_1fr]" : ""
-      } border-blue-100 bg-blue-50/70`}
+      className={`mt-1 grid gap-3 rounded-3xl border border-zinc-200 bg-zinc-50 p-3 ${compact ? "lg:grid-cols-[220px_1fr]" : ""
+        } border-blue-100 bg-blue-50/70`}
     >
       <div className="overflow-hidden rounded-2xl border border-white bg-white shadow-sm">
         {/* eslint-disable-next-line @next/next/no-img-element */}

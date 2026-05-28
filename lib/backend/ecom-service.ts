@@ -237,6 +237,14 @@ export async function listOrders(filters?: {
   return orders.map(toOrder);
 }
 
+export async function countPendingOrders() {
+  const db = await getDb();
+
+  return db.collection("orders").countDocuments({
+    $or: [{ status: "payment_review" }, { "slip.status": "pending" }],
+  });
+}
+
 export async function getOrder(orderId: string) {
   const db = await getDb();
   const order = await db
