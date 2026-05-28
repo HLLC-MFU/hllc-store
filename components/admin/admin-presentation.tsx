@@ -3,823 +3,1099 @@
 import * as React from "react";
 import {
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   ClipboardList,
   Image as ImageIcon,
-  Mail,
   Package,
   PackagePlus,
-  Search,
-  Settings2,
+  Pencil,
+  Trash2,
+  Upload,
   XCircle,
+  TrendingUp,
+  Truck,
+  Globe,
+  Search,
+  Filter,
+  DollarSign,
+  User,
+  Phone,
+  MapPin,
+  Calendar,
+  AlertCircle,
+  FileCheck2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useLanguage } from "@/lib/language-context";
+
+/* ─── Types ──────────────────────────────────────────────────────────────── */
 
 type OrderStatus =
-  | "pending slip"
-  | "paid"
-  | "cancelled";
+  | "pending_payment" | "payment_review" | "paid"
+  | "packing" | "shipped" | "completed" | "cancelled";
+
+type SlipStatus = "none" | "pending" | "approved" | "rejected";
 
 type Product = {
-  id: string;
-  name: string;
-  sku: string;
-  imageUrl: string;
-  description: string;
-  price: number;
-  stock: number;
+  id: string; name: string; slug: string;
+  description?: string; price: number; stock: number;
+  discount?: number; // percent 0-100
+  imageUrl?: string; active: boolean;
 };
 
 type Order = {
   id: string;
-  customerName: string;
-  customerEmail: string;
+  customer: { name: string; phone: string; address: string };
+  items: { productId: string; name: string; price: number; quantity: number; subtotal: number }[];
   total: number;
   status: OrderStatus;
-  productName: string;
-  slipUrl: string;
-  slipStatus: "pending" | "approved" | "rejected";
+  slip: { imageUrl?: string; amount?: number; status: SlipStatus };
   createdAt: string;
 };
 
-const orderStatuses: OrderStatus[] = ["pending slip", "paid", "cancelled"];
+/* ─── Mock Data ───────────────────────────────────────────────────────────── */
 
-const initialProducts: Product[] = [
+const MOCK_ORDERS: Order[] = [
   {
-    id: "prd-001",
-    name: "HLLC Signature Hoodie",
-    sku: "HLLC-HD-001",
-    imageUrl:
-      "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=900&q=80",
-    description: "Regular fit hoodie with heavyweight fabric and logo embroidery.",
-    price: 1290,
-    stock: 18,
+    id: "demo-001",
+    customer: { name: "Best Rakdee", phone: "081-234-5678", address: "123 ถ.สุขุมวิท แขวงคลองเตย กรุงเทพมหานคร 10110" },
+    items: [{ productId: "mock-1", name: "เสื้อกันฝน Classic", price: 290, quantity: 2, subtotal: 580 }],
+    total: 580,
+    status: "payment_review",
+    slip: { imageUrl: "https://picsum.photos/seed/slip1/400/600", amount: 580, status: "pending" },
+    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
   },
   {
-    id: "prd-002",
-    name: "Minimal Logo Tee",
-    sku: "HLLC-TS-014",
-    imageUrl:
-      "https://www.stussy.com/cdn/shop/files/1975000_NAVY_2_3e24bff1-1fba-4b0c-bf42-381795cf6f33.jpg?v=1760565675&width=1600",
-    description: "100% cotton daily tee with a small logo print.",
-    price: 590,
-    stock: 42,
+    id: "demo-002",
+    customer: { name: "Smaet Jaidee", phone: "089-876-5432", address: "456 ถ.เพชรบุรี แขวงมักกะสัน กรุงเทพมหานคร 10400" },
+    items: [
+      { productId: "mock-2", name: "ร่มพับ Ultra Light", price: 180, quantity: 1, subtotal: 180 },
+      { productId: "mock-4", name: "ร่มกอล์ฟ XL", price: 380, quantity: 1, subtotal: 380 },
+    ],
+    total: 560,
+    status: "paid",
+    slip: { imageUrl: "https://picsum.photos/seed/slip2/400/600", amount: 560, status: "approved" },
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
   },
   {
-    id: "prd-003",
-    name: "Canvas Tote Bag",
-    sku: "HLLC-BG-006",
-    imageUrl:
-      "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=900&q=80",
-    description: "Durable canvas tote with a large main compartment.",
-    price: 390,
-    stock: 25,
+    id: "demo-003",
+    customer: { name: "Aut Meesuk", phone: "062-111-9999", address: "รับเองที่ D1 — เวลา 14:00 น." },
+    items: [{ productId: "mock-3", name: "ชุดกันฝน Pro Set", price: 550, quantity: 1, subtotal: 550 }],
+    total: 550,
+    status: "payment_review",
+    slip: { imageUrl: "https://picsum.photos/seed/slip3/400/600", amount: 550, status: "pending" },
+    createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
+  },
+  {
+    id: "demo-004",
+    customer: { name: "Best Sadsai", phone: "095-555-0001", address: "789 ถ.ลาดพร้าว แขวงจตุจักร กรุงเทพมหานคร 10900" },
+    items: [{ productId: "mock-7", name: "รองเท้ากันน้ำ", price: 590, quantity: 1, subtotal: 590 }],
+    total: 590,
+    status: "packing",
+    slip: { imageUrl: "https://picsum.photos/seed/slip4/400/600", amount: 590, status: "approved" },
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
   },
 ];
 
-const initialOrders: Order[] = [
-  {
-    id: "ORD-2401",
-    customerName: "Narin Ch.",
-    customerEmail: "narin@example.com",
-    total: 1880,
-    status: "pending slip",
-    productName: "HLLC Signature Hoodie, Minimal Logo Tee",
-    slipUrl: "/image.png",
-    slipStatus: "pending",
-    createdAt: "28 May 2026, 10:12",
-  },
-  {
-    id: "ORD-2402",
-    customerName: "Ploy K.",
-    customerEmail: "ploy@example.com",
-    total: 390,
-    status: "paid",
-    productName: "Canvas Tote Bag",
-    slipUrl: "/image.png",
-    slipStatus: "approved",
-    createdAt: "28 May 2026, 09:48",
-  },
-  {
-    id: "ORD-2403",
-    customerName: "Win T.",
-    customerEmail: "win@example.com",
-    total: 1290,
-    status: "paid",
-    productName: "HLLC Signature Hoodie",
-    slipUrl: "/image.png",
-    slipStatus: "approved",
-    createdAt: "27 May 2026, 18:20",
-  },
+const ORDER_STATUSES: OrderStatus[] = [
+  "paid", "packing", "shipped", "completed",
 ];
 
-function money(value: number) {
-  return new Intl.NumberFormat("th-TH", {
-    style: "currency",
-    currency: "THB",
-    maximumFractionDigits: 0,
-  }).format(value);
+/* ─── Helpers ─────────────────────────────────────────────────────────────── */
+
+function money(v: number) {
+  return new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 }).format(v);
 }
 
-function statusVariant(status: OrderStatus | Order["slipStatus"]) {
-  if (["paid", "approved"].includes(status)) return "success";
-  if (["cancelled", "rejected"].includes(status)) return "destructive";
-  if (["pending slip", "pending"].includes(status)) return "warning";
-  return "secondary";
+function timeAgo(iso: string, lang: "th" | "en") {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return lang === "th" ? "เมื่อกี้" : "just now";
+  if (m < 60) return lang === "th" ? `${m} นาทีที่แล้ว` : `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return lang === "th" ? `${h} ชั่วโมงที่แล้ว` : `${h}h ago`;
+  return lang === "th" ? `${Math.floor(h / 24)} วันที่แล้ว` : `${Math.floor(h / 24)}d ago`;
 }
+
+const STATUS_COLOR: Record<OrderStatus, string> = {
+  pending_payment: "bg-amber-50 text-amber-700 border-amber-200/60",
+  payment_review: "bg-orange-50 text-orange-700 border-orange-200/60",
+  paid: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
+  packing: "bg-blue-50 text-blue-700 border-blue-200/60",
+  shipped: "bg-indigo-50 text-indigo-700 border-indigo-200/60",
+  completed: "bg-green-50 text-green-700 border-green-200/60",
+  cancelled: "bg-red-50 text-red-700 border-red-200/60",
+};
+
+/* ─── Main ────────────────────────────────────────────────────────────────── */
 
 export function AdminPresentation() {
-  const [products, setProducts] = React.useState(initialProducts);
-  const [orders, setOrders] = React.useState(initialOrders);
-  const [pendingCount, setPendingCount] = React.useState<number | null>(null);
-  const [search, setSearch] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all">(
-    "all",
-  );
-  const pendingNotification =
-    pendingCount ?? orders.filter((order) => order.slipStatus === "pending").length;
+  const [orders, setOrders] = React.useState<Order[]>(MOCK_ORDERS);
+  const [products, setProducts] = React.useState<Product[]>([]);
+  const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all">("all");
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [shippingFilter, setShippingFilter] = React.useState<"all" | "delivery" | "pickup">("all");
+  const [toast, setToast] = React.useState("");
+  const [confirm, setConfirm] = React.useState<{ orderId: string; approved: boolean } | null>(null);
+  const [statusConfirm, setStatusConfirm] = React.useState<{ orderId: string; status: OrderStatus } | null>(null);
+  const [lightbox, setLightbox] = React.useState<string | null>(null);
+  const { lang, setLang, t } = useLanguage();
 
-  const filteredOrders = orders.filter((order) =>
-    [order.id, order.customerName, order.productName]
-      .join(" ")
-      .toLowerCase()
-      .includes(search.toLowerCase()),
-  ).filter((order) => statusFilter === "all" || order.status === statusFilter);
+  const notify = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
+
+  const pendingSlips = orders.filter((o) => o.slip.status === "pending");
+
+  // Advanced search and shipping filter implementation
+  const filteredOrders = orders.filter((o) => {
+    const displayStatus = o.status === "payment_review" ? "paid" : o.status;
+    const matchStatus = statusFilter === "all" || displayStatus === statusFilter;
+
+    const q = searchQuery.toLowerCase().trim();
+    const matchSearch = !q ||
+      o.customer.name.toLowerCase().includes(q) ||
+      o.customer.phone.includes(q) ||
+      o.id.toLowerCase().includes(q);
+
+    const isPickup = o.customer.address.includes("รับเอง");
+    const matchShipping =
+      shippingFilter === "all" ||
+      (shippingFilter === "pickup" && isPickup) ||
+      (shippingFilter === "delivery" && !isPickup);
+
+    return matchStatus && matchSearch && matchShipping;
+  });
+
+  function approveSlip(orderId: string, approved: boolean) {
+    setConfirm({ orderId, approved });
+  }
+
+  function confirmApprove() {
+    if (!confirm) return;
+    setOrders((prev) => prev.map((o) =>
+      o.id === confirm.orderId
+        ? { ...o, status: confirm.approved ? "paid" : o.status, slip: { ...o.slip, status: confirm.approved ? "approved" : "rejected" } }
+        : o
+    ));
+    notify(confirm.approved ? t("admin.toast.slip_approved") : t("admin.toast.slip_rejected"));
+    setConfirm(null);
+  }
+
+  function updateStatus(orderId: string, status: OrderStatus) {
+    setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status } : o));
+    notify(t("admin.toast.product_updated"));
+  }
+
+  function triggerStatusConfirm(orderId: string, status: OrderStatus) {
+    setStatusConfirm({ orderId, status });
+  }
+
+  function confirmStatusChange() {
+    if (!statusConfirm) return;
+    updateStatus(statusConfirm.orderId, statusConfirm.status);
+    setStatusConfirm(null);
+  }
 
   function addProduct(formData: FormData) {
     const name = String(formData.get("name") ?? "").trim();
-    const sku = String(formData.get("sku") ?? "").trim();
-    const imageUrl = String(formData.get("imageUrl") ?? "").trim();
-    const description = String(formData.get("description") ?? "").trim();
-    const price = Number(formData.get("price"));
-    const stock = Number(formData.get("stock"));
-
-    if (!name || !sku || !price) {
-      return;
-    }
-
-    setProducts((current) => [
-      {
-        id: `prd-${String(current.length + 1).padStart(3, "0")}`,
-        name,
-        sku,
-        imageUrl,
-        description,
-        price,
-        stock,
-      },
-      ...current,
-    ]);
+    if (!name) return;
+    const discount = Number(formData.get("discount")) || undefined;
+    setProducts((prev) => [{
+      id: `p-${Date.now()}`,
+      name,
+      slug: name.toLowerCase().replace(/\s+/g, "-"),
+      description: String(formData.get("description") ?? "").trim() || undefined,
+      price: Number(formData.get("price")) || 0,
+      stock: Number(formData.get("stock")) || 0,
+      discount,
+      imageUrl: String(formData.get("imageUrl") ?? "").trim() || undefined,
+      active: true,
+    }, ...prev]);
+    notify(t("admin.toast.product_added"));
   }
 
-  function updateOrder(orderId: string, status: OrderStatus) {
-    setOrders((current) =>
-      current.map((order) =>
-        order.id === orderId ? { ...order, status } : order,
-      ),
-    );
+  function updateProduct(updated: Product) {
+    setProducts((prev) => prev.map((p) => p.id === updated.id ? updated : p));
+    notify(t("admin.toast.product_updated"));
   }
 
-  function reviewSlip(orderId: string, approved: boolean) {
-    const wasPending =
-      orders.find((order) => order.id === orderId)?.slipStatus === "pending";
-
-    setOrders((current) =>
-      current.map((order) =>
-        order.id === orderId
-          ? {
-            ...order,
-            slipStatus: approved ? "approved" : "rejected",
-            status: approved ? "paid" : "pending slip",
-          }
-          : order,
-      ),
-    );
-    setPendingCount((current) =>
-      current === null || !wasPending ? current : Math.max(0, current - 1),
-    );
+  function deleteProduct(id: string) {
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+    notify(t("admin.toast.product_deleted"));
   }
 
-  function mockSendEmail(order: Order) {
-    console.info(`Mock email sent to ${order.customerEmail} for ${order.id}.`);
-  }
-
-  React.useEffect(() => {
-    let active = true;
-
-    fetch("/api/backend/admin/orders/pending")
-      .then((response) => response.json())
-      .then((payload: { data?: { pending?: number } }) => {
-        if (!active) return;
-
-        if (typeof payload.data?.pending === "number") {
-          setPendingCount(payload.data.pending);
-        }
-      })
-      .catch(() => {
-        if (active) setPendingCount(null);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  // Stats dashboard data aggregates
+  const statsRevenue = orders.reduce((sum, o) => ["paid", "packing", "shipped", "completed"].includes(o.status) ? sum + o.total : sum, 0);
+  const statsPending = pendingSlips.length;
+  const statsActive = orders.filter(o => ["packing", "shipped"].includes(o.status)).length;
+  const statsTotal = orders.length;
 
   return (
-    <main className="min-h-screen bg-[#dcecff] text-slate-950">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-3 pb-24 pt-3 sm:px-4 sm:py-6 md:px-8">
-        <header className="sticky top-0 z-20 -mx-3 border-b border-white/70 bg-[#dcecff]/95 px-3 pb-3 pt-2 backdrop-blur sm:static sm:mx-0 sm:border-b-0 sm:bg-transparent sm:px-0 sm:pb-4 sm:pt-0 md:flex md:items-end md:justify-between">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="grid size-11 place-items-center rounded-full bg-white shadow-sm ring-1 ring-blue-100">
-                <Package className="size-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-slate-500">
-                  Welcome back
-                </p>
-                <h1 className="text-xl font-semibold tracking-normal text-slate-950 sm:text-3xl">
-                  HLLC Admin
-                </h1>
-              </div>
+    <main className="min-h-screen bg-[#f8fafc]">
+      {/* Confirm modal */}
+      {confirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl border border-gray-100 animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
+            <div className="text-center">
+              <div className="text-4xl mb-3">{confirm.approved ? "✅" : "❌"}</div>
+              <h3 className="font-bold text-lg text-gray-900">
+                {confirm.approved ? t("admin.modal.approve_title") : t("admin.modal.reject_title")}
+              </h3>
+              <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                {confirm.approved ? t("admin.modal.approve_desc") : t("admin.modal.reject_desc")}
+              </p>
             </div>
-            <Button className="rounded-full bg-white text-slate-900 shadow-sm hover:bg-blue-50 md:hidden" size="icon" variant="ghost">
-              <Settings2 className="size-5" />
-            </Button>
-          </div>
-          <div className="mt-4 grid grid-cols-3 gap-2 text-sm sm:gap-3 md:mt-0">
-            <Metric label="Orders" tone="blue" value={orders.length} />
-            <Metric label="Products" tone="violet" value={products.length} />
-            <Metric
-              label="Pending"
-              tone="amber"
-              value={pendingNotification}
-            />
-          </div>
-        </header>
-
-        <Tabs defaultValue="orders">
-          <TabsList className="hidden h-auto w-full grid-cols-2 gap-1 rounded-full bg-white/80 p-1 shadow-sm ring-1 ring-blue-100 sm:grid md:w-96">
-            <TabsTrigger
-              className="h-10 rounded-full data-[state=active]:bg-blue-600"
-              value="orders"
-            >
-              <ClipboardList className="size-4" />
-              <span className="text-sm">Orders</span>
-              {pendingNotification > 0 ? (
-                <span className="ml-1 grid min-w-5 place-items-center rounded-full bg-red-500 px-1.5 text-xs font-semibold text-white">
-                  {pendingNotification}
-                </span>
-              ) : null}
-            </TabsTrigger>
-            <TabsTrigger
-              className="h-10 rounded-full"
-              value="products"
-            >
-              <Package className="size-4" />
-              <span className="text-sm">Products</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="orders">
-            <Card className="border-white/80 bg-white/90 shadow-sm shadow-blue-200/40">
-              <CardHeader>
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <CardTitle className="text-xl">Order Management</CardTitle>
-                    <CardDescription>
-                      Review slips, update status, and notify customers.
-                    </CardDescription>
-                  </div>
-                  <div className="relative w-full md:w-80">
-                    <Search className="pointer-events-none absolute left-3 top-3 size-4 text-blue-400" />
-                    <Input
-                      className="rounded-full border-white bg-white pl-9 shadow-sm ring-1 ring-blue-100 focus:border-blue-300"
-                      onChange={(event) => setSearch(event.target.value)}
-                      placeholder="Search order, customer, product"
-                      value={search}
-                    />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <OrderFilterNav
-                  orders={orders}
-                  statusFilter={statusFilter}
-                  setStatusFilter={setStatusFilter}
-                />
-
-                <div className="mt-4 grid gap-3 lg:hidden">
-                  {filteredOrders.map((order) => (
-                    <OrderCard
-                      key={order.id}
-                      mockSendEmail={mockSendEmail}
-                      order={order}
-                      reviewSlip={reviewSlip}
-                      updateOrder={updateOrder}
-                    />
-                  ))}
-                </div>
-
-                <div className="mt-4 hidden lg:block">
-                  <OrderTable
-                    mockSendEmail={mockSendEmail}
-                    orders={filteredOrders}
-                    reviewSlip={reviewSlip}
-                    updateOrder={updateOrder}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="products">
-            <div className="grid gap-4 xl:grid-cols-[390px_1fr]">
-              <Card className="border-white/80 bg-white/90 shadow-sm shadow-blue-200/40">
-                <CardHeader>
-                  <CardTitle>Add Product</CardTitle>
-                  <CardDescription>
-                    Mock product form for image, detail, price, and stock.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form action={addProduct} className="grid gap-3">
-                    <Field label="Product name" name="name" />
-                    <Field label="SKU" name="sku" />
-                    <Field label="Image URL" name="imageUrl" />
-                    <Field label="Description" name="description" textarea />
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <Field label="Price" name="price" type="number" />
-                      <Field label="Stock" name="stock" type="number" />
-                    </div>
-                    <Button type="submit">
-                      <PackagePlus className="size-4" />
-                      Add Product
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-
-              <section className="grid gap-3 sm:grid-cols-2">
-                {products.map((product) => (
-                  <Card className="border-white/80 bg-white/90 shadow-sm shadow-blue-200/40" key={product.id}>
-                    <CardContent className="grid gap-3 p-3 sm:gap-4 sm:p-4">
-                      <div className="flex aspect-[16/10] items-center justify-center overflow-hidden rounded-md border border-zinc-200 bg-zinc-100 text-zinc-400">
-                        {product.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            alt={product.name}
-                            className="h-full w-full object-cover"
-                            src={product.imageUrl}
-                          />
-                        ) : (
-                          <ImageIcon className="size-8" />
-                        )}
-                      </div>
-                      <div className="grid gap-2">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h3 className="font-semibold">{product.name}</h3>
-                            <p className="text-xs text-zinc-500">{product.sku}</p>
-                          </div>
-                          <Badge variant="outline">Stock {product.stock}</Badge>
-                        </div>
-                        <p className="text-sm leading-6 text-zinc-600">
-                          {product.description}
-                        </p>
-                        <strong>{money(product.price)}</strong>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </section>
+            <div className="flex gap-3 mt-2">
+              <button onClick={() => setConfirm(null)}
+                className="flex-1 py-3 rounded-2xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 cursor-pointer transition-colors">
+                {t("admin.modal.cancel")}
+              </button>
+              <button onClick={confirmApprove}
+                className={`flex-1 py-3 rounded-2xl text-xs font-bold text-white cursor-pointer transition-all shadow-md active:scale-98 ${confirm.approved ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20" : "bg-red-500 hover:bg-red-600 shadow-red-500/20"}`}>
+                {confirm.approved ? t("admin.slip.approve") : t("admin.slip.reject")}
+              </button>
             </div>
-          </TabsContent>
+          </div>
+        </div>
+      )}
 
-          <TabsList className="fixed inset-x-4 bottom-4 z-30 grid h-16 grid-cols-2 rounded-[28px] bg-white/95 p-2 shadow-xl shadow-blue-300/40 ring-1 ring-blue-100 backdrop-blur sm:hidden">
-            <TabsTrigger className="h-12 flex-col gap-1 rounded-2xl" value="orders">
-              <span className="relative">
-                <ClipboardList className="size-5" />
-                {pendingNotification > 0 ? (
-                  <span className="absolute -right-2 -top-2 grid min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-4 text-white">
-                    {pendingNotification}
-                  </span>
-                ) : null}
+      {/* Status Change Confirmation Modal */}
+      {statusConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl border border-gray-100 animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
+            <div className="text-center flex flex-col items-center">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${statusConfirm.status === "cancelled" ? "bg-red-50 text-red-500 border border-red-100" : "bg-emerald-50 text-emerald-500 border border-emerald-100"
+                }`}>
+                {statusConfirm.status === "cancelled" ? <XCircle className="w-6 h-6 animate-pulse" /> : <CheckCircle2 className="w-6 h-6" />}
+              </div>
+              <h3 className="font-extrabold text-gray-900 text-sm">
+                {statusConfirm.status === "cancelled"
+                  ? t("admin.modal.cancel_title")
+                  : t("admin.modal.status_title")}
+              </h3>
+              <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
+                {statusConfirm.status === "cancelled"
+                  ? t("admin.modal.cancel_desc")
+                  : t("admin.modal.status_desc", { status: t(`admin.status.${statusConfirm.status}`) })}
+              </p>
+            </div>
+            <div className="flex gap-3 mt-2.5">
+              <button onClick={() => setStatusConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 cursor-pointer transition-colors">
+                {t("admin.modal.cancel")}
+              </button>
+              <button onClick={confirmStatusChange}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold text-white cursor-pointer transition-all shadow-md active:scale-98 ${statusConfirm.status === "cancelled"
+                    ? "bg-red-500 hover:bg-red-600 shadow-red-500/20"
+                    : "bg-[#85241F] hover:bg-[#B72D2A] shadow-[#85241F]/20"
+                  }`}>
+                {t("admin.modal.confirm")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
+          <button className="absolute top-4 right-4 w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white cursor-pointer transition-colors">
+            <XCircle className="w-5 h-5" />
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={lightbox} alt="slip" className="max-w-full max-h-[90vh] rounded-2xl object-contain shadow-2xl border border-white/10" />
+        </div>
+      )}
+
+      {toast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 backdrop-blur-md text-white text-xs font-bold px-5 py-3 rounded-2xl shadow-xl border border-white/10 flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          {toast}
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="bg-white border-b border-slate-100 sticky top-0 z-40 shadow-xs">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#85241F] flex items-center justify-center shrink-0 shadow-lg shadow-[#85241F]/20">
+              <Package className="w-4.5 h-4.5 text-white" />
+            </div>
+            <div>
+              <span className="font-black text-gray-900 tracking-tight text-base leading-none block">{t("admin.header")}</span>
+              <span className="text-[10px] text-gray-400 mt-1 block">
+                {t("admin.stats_summary", { orders: orders.length, products: products.length })}
               </span>
-              <span className="text-[11px]">Orders</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {pendingSlips.length > 0 && (
+              <span className="flex items-center gap-1.5 bg-orange-50 text-orange-700 text-[10px] font-bold px-2.5 py-1.5 rounded-full border border-orange-100">
+                <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse" />
+                {t("admin.pending_badge", { count: pendingSlips.length })}
+              </span>
+            )}
+
+            {/* Header Language Switcher */}
+            <div className="flex items-center gap-1 bg-gray-50 border border-gray-200/50 p-1 rounded-xl shadow-xs">
+              <Globe className="w-3.5 h-3.5 text-gray-400 ml-1.5 shrink-0" />
+              <button
+                onClick={() => setLang("th")}
+                className={`px-2 py-0.5 rounded-lg text-[9px] font-black transition-all cursor-pointer ${lang === "th"
+                    ? "bg-[#85241F] text-white shadow-xs"
+                    : "text-gray-400 hover:text-gray-700"
+                  }`}
+              >
+                TH
+              </button>
+              <button
+                onClick={() => setLang("en")}
+                className={`px-2 py-0.5 rounded-lg text-[9px] font-black transition-all cursor-pointer ${lang === "en"
+                    ? "bg-[#85241F] text-white shadow-xs"
+                    : "text-gray-400 hover:text-gray-700"
+                  }`}
+              >
+                EN
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
+        <Tabs defaultValue="orders">
+          <TabsList className="w-full grid grid-cols-2 bg-white border border-slate-100 rounded-2xl p-1.5 h-auto shadow-xs">
+            <TabsTrigger value="orders" className="h-11 rounded-xl data-[state=active]:bg-[#85241F] data-[state=active]:text-white font-bold text-xs gap-2 transition-all cursor-pointer">
+              <ClipboardList className="w-4 h-4" />
+              {t("admin.tab.orders")}
+              {pendingSlips.length > 0 && (
+                <span className="bg-orange-500 text-white text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center animate-pulse">
+                  {pendingSlips.length}
+                </span>
+              )}
             </TabsTrigger>
-            <TabsTrigger className="h-12 flex-col gap-1 rounded-2xl" value="products">
-              <Package className="size-5" />
-              <span className="text-[11px]">Products</span>
+            <TabsTrigger value="products" className="h-11 rounded-xl data-[state=active]:bg-[#85241F] data-[state=active]:text-white font-bold text-xs gap-2 transition-all cursor-pointer">
+              <Package className="w-4 h-4" />
+              {t("admin.tab.products")}
             </TabsTrigger>
           </TabsList>
+
+          {/* ── Orders Tab ── */}
+          <TabsContent value="orders" className="mt-5 flex flex-col gap-6 animate-in fade-in duration-200">
+
+            {/* Redesigned Executive Stats Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+              <div className="bg-white border border-emerald-100/80 rounded-2xl p-4.5 shadow-xs flex items-center gap-3.5 hover:shadow-md hover:border-emerald-200 transition-all group">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100 transition-transform group-hover:scale-105">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">{t("admin.stats.revenue")}</span>
+                  <span className="text-base font-black text-gray-900 block mt-0.5 tracking-tight truncate">{money(statsRevenue)}</span>
+                </div>
+              </div>
+
+              <div className={`bg-white border rounded-2xl p-4.5 shadow-xs flex items-center gap-3.5 hover:shadow-md transition-all group relative overflow-hidden ${statsPending > 0 ? "border-orange-200 ring-2 ring-orange-500/5" : "border-gray-100 hover:border-orange-200"}`}>
+                {statsPending > 0 && <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping" />}
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border transition-transform group-hover:scale-105 ${statsPending > 0 ? "bg-orange-50 text-orange-600 border-orange-100" : "bg-gray-50 text-gray-500 border-gray-100"}`}>
+                  <FileCheck2 className="w-5 h-5 animate-pulse" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">{t("admin.stats.pending")}</span>
+                  <span className={`text-base font-black block mt-0.5 tracking-tight truncate ${statsPending > 0 ? "text-orange-600" : "text-gray-900"}`}>{statsPending}</span>
+                </div>
+              </div>
+
+              <div className="bg-white border border-blue-100/80 rounded-2xl p-4.5 shadow-xs flex items-center gap-3.5 hover:shadow-md hover:border-blue-200 transition-all group">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100 transition-transform group-hover:scale-105">
+                  <Truck className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">{t("admin.stats.active")}</span>
+                  <span className="text-base font-black text-gray-900 block mt-0.5 tracking-tight truncate">{statsActive}</span>
+                </div>
+              </div>
+
+              <div className="bg-white border border-slate-100/80 rounded-2xl p-4.5 shadow-xs flex items-center gap-3.5 hover:shadow-md hover:border-slate-200 transition-all group">
+                <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-700 flex items-center justify-center shrink-0 border border-slate-100 transition-transform group-hover:scale-105">
+                  <ClipboardList className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">{t("admin.stats.completed")}</span>
+                  <span className="text-base font-black text-gray-900 block mt-0.5 tracking-tight truncate">{statsTotal}</span>
+                </div>
+              </div>
+            </div>
+
+
+
+            {/* Zone 2: All orders */}
+            <div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3.5">
+                <h2 className="font-bold text-gray-900 text-sm">{t("admin.orders.all")}</h2>
+
+                {/* Advanced Search & Filtering Controls */}
+                <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                  {/* Shipping mode toggle */}
+                  <div className="flex bg-white border border-gray-200/70 p-0.5 rounded-xl shadow-2xs shrink-0 self-start sm:self-auto">
+                    {([
+                      { key: "all", labelKey: "admin.orders.filter_all" },
+                      { key: "delivery", labelKey: "admin.orders.filter_delivery" },
+                      { key: "pickup", labelKey: "admin.orders.filter_pickup" }
+                    ] as const).map((opt) => (
+                      <button
+                        key={opt.key}
+                        onClick={() => setShippingFilter(opt.key)}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${shippingFilter === opt.key
+                            ? "bg-slate-900 text-white shadow-xs"
+                            : "text-gray-500 hover:text-gray-900"
+                          }`}
+                      >
+                        {t(opt.labelKey)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Advanced Search Input Bar */}
+              <div className="bg-white border border-gray-200/60 rounded-2xl px-4.5 py-3 shadow-2xs mb-4.5 flex items-center gap-3 focus-within:border-[#85241F] focus-within:ring-2 focus-within:ring-[#85241F]/5 transition-all">
+                <Search className="w-4 h-4 text-gray-400 shrink-0" />
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t("admin.orders.search_placeholder")}
+                  className="flex-1 bg-transparent border-none text-xs outline-none text-gray-800 placeholder:text-gray-400"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className="text-gray-400 hover:text-gray-600 cursor-pointer">
+                    <XCircle className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Status filter chips */}
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none mb-3.5 border-b border-gray-100">
+                {(["all", ...ORDER_STATUSES] as const).map((s) => {
+                  const count = s === "all"
+                    ? orders.length
+                    : orders.filter((o) => {
+                      const displayStatus = o.status === "payment_review" ? "paid" : o.status;
+                      return displayStatus === s;
+                    }).length;
+                  if (count === 0 && s !== "all") return null;
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => setStatusFilter(s)}
+                      className={`shrink-0 h-8 px-3 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${statusFilter === s
+                          ? "bg-[#85241F] text-white border-[#85241F] shadow-sm shadow-[#85241F]/10"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-[#85241F]/30 hover:bg-gray-50"
+                        }`}
+                    >
+                      {s === "all" ? t("admin.orders.filter_all") : t(`admin.status.${s as OrderStatus}`)} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {filteredOrders.map((order) => (
+                  <OrderRow key={order.id} order={order} onStatusChange={triggerStatusConfirm} onApproveSlip={approveSlip} t={t} onViewSlip={setLightbox} />
+                ))}
+                {filteredOrders.length === 0 && (
+                  <div className="bg-white border border-gray-100 rounded-3xl py-12 flex flex-col items-center justify-center text-center shadow-2xs">
+                    <AlertCircle className="w-8 h-8 text-gray-300 animate-pulse mb-2" />
+                    <p className="text-xs text-gray-400 font-semibold">{t("admin.orders.empty")}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* ── Products Tab ── */}
+          <TabsContent value="products" className="mt-4 flex flex-col gap-4 animate-in fade-in duration-200">
+            <AddProductForm onSubmit={addProduct} notify={notify} t={t} />
+            {products.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+                {products.map((p) => (
+                  <ProductCard key={p.id} product={p} onUpdate={updateProduct} onDelete={deleteProduct} t={t} />
+                ))}
+              </div>
+            )}
+            {products.length === 0 && (
+              <div className="bg-white border border-gray-100 rounded-3xl py-12 flex flex-col items-center justify-center text-center shadow-2xs">
+                <Package className="w-8 h-8 text-gray-300 mb-2" />
+                <p className="text-xs text-gray-400 font-semibold">{t("admin.products.empty")}</p>
+              </div>
+            )}
+          </TabsContent>
         </Tabs>
       </div>
     </main>
   );
 }
 
-function OrderFilterNav({
-  orders,
-  setStatusFilter,
-  statusFilter,
-}: {
-  orders: Order[];
-  setStatusFilter: (status: OrderStatus | "all") => void;
-  statusFilter: OrderStatus | "all";
-}) {
-  const filters: Array<OrderStatus | "all"> = ["all", ...orderStatuses];
 
-  return (
-    <nav className="-mx-5 overflow-x-auto px-5 pb-1">
-      <div className="flex min-w-max gap-2">
-        {filters.map((filter) => {
-          const active = statusFilter === filter;
-          const count =
-            filter === "all"
-              ? orders.length
-              : orders.filter((order) => order.status === filter).length;
 
-          return (
-            <button
-              className={`flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium shadow-sm transition-colors ${active
-                ? "bg-blue-600 text-white shadow-blue-300/50"
-                : "bg-white/90 text-slate-600 ring-1 ring-blue-100 hover:bg-blue-50"
-                }`}
-              key={filter}
-              onClick={() => setStatusFilter(filter)}
-              type="button"
-            >
-              {filter !== "all" ? <span className={statusDot(filter)} /> : null}
-              <span className="capitalize">{filter}</span>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs ${active ? "bg-white/20 text-white" : "bg-blue-50 text-blue-700"
-                  }`}
-              >
-                {count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </nav>
-  );
-}
+/* ─── Order Row with Stepper timeline & mock parcel ────────────────────────── */
 
-function OrderTable({
-  mockSendEmail,
-  orders,
-  reviewSlip,
-  updateOrder,
-}: {
-  mockSendEmail: (order: Order) => void;
-  orders: Order[];
-  reviewSlip: (orderId: string, approved: boolean) => void;
-  updateOrder: (orderId: string, status: OrderStatus) => void;
-}) {
-  return (
-    <section className="overflow-hidden rounded-3xl border border-blue-100 bg-white/75">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Order</TableHead>
-            <TableHead>Customer</TableHead>
-            <TableHead>Items</TableHead>
-            <TableHead>Total</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Slip</TableHead>
-            <TableHead>Action</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {orders.map((order) => (
-            <React.Fragment key={order.id}>
-              <TableRow className={orderRowTone(order.status)}>
-                <TableCell>
-                  <div className="font-medium">{order.id}</div>
-                  <div className="text-xs text-zinc-500">{order.createdAt}</div>
-                </TableCell>
-                <TableCell>
-                  <div>{order.customerName}</div>
-                  <div className="text-xs text-zinc-500">
-                    {order.customerEmail}
-                  </div>
-                </TableCell>
-                <TableCell className="max-w-56 text-zinc-600">
-                  {order.productName}
-                </TableCell>
-                <TableCell>{money(order.total)}</TableCell>
-                <TableCell>
-                  <Badge variant={statusVariant(order.status)}>
-                    {order.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={statusVariant(order.slipStatus)}>
-                    {order.slipStatus}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <StatusSelect order={order} updateOrder={updateOrder} />
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell colSpan={7}>
-                  <SlipReview
-                    compact
-                    mockSendEmail={mockSendEmail}
-                    order={order}
-                    reviewSlip={reviewSlip}
-                  />
-                </TableCell>
-              </TableRow>
-            </React.Fragment>
-          ))}
-        </TableBody>
-      </Table>
-      {!orders.length ? (
-        <div className="p-6 text-center text-sm text-slate-500">
-          No orders match this filter.
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-function orderRowTone(status: OrderStatus) {
-  if (status === "paid") return "bg-emerald-50/70 hover:bg-emerald-50";
-  if (status === "cancelled") return "bg-red-50/70 hover:bg-red-50";
-  return "bg-amber-50/70 hover:bg-amber-50";
-}
-
-function statusDot(status: OrderStatus) {
-  if (status === "paid") return "size-3 rounded-full bg-emerald-500";
-  if (status === "cancelled") return "size-3 rounded-full bg-red-500";
-  if (status === "pending slip") return "size-3 rounded-full bg-amber-500";
-  return "size-3 rounded-full bg-blue-500";
-}
-
-function orderTone(status: OrderStatus) {
-  if (status === "paid") {
-    return {
-      card: "border-emerald-100 bg-emerald-50/95 shadow-emerald-200/50",
-      summary: "bg-white/80",
-      items: "bg-emerald-100/70",
-      label: "text-emerald-600",
-      total: "text-emerald-700",
-    };
-  }
-
-  if (status === "cancelled") {
-    return {
-      card: "border-red-100 bg-red-50/95 shadow-red-200/50",
-      summary: "bg-white/80",
-      items: "bg-red-100/70",
-      label: "text-red-600",
-      total: "text-red-700",
-    };
-  }
-
-  return {
-    card: "border-amber-100 bg-amber-50/95 shadow-amber-200/50",
-    summary: "bg-white/80",
-    items: "bg-amber-100/70",
-    label: "text-amber-600",
-    total: "text-amber-700",
-  };
-}
-
-function OrderCard({
-  mockSendEmail,
-  order,
-  reviewSlip,
-  updateOrder,
-}: {
-  mockSendEmail: (order: Order) => void;
+function OrderRow({ order, onStatusChange, onApproveSlip, t, onViewSlip }: {
   order: Order;
-  reviewSlip: (orderId: string, approved: boolean) => void;
-  updateOrder: (orderId: string, status: OrderStatus) => void;
+  onStatusChange: (id: string, s: OrderStatus) => void;
+  onApproveSlip: (orderId: string, approved: boolean) => void;
+  t: (key: string, replacements?: Record<string, string | number>) => string;
+  onViewSlip: (url: string) => void;
 }) {
-  const tone = orderTone(order.status);
+  const [open, setOpen] = React.useState(false);
+  const { lang } = useLanguage();
+
+  const isPickup = order.customer.address.includes("รับเอง");
+
+  // Premium Logistics Stepper States
+  const timelineSteps: OrderStatus[] = [
+    "paid",
+    "packing",
+    "shipped",
+    "completed",
+  ];
+
+  const stepperStatus = order.status === "payment_review" ? "paid" : order.status;
+  const currentIdx = timelineSteps.indexOf(stepperStatus);
 
   return (
-    <div className={`rounded-3xl border p-4 shadow-sm ${tone.card}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-base font-semibold">{order.id}</div>
-          <div className="text-xs text-zinc-500">{order.createdAt}</div>
-        </div>
-        <Badge variant={statusVariant(order.status)}>{order.status}</Badge>
-      </div>
+    <div className={`bg-white rounded-3xl border shadow-2xs overflow-hidden transition-all duration-200 ${open ? "border-slate-200/80 ring-3 ring-slate-100" : "border-slate-100 hover:border-slate-200"
+      }`}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 p-3.5 text-left hover:bg-slate-50/50 transition-colors cursor-pointer"
+      >
+        {/* Status dot */}
+        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${order.status === "completed" ? "bg-green-500" :
+            order.status === "paid" ? "bg-emerald-500 animate-pulse" :
+              order.status === "payment_review" ? "bg-orange-500 animate-bounce" :
+                "bg-blue-400"
+          }`} />
 
-      <div className="mt-4 grid gap-3 text-sm">
-        <div className={`rounded-2xl p-3 ${tone.summary}`}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xs font-medium uppercase text-slate-400">
-                Customer
-              </div>
-              <div className="mt-1 font-medium">{order.customerName}</div>
-              <div className="text-xs text-slate-500">{order.customerEmail}</div>
-            </div>
-            <div className="text-right">
-              <div className="text-xs font-medium uppercase text-slate-400">
-                Total
-              </div>
-              <strong className={`mt-1 block ${tone.total}`}>
-                {money(order.total)}
-              </strong>
-            </div>
-          </div>
-        </div>
-
-        <div className={`rounded-2xl p-3 ${tone.items}`}>
-          <div className={`text-xs font-medium uppercase ${tone.label}`}>
-            Items
-          </div>
-          <div className="mt-1 text-slate-700">{order.productName}</div>
-        </div>
-
-        <div className="grid gap-2">
-          <Label>Status</Label>
-          <StatusSelect order={order} updateOrder={updateOrder} />
-        </div>
-
-        <SlipReview
-          mockSendEmail={mockSendEmail}
-          order={order}
-          reviewSlip={reviewSlip}
-        />
-      </div>
-    </div>
-  );
-}
-
-function StatusSelect({
-  order,
-  updateOrder,
-}: {
-  order: Order;
-  updateOrder: (orderId: string, status: OrderStatus) => void;
-}) {
-  return (
-    <Select
-      onValueChange={(value) => updateOrder(order.id, value as OrderStatus)}
-      value={order.status}
-    >
-      <SelectTrigger>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {orderStatuses.map((status) => (
-          <SelectItem key={status} value={status}>
-            <span className="flex items-center gap-2">
-              <span
-                className={`size-2 rounded-full ${status === "paid"
-                  ? "bg-emerald-500"
-                  : status === "cancelled"
-                    ? "bg-red-500"
-                    : status === "pending slip"
-                      ? "bg-amber-500"
-                      : "bg-blue-500"
-                  }`}
-              />
-              {status}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-extrabold text-xs text-gray-900 leading-none">{order.customer.name}</span>
+            <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border ${STATUS_COLOR[order.status]}`}>
+              {t(`admin.status.${order.status}`)}
             </span>
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
-function SlipReview({
-  compact,
-  mockSendEmail,
-  order,
-  reviewSlip,
-}: {
-  compact?: boolean;
-  mockSendEmail: (order: Order) => void;
-  order: Order;
-  reviewSlip: (orderId: string, approved: boolean) => void;
-}) {
-  return (
-    <div
-      className={`mt-1 grid gap-3 rounded-3xl border border-zinc-200 bg-zinc-50 p-3 ${compact ? "lg:grid-cols-[220px_1fr]" : ""
-        } border-blue-100 bg-blue-50/70`}
-    >
-      <div className="overflow-hidden rounded-2xl border border-white bg-white shadow-sm">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          alt={`Slip for ${order.id}`}
-          className="h-44 w-full object-cover"
-          src={order.slipUrl}
-        />
-      </div>
-      <div className="grid content-start gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <div className="text-sm font-medium">Payment slip</div>
-            <div className="text-xs text-zinc-500">{money(order.total)}</div>
+            {order.slip.status === "pending" && (
+              <span className="text-[8px] font-black bg-orange-100 text-orange-600 px-2 py-0.5 rounded-md border border-orange-200 animate-pulse">
+                {t("admin.status.payment_review")}
+              </span>
+            )}
+            <span className="text-[9px] text-gray-300 font-bold font-mono">
+              #{order.id.slice(-6).toUpperCase()}
+            </span>
           </div>
-          <Badge variant={statusVariant(order.slipStatus)}>
-            {order.slipStatus}
-          </Badge>
+          <p className="text-[10px] text-gray-400 mt-1 font-semibold truncate">
+            {order.items.map((i) => {
+              const trName = t(`product.${i.productId}.name`);
+              const name = trName === `product.${i.productId}.name` ? i.name : trName;
+              return `${name} ×${i.quantity}`;
+            }).join(", ")}
+          </p>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex">
-          <Button onClick={() => reviewSlip(order.id, true)} size="sm">
-            <CheckCircle2 className="size-4" />
-            Approve
-          </Button>
-          <Button
-            onClick={() => reviewSlip(order.id, false)}
-            size="sm"
-            variant="destructive"
-          >
-            <XCircle className="size-4" />
-            Reject
-          </Button>
-          <Button onClick={() => mockSendEmail(order)} size="sm" variant="outline">
-            <Mail className="size-4" />
-            Email
-          </Button>
+
+        <div className="text-right shrink-0 mr-1">
+          <p className="font-black text-xs text-gray-950">{money(order.total)}</p>
+          <p className="text-[9px] text-gray-400 font-bold mt-1">{timeAgo(order.createdAt, lang)}</p>
+        </div>
+
+        {open ? <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />}
+      </button>
+
+      {open && (
+        <div className="border-t border-slate-100 p-4.5 bg-slate-50/20 flex flex-col gap-5 animate-in slide-in-from-top-2 duration-200">
+
+          {/* Redesigned Premium Logistics Stepper */}
+          <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-3xs">
+            <div className="flex items-center justify-between relative">
+              {/* Connector line */}
+              <div className="absolute top-3.5 left-6 right-6 h-0.5 bg-gray-100 z-0" />
+              <div
+                className="absolute top-3.5 left-6 h-0.5 bg-emerald-500 z-0 transition-all duration-500"
+                style={{ width: `${(Math.max(0, currentIdx) / (timelineSteps.length - 1)) * 92}%` }}
+              />
+
+              {timelineSteps.map((s, idx) => {
+                const done = idx < currentIdx || order.status === "completed";
+                const active = idx === currentIdx;
+
+                return (
+                  <div key={s} className="flex flex-col items-center z-10">
+                    <div className={`w-7.5 h-7.5 rounded-full flex items-center justify-center border-2 transition-all duration-300 font-black text-[10px] shadow-sm ${done ? "bg-emerald-500 border-emerald-500 text-white" :
+                        active ? "bg-white border-[#85241F] text-[#85241F] scale-110 ring-4 ring-[#85241F]/5" :
+                          "bg-white border-gray-200 text-gray-300"
+                      }`}>
+                      {done ? "✓" : idx + 1}
+                    </div>
+                    <span className={`text-[8px] font-bold mt-2 text-center max-w-[65px] truncate block ${active ? "text-[#85241F] font-black" : done ? "text-emerald-600" : "text-gray-400"
+                      }`}>
+                      {t(`admin.status.${s}`)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            {/* Redesigned Mock Parcel Label details block */}
+            <div className="bg-linear-to-br from-amber-50/20 to-amber-100/10 border-2 border-dashed border-amber-200/80 rounded-2xl p-4 shadow-3xs relative overflow-hidden flex flex-col justify-between">
+              {/* Corner Stamp */}
+              <div className="absolute -top-3 -right-3 w-16 h-16 bg-amber-500/10 border border-amber-500/20 rounded-full flex items-center justify-center text-[8px] font-black text-amber-600/40 rotate-12 uppercase pointer-events-none select-none">
+                HLLC POST
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between border-b border-amber-200/50 pb-2 mb-3.5">
+                  <div className="flex items-center gap-1.5 text-amber-800 text-[10px] font-black">
+                    <Truck className="w-3.5 h-3.5" />
+                    <span>{isPickup ? t("admin.order.pickup_label") : t("admin.order.shipping_label")}</span>
+                  </div>
+                  <span className="text-[8px] text-amber-500 font-bold font-mono">CODE: #{order.id.slice(-6).toUpperCase()}</span>
+                </div>
+
+                {/* Simulated Barcode */}
+                <div className="flex gap-0.5 justify-center py-1 bg-white border border-amber-200/40 rounded-lg mb-3 max-w-[180px] mx-auto select-none opacity-80 pointer-events-none">
+                  {[1, 3, 1, 2, 1, 4, 1, 2, 3, 1, 2, 1, 1, 3, 1, 2, 4, 1, 2, 1].map((w, i) => (
+                    <div key={i} className="bg-amber-950 h-5" style={{ width: `${w}px` }} />
+                  ))}
+                </div>
+
+                <div className="text-xs text-gray-700 space-y-2 leading-normal font-semibold">
+                  <div>
+                    <span className="text-[9px] text-gray-400 block mb-0.5">{isPickup ? t("admin.order.pickup_details") : t("admin.order.address")}</span>
+                    <p className="text-gray-800 leading-relaxed pl-1 border-l-2 border-amber-300">{order.customer.address}</p>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2 pl-1">
+                    <span className="text-[9px] text-gray-400 block shrink-0">{t("admin.order.phone")}</span>
+                    <span className="text-gray-700 font-mono">{order.customer.phone}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dotted cut line */}
+              <div className="border-t border-dashed border-amber-200/60 pt-3 mt-3 flex items-center justify-between text-[8px] font-bold text-amber-600/80">
+                <span>THANK YOU FOR SHOPPING!</span>
+                <span>D1 DEPOT</span>
+              </div>
+            </div>
+
+            {/* Slip display / status changer */}
+            <div className="flex flex-col gap-4">
+              {/* Slip thumbnail if exists and reviewed */}
+              {order.slip.imageUrl && order.slip.status !== "pending" && (
+                <div className="flex items-center gap-4 bg-white border border-gray-100 rounded-2xl p-3.5 shadow-3xs">
+                  <button
+                    onClick={() => order.slip.imageUrl && onViewSlip(order.slip.imageUrl)}
+                    className="w-12 h-16 rounded-xl overflow-hidden shrink-0 bg-gray-50 shadow-xs relative group border border-gray-100 cursor-pointer"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={order.slip.imageUrl} alt="slip" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center transition-colors">
+                      <span className="opacity-0 group-hover:opacity-100 text-white text-[8px] font-black bg-black/55 px-1.5 py-0.5 rounded-md">
+                        {t("admin.slip.view")}
+                      </span>
+                    </div>
+                  </button>
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-gray-400 font-bold mb-1">{t("admin.order.slip_status")}</p>
+                    <Badge variant={order.slip.status === "approved" ? "success" : "destructive"} className="text-[9px] font-black rounded-lg">
+                      {order.slip.status === "approved" ? t("admin.order.shipping_label") === "ใบจ่าหน้าพัสดุ" ? "อนุมัติแล้ว" : "Approved" : "ปฏิเสธแล้ว"}
+                    </Badge>
+                  </div>
+                </div>
+              )}
+
+              {/* Integrated interactive Slip Approval Card for Pending Slips */}
+              {order.slip.imageUrl && order.slip.status === "pending" && (
+                <div className="bg-orange-50/70 border border-orange-100 rounded-2xl p-4 shadow-3xs flex flex-col gap-3 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between border-b border-orange-200/40 pb-2 mb-1">
+                    <span className="text-[10px] text-orange-800 font-extrabold uppercase tracking-wider flex items-center gap-1.5">
+                      <FileCheck2 className="w-3.5 h-3.5 text-orange-600" />
+                      {t("admin.status.payment_review")}
+                    </span>
+                    <span className="text-[9px] text-orange-600 font-mono font-bold">{t("admin.order.slip_status")}</span>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => order.slip.imageUrl && onViewSlip(order.slip.imageUrl)}
+                      className="w-16 h-20 rounded-xl overflow-hidden shrink-0 bg-gray-50 shadow-xs relative group border border-orange-200/50 cursor-pointer"
+                    >
+                      <img src={order.slip.imageUrl} alt="slip" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center transition-colors">
+                        <span className="opacity-0 group-hover:opacity-100 text-white text-[8px] font-black bg-black/55 px-1.5 py-0.5 rounded-md">
+                          {t("admin.slip.view")}
+                        </span>
+                      </div>
+                    </button>
+                    <div className="flex-1 flex flex-col justify-between py-0.5">
+                      <div>
+                        <span className="text-[9px] text-orange-600 font-bold block">{t("checkout.payment_amount")}</span>
+                        <span className="text-sm font-black text-orange-950 block mt-0.5">{money(order.slip.amount || order.total)}</span>
+                      </div>
+                      <div className="flex gap-2 mt-1">
+                        <button
+                          onClick={() => onApproveSlip(order.id, true)}
+                          className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold py-2 px-2.5 rounded-xl text-[10px] shadow-sm active:scale-97 transition-all cursor-pointer text-center"
+                        >
+                          {t("admin.slip.approve")}
+                        </button>
+                        <button
+                          onClick={() => onApproveSlip(order.id, false)}
+                          className="flex-1 bg-white border border-red-200 hover:bg-red-50 text-red-600 font-extrabold py-2 px-2.5 rounded-xl text-[10px] active:scale-97 transition-all cursor-pointer text-center"
+                        >
+                          {t("admin.slip.reject")}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Status changer — Premium linear next-step action layout */}
+              <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-3xs flex-1 flex flex-col justify-between">
+                <div>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">{t("admin.order.change_status")}</p>
+
+                  {(() => {
+                    const stepperStatus = order.status === "payment_review" ? "paid" : order.status;
+                    const currentIdx = timelineSteps.indexOf(stepperStatus);
+                    const prevStatus = currentIdx > 0 ? timelineSteps[currentIdx - 1] : null;
+                    const nextStatus = currentIdx !== -1 && currentIdx < timelineSteps.length - 1 ? timelineSteps[currentIdx + 1] : null;
+
+                    if (order.status === "completed") {
+                      return (
+                        <div className="flex flex-col gap-3">
+                          <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3.5 flex items-center gap-2.5 text-emerald-800 text-xs font-bold shadow-3xs">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <span>{t("admin.order.is_completed")}</span>
+                          </div>
+                          {prevStatus && (
+                            <button
+                              onClick={() => onStatusChange(order.id, prevStatus)}
+                              className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-500 hover:text-gray-800 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer mt-1"
+                            >
+                              <span className="text-[11px] font-semibold">⮌</span>
+                              <span>{t("admin.order.prev_stage")}</span>
+                              <span className="bg-gray-100 px-2 py-0.5 rounded-lg text-[9px] font-extrabold uppercase text-gray-600">
+                                {t(`admin.status.${prevStatus}`)}
+                              </span>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="flex flex-col gap-3">
+                        {/* Proceed to Next State CTA */}
+                        {nextStatus && (
+                          <button
+                            onClick={() => onStatusChange(order.id, nextStatus)}
+                            className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-[#85241F]/15 active:scale-98 transition-all cursor-pointer"
+                          >
+                            <span>{t("admin.order.next_stage")}</span>
+                            <span className="bg-white/20 px-2 py-0.5 rounded-lg text-[9px] font-extrabold uppercase">
+                              {t(`admin.status.${nextStatus}`)}
+                            </span>
+                            <span className="ml-1 text-sm font-light">➔</span>
+                          </button>
+                        )}
+
+                        {/* Back to Previous State CTA */}
+                        {prevStatus && (
+                          <button
+                            onClick={() => onStatusChange(order.id, prevStatus)}
+                            className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-500 hover:text-gray-800 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer"
+                          >
+                            <span className="text-[11px] font-semibold">⮌</span>
+                            <span>{t("admin.order.prev_stage")}</span>
+                            <span className="bg-gray-100 px-2 py-0.5 rounded-lg text-[9px] font-extrabold uppercase text-gray-600">
+                              {t(`admin.status.${prevStatus}`)}
+                            </span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                <div className="border-t border-gray-50 pt-3 mt-3 flex items-center justify-between text-[10px] font-bold text-gray-400">
+                  <span>{t("admin.order.item")}</span>
+                  <span>{order.items.length} {t("shop.items_count")}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Add Product Form ───────────────────────────────────────────────────── */
+
+function AddProductForm({ onSubmit, notify, t }: {
+  onSubmit: (fd: FormData) => void;
+  notify: (msg: string) => void;
+  t: (key: string, replacements?: Record<string, string | number>) => string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [imagePreview, setImagePreview] = React.useState("");
+  const [imageMode, setImageMode] = React.useState<"upload" | "url">("upload");
+  const fileRef = React.useRef<HTMLInputElement>(null);
+  const formRef = React.useRef<HTMLFormElement>(null);
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setImagePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    if (imageMode === "upload" && imagePreview) fd.set("imageUrl", imagePreview);
+    onSubmit(fd);
+    formRef.current?.reset();
+    setImagePreview("");
+    setOpen(false);
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-xs">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-2">
+          <PackagePlus className="w-5 h-5 text-[#85241F]" />
+          <span className="font-extrabold text-xs text-gray-900">{t("admin.products.add_title")}</span>
+        </div>
+        {open ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+      </button>
+
+      {open && (
+        <div className="border-t border-gray-100 p-4 animate-in slide-in-from-top-2 duration-200">
+          <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-3.5">
+            {/* Image toggle */}
+            <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
+              {(["upload", "url"] as const).map((m) => (
+                <button key={m} type="button" onClick={() => { setImageMode(m); setImagePreview(""); }}
+                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-colors cursor-pointer ${imageMode === m ? "bg-white text-[#85241F] shadow-xs" : "text-gray-500"}`}>
+                  {m === "upload" ? t("admin.products.upload") : t("admin.products.url")}
+                </button>
+              ))}
+            </div>
+
+            {imageMode === "upload" ? (
+              <>
+                <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+                {imagePreview ? (
+                  <div className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={imagePreview} alt="preview" className="w-full h-36 object-cover rounded-xl border border-gray-200" />
+                    <button type="button" onClick={() => setImagePreview("")}
+                      className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center cursor-pointer">
+                      <XCircle className="w-4 h-4 text-gray-400" />
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => fileRef.current?.click()}
+                    className="w-full border-2 border-dashed border-gray-200 rounded-xl py-6 flex flex-col items-center gap-1.5 hover:border-[#85241F]/30 transition-colors cursor-pointer">
+                    <Upload className="w-5 h-5 text-gray-400" />
+                    <span className="text-xs text-gray-400 font-bold">{t("admin.products.upload_tap")}</span>
+                  </button>
+                )}
+              </>
+            ) : (
+              <Input name="imageUrl" placeholder="https://..." value={imagePreview}
+                onChange={(e) => setImagePreview(e.target.value)}
+                className="rounded-xl border-gray-200 text-xs" />
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.name")}</Label>
+                <Input name="name" required className="rounded-xl border-gray-200 text-xs h-10" />
+              </div>
+              <div>
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.price")}</Label>
+                <Input name="price" type="number" min="0" required className="rounded-xl border-gray-200 text-xs h-10" />
+              </div>
+              <div>
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.stock")}</Label>
+                <Input name="stock" type="number" min="0" required className="rounded-xl border-gray-200 text-xs h-10" />
+              </div>
+              <div className="col-span-2">
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.discount")}</Label>
+                <div className="relative">
+                  <Input name="discount" type="number" min="0" max="100" placeholder="0"
+                    className="rounded-xl border-gray-200 pr-8 text-xs h-10" />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                </div>
+              </div>
+              <div className="col-span-2">
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.description")}</Label>
+                <Textarea name="description" rows={2} className="rounded-xl border-gray-200 text-xs resize-none" />
+              </div>
+            </div>
+
+            <Button type="submit" className="bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-11 w-full text-xs font-bold shadow-md shadow-[#85241F]/10 cursor-pointer transition-all active:scale-98">
+              <PackagePlus className="w-4 h-4 mr-1" /> {t("admin.products.add_title")}
+            </Button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Product Card ───────────────────────────────────────────────────────── */
+
+function ProductCard({ product, onUpdate, onDelete, t }: {
+  product: Product;
+  onUpdate: (p: Product) => void;
+  onDelete: (id: string) => void;
+  t: (key: string, replacements?: Record<string, string | number>) => string;
+}) {
+  const [editing, setEditing] = React.useState(false);
+  const [form, setForm] = React.useState({ ...product });
+  const [imagePreview, setImagePreview] = React.useState(product.imageUrl ?? "");
+  const fileRef = React.useRef<HTMLInputElement>(null);
+
+  const translatedName = t(`product.${product.id}.name`) === `product.${product.id}.name` ? product.name : t(`product.${product.id}.name`);
+
+  const discountedPrice = form.discount ? Math.round(form.price * (1 - form.discount / 100)) : null;
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string;
+      setImagePreview(result);
+      setForm((f) => ({ ...f, imageUrl: result }));
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleSave() {
+    onUpdate({ ...form, imageUrl: imagePreview || undefined });
+    setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <div className="bg-white rounded-3xl border border-[#85241F]/30 overflow-hidden shadow-md col-span-2 sm:col-span-1 animate-in zoom-in-95 duration-200">
+        {/* Image preview */}
+        <div className="relative aspect-square bg-gray-50 overflow-hidden">
+          {imagePreview
+            ? <img src={imagePreview} alt="" className="w-full h-full object-cover" />
+            : <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-8 h-8 text-gray-300" /></div>}
+          <button type="button" onClick={() => fileRef.current?.click()}
+            className="absolute bottom-2 right-2 bg-white/95 backdrop-blur-xs rounded-full px-2.5 py-1.5 text-[9px] font-black shadow-sm flex items-center gap-1 border border-gray-100 cursor-pointer hover:bg-gray-50">
+            <Upload className="w-3 h-3 text-[#85241F]" /> {t("admin.products.edit.change_image")}
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+        </div>
+
+        <div className="p-3 flex flex-col gap-2.5">
+          <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            placeholder="ชื่อสินค้า" className="rounded-xl border-gray-200 text-xs h-9 font-semibold" />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">{t("admin.products.label.price")}</Label>
+              <Input type="number" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: Number(e.target.value) }))}
+                className="rounded-xl border-gray-200 text-xs h-9" />
+            </div>
+            <div>
+              <Label className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">{t("admin.products.label.stock")}</Label>
+              <Input type="number" value={form.stock} onChange={(e) => setForm((f) => ({ ...f, stock: Number(e.target.value) }))}
+                className="rounded-xl border-gray-200 text-xs h-9" />
+            </div>
+          </div>
+          <div>
+            <Label className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">{t("admin.products.label.discount")}</Label>
+            <div className="relative">
+              <Input type="number" min="0" max="100" value={form.discount ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, discount: e.target.value ? Number(e.target.value) : undefined }))}
+                placeholder="0" className="rounded-xl border-gray-200 text-xs h-9 pr-7" />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+            </div>
+            {form.discount ? (
+              <p className="text-[10px] text-emerald-600 mt-1.5 font-bold">
+                {t("admin.products.edit.discounted")} <span className="font-extrabold">{money(Math.round(form.price * (1 - form.discount / 100)))}</span>
+              </p>
+            ) : null}
+          </div>
+          <div className="flex gap-2 mt-1 border-t border-gray-50 pt-2.5">
+            <Button onClick={handleSave} className="flex-1 bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-9 text-[10px] font-bold shadow-sm cursor-pointer transition-all active:scale-97">
+              {t("admin.products.edit.save")}
+            </Button>
+            <Button onClick={() => setEditing(false)} variant="outline" className="flex-1 rounded-xl h-9 text-[10px] font-bold cursor-pointer transition-all active:scale-97">
+              {t("admin.modal.cancel")}
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Metric({
-  label,
-  tone,
-  value,
-}: {
-  label: string;
-  tone: "amber" | "blue" | "violet";
-  value: number;
-}) {
-  const styles = {
-    amber: "from-amber-50 to-orange-100 text-amber-700 ring-amber-200",
-    blue: "from-blue-50 to-sky-100 text-blue-700 ring-blue-200",
-    violet: "from-violet-50 to-fuchsia-100 text-violet-700 ring-violet-200",
-  };
+    );
+  }
 
   return (
-    <div
-      className={`rounded-2xl bg-gradient-to-br px-3 py-3 shadow-sm ring-1 ${styles[tone]} sm:px-4`}
-    >
-      <div className="text-xs font-medium opacity-75">{label}</div>
-      <div className="mt-1 text-xl font-semibold sm:text-2xl">{value}</div>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  name,
-  textarea,
-  type = "text",
-}: {
-  label: string;
-  name: string;
-  textarea?: boolean;
-  type?: string;
-}) {
-  return (
-    <div className="grid gap-2">
-      <Label htmlFor={name}>{label}</Label>
-      {textarea ? (
-        <Textarea id={name} name={name} />
-      ) : (
-        <Input id={name} name={name} type={type} />
-      )}
+    <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-xs hover:shadow-md hover:border-gray-200/80 transition-all duration-200 flex flex-col group">
+      <div className="relative aspect-square bg-gray-50 overflow-hidden">
+        {imagePreview
+          ? <img src={imagePreview} alt={translatedName} className="w-full h-full object-cover" />
+          : <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-8 h-8 text-gray-300" /></div>}
+        {product.discount ? (
+          <span className="absolute top-2.5 left-2.5 bg-[#85241F] text-white text-[9px] font-black px-2 py-0.5 rounded-lg shadow-sm">
+            -{product.discount}%
+          </span>
+        ) : null}
+        {/* Action buttons with nice group hover reveal */}
+        <div className="absolute top-2.5 right-2.5 flex gap-1.5 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
+          <button onClick={() => setEditing(true)}
+            className="w-7.5 h-7.5 bg-white/95 backdrop-blur-xs rounded-full shadow flex items-center justify-center hover:bg-gray-100 border border-gray-100 cursor-pointer transition-colors shadow-slate-200/50">
+            <Pencil className="w-3.5 h-3.5 text-gray-600" />
+          </button>
+          <button onClick={() => { if (confirm(t("admin.products.edit.delete_confirm"))) onDelete(product.id); }}
+            className="w-7.5 h-7.5 bg-white/95 backdrop-blur-xs rounded-full shadow flex items-center justify-center hover:bg-red-50 border border-gray-100 cursor-pointer transition-colors shadow-slate-200/50">
+            <Trash2 className="w-3.5 h-3.5 text-red-500" />
+          </button>
+        </div>
+      </div>
+      <div className="p-3.5 flex-1 flex flex-col justify-between">
+        <p className="font-extrabold text-xs text-gray-800 truncate leading-tight">{translatedName}</p>
+        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
+          <div>
+            {discountedPrice ? (
+              <div>
+                <span className="font-black text-[#85241F] text-xs">{money(discountedPrice)}</span>
+                <span className="text-[9px] text-gray-400 line-through ml-1.5 font-bold">{money(product.price)}</span>
+              </div>
+            ) : (
+              <span className="font-black text-[#85241F] text-xs">{money(product.price)}</span>
+            )}
+          </div>
+          <span className="text-[10px] text-gray-400 font-bold bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-lg">{product.stock} {t("admin.products.edit.units")}</span>
+        </div>
+      </div>
     </div>
   );
 }
