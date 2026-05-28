@@ -1,5 +1,5 @@
-import { EcomDashboard } from "@/components/store/ecom-dashboard";
+import { AuthPage } from "@/components/store/auth-page";
 
 export default function Home() {
-  return <EcomDashboard />;
+  return <AuthPage />;
 }
