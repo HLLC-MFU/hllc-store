@@ -10,7 +10,6 @@ import {
   PackagePlus,
   Search,
   Settings2,
-  Truck,
   XCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -45,8 +44,6 @@ import { Textarea } from "@/components/ui/textarea";
 type OrderStatus =
   | "pending slip"
   | "paid"
-  | "packing"
-  | "shipped"
   | "cancelled";
 
 type Product = {
@@ -71,13 +68,7 @@ type Order = {
   createdAt: string;
 };
 
-const orderStatuses: OrderStatus[] = [
-  "pending slip",
-  "paid",
-  "packing",
-  "shipped",
-  "cancelled",
-];
+const orderStatuses: OrderStatus[] = ["pending slip", "paid", "cancelled"];
 
 const initialProducts: Product[] = [
   {
@@ -129,7 +120,7 @@ const initialOrders: Order[] = [
     customerName: "Ploy K.",
     customerEmail: "ploy@example.com",
     total: 390,
-    status: "packing",
+    status: "paid",
     productName: "Canvas Tote Bag",
     slipUrl: "/image.png",
     slipStatus: "approved",
@@ -140,7 +131,7 @@ const initialOrders: Order[] = [
     customerName: "Win T.",
     customerEmail: "win@example.com",
     total: 1290,
-    status: "shipped",
+    status: "paid",
     productName: "HLLC Signature Hoodie",
     slipUrl: "/image.png",
     slipStatus: "approved",
@@ -157,7 +148,7 @@ function money(value: number) {
 }
 
 function statusVariant(status: OrderStatus | Order["slipStatus"]) {
-  if (["paid", "shipped", "approved"].includes(status)) return "success";
+  if (["paid", "approved"].includes(status)) return "success";
   if (["cancelled", "rejected"].includes(status)) return "destructive";
   if (["pending slip", "pending"].includes(status)) return "warning";
   return "secondary";
@@ -167,13 +158,16 @@ export function AdminPresentation() {
   const [products, setProducts] = React.useState(initialProducts);
   const [orders, setOrders] = React.useState(initialOrders);
   const [search, setSearch] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all">(
+    "all",
+  );
 
   const filteredOrders = orders.filter((order) =>
     [order.id, order.customerName, order.productName]
       .join(" ")
       .toLowerCase()
       .includes(search.toLowerCase()),
-  );
+  ).filter((order) => statusFilter === "all" || order.status === statusFilter);
 
   function addProduct(formData: FormData) {
     const name = String(formData.get("name") ?? "").trim();
@@ -300,7 +294,13 @@ export function AdminPresentation() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-3 lg:hidden">
+                <OrderFilterNav
+                  orders={orders}
+                  statusFilter={statusFilter}
+                  setStatusFilter={setStatusFilter}
+                />
+
+                <div className="mt-4 grid gap-3 lg:hidden">
                   {filteredOrders.map((order) => (
                     <OrderCard
                       key={order.id}
@@ -312,67 +312,13 @@ export function AdminPresentation() {
                   ))}
                 </div>
 
-                <div className="hidden lg:block">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Order</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Items</TableHead>
-                        <TableHead>Total</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredOrders.map((order) => (
-                        <React.Fragment key={order.id}>
-                          <TableRow>
-                            <TableCell>
-                              <div className="font-medium">{order.id}</div>
-                              <div className="text-xs text-zinc-500">
-                                {order.createdAt}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div>{order.customerName}</div>
-                              <div className="text-xs text-zinc-500">
-                                {order.customerEmail}
-                              </div>
-                            </TableCell>
-                            <TableCell className="max-w-56 text-zinc-600">
-                              {order.productName}
-                            </TableCell>
-                            <TableCell>{money(order.total)}</TableCell>
-                            <TableCell>
-                              <Badge variant={statusVariant(order.status)}>
-                                {order.status}
-                              </Badge>
-                              <div className="mt-1">
-                                <Badge variant={statusVariant(order.slipStatus)}>
-                                  slip {order.slipStatus}
-                                </Badge>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <StatusSelect order={order} updateOrder={updateOrder} />
-                            </TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell colSpan={6}>
-                              <SlipReview
-                                compact
-                                mockSendEmail={mockSendEmail}
-                                order={order}
-                                reviewSlip={reviewSlip}
-                                updateOrder={updateOrder}
-                              />
-                            </TableCell>
-                          </TableRow>
-                        </React.Fragment>
-                      ))}
-                    </TableBody>
-                  </Table>
+                <div className="mt-4 hidden lg:block">
+                  <OrderTable
+                    mockSendEmail={mockSendEmail}
+                    orders={filteredOrders}
+                    reviewSlip={reviewSlip}
+                    updateOrder={updateOrder}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -457,6 +403,178 @@ export function AdminPresentation() {
   );
 }
 
+function OrderFilterNav({
+  orders,
+  setStatusFilter,
+  statusFilter,
+}: {
+  orders: Order[];
+  setStatusFilter: (status: OrderStatus | "all") => void;
+  statusFilter: OrderStatus | "all";
+}) {
+  const filters: Array<OrderStatus | "all"> = ["all", ...orderStatuses];
+
+  return (
+    <nav className="-mx-5 overflow-x-auto px-5 pb-1">
+      <div className="flex min-w-max gap-2">
+        {filters.map((filter) => {
+          const active = statusFilter === filter;
+          const count =
+            filter === "all"
+              ? orders.length
+              : orders.filter((order) => order.status === filter).length;
+
+          return (
+            <button
+              className={`flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium shadow-sm transition-colors ${
+                active
+                  ? "bg-blue-600 text-white shadow-blue-300/50"
+                  : "bg-white/90 text-slate-600 ring-1 ring-blue-100 hover:bg-blue-50"
+              }`}
+              key={filter}
+              onClick={() => setStatusFilter(filter)}
+              type="button"
+            >
+              {filter !== "all" ? <span className={statusDot(filter)} /> : null}
+              <span className="capitalize">{filter}</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs ${
+                  active ? "bg-white/20 text-white" : "bg-blue-50 text-blue-700"
+                }`}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
+function OrderTable({
+  mockSendEmail,
+  orders,
+  reviewSlip,
+  updateOrder,
+}: {
+  mockSendEmail: (order: Order) => void;
+  orders: Order[];
+  reviewSlip: (orderId: string, approved: boolean) => void;
+  updateOrder: (orderId: string, status: OrderStatus) => void;
+}) {
+  return (
+    <section className="overflow-hidden rounded-3xl border border-blue-100 bg-white/75">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Order</TableHead>
+            <TableHead>Customer</TableHead>
+            <TableHead>Items</TableHead>
+            <TableHead>Total</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Slip</TableHead>
+            <TableHead>Action</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {orders.map((order) => (
+            <React.Fragment key={order.id}>
+              <TableRow className={orderRowTone(order.status)}>
+                <TableCell>
+                  <div className="font-medium">{order.id}</div>
+                  <div className="text-xs text-zinc-500">{order.createdAt}</div>
+                </TableCell>
+                <TableCell>
+                  <div>{order.customerName}</div>
+                  <div className="text-xs text-zinc-500">
+                    {order.customerEmail}
+                  </div>
+                </TableCell>
+                <TableCell className="max-w-56 text-zinc-600">
+                  {order.productName}
+                </TableCell>
+                <TableCell>{money(order.total)}</TableCell>
+                <TableCell>
+                  <Badge variant={statusVariant(order.status)}>
+                    {order.status}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={statusVariant(order.slipStatus)}>
+                    {order.slipStatus}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <StatusSelect order={order} updateOrder={updateOrder} />
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell colSpan={7}>
+                  <SlipReview
+                    compact
+                    mockSendEmail={mockSendEmail}
+                    order={order}
+                    reviewSlip={reviewSlip}
+                  />
+                </TableCell>
+              </TableRow>
+            </React.Fragment>
+          ))}
+        </TableBody>
+      </Table>
+      {!orders.length ? (
+        <div className="p-6 text-center text-sm text-slate-500">
+          No orders match this filter.
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function orderRowTone(status: OrderStatus) {
+  if (status === "paid") return "bg-emerald-50/70 hover:bg-emerald-50";
+  if (status === "cancelled") return "bg-red-50/70 hover:bg-red-50";
+  return "bg-amber-50/70 hover:bg-amber-50";
+}
+
+function statusDot(status: OrderStatus) {
+  if (status === "paid") return "size-3 rounded-full bg-emerald-500";
+  if (status === "cancelled") return "size-3 rounded-full bg-red-500";
+  if (status === "pending slip") return "size-3 rounded-full bg-amber-500";
+  return "size-3 rounded-full bg-blue-500";
+}
+
+function orderTone(status: OrderStatus) {
+  if (status === "paid") {
+    return {
+      card: "border-emerald-100 bg-emerald-50/95 shadow-emerald-200/50",
+      summary: "bg-white/80",
+      items: "bg-emerald-100/70",
+      label: "text-emerald-600",
+      total: "text-emerald-700",
+    };
+  }
+
+  if (status === "cancelled") {
+    return {
+      card: "border-red-100 bg-red-50/95 shadow-red-200/50",
+      summary: "bg-white/80",
+      items: "bg-red-100/70",
+      label: "text-red-600",
+      total: "text-red-700",
+    };
+  }
+
+  return {
+    card: "border-amber-100 bg-amber-50/95 shadow-amber-200/50",
+    summary: "bg-white/80",
+    items: "bg-amber-100/70",
+    label: "text-amber-600",
+    total: "text-amber-700",
+  };
+}
+
 function OrderCard({
   mockSendEmail,
   order,
@@ -468,8 +586,10 @@ function OrderCard({
   reviewSlip: (orderId: string, approved: boolean) => void;
   updateOrder: (orderId: string, status: OrderStatus) => void;
 }) {
+  const tone = orderTone(order.status);
+
   return (
-    <div className="rounded-3xl border border-white/80 bg-white/95 p-4 shadow-sm shadow-blue-200/40">
+    <div className={`rounded-3xl border p-4 shadow-sm ${tone.card}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-base font-semibold">{order.id}</div>
@@ -479,7 +599,7 @@ function OrderCard({
       </div>
 
       <div className="mt-4 grid gap-3 text-sm">
-        <div className="rounded-2xl bg-slate-50 p-3">
+        <div className={`rounded-2xl p-3 ${tone.summary}`}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-xs font-medium uppercase text-slate-400">
@@ -492,15 +612,17 @@ function OrderCard({
               <div className="text-xs font-medium uppercase text-slate-400">
                 Total
               </div>
-              <strong className="mt-1 block text-blue-700">
+              <strong className={`mt-1 block ${tone.total}`}>
                 {money(order.total)}
               </strong>
             </div>
           </div>
         </div>
 
-        <div className="rounded-2xl bg-blue-50/80 p-3">
-          <div className="text-xs font-medium uppercase text-blue-400">Items</div>
+        <div className={`rounded-2xl p-3 ${tone.items}`}>
+          <div className={`text-xs font-medium uppercase ${tone.label}`}>
+            Items
+          </div>
           <div className="mt-1 text-slate-700">{order.productName}</div>
         </div>
 
@@ -513,7 +635,6 @@ function OrderCard({
           mockSendEmail={mockSendEmail}
           order={order}
           reviewSlip={reviewSlip}
-          updateOrder={updateOrder}
         />
       </div>
     </div>
@@ -541,7 +662,7 @@ function StatusSelect({
             <span className="flex items-center gap-2">
               <span
                 className={`size-2 rounded-full ${
-                  status === "paid" || status === "shipped"
+                  status === "paid"
                     ? "bg-emerald-500"
                     : status === "cancelled"
                       ? "bg-red-500"
@@ -564,13 +685,11 @@ function SlipReview({
   mockSendEmail,
   order,
   reviewSlip,
-  updateOrder,
 }: {
   compact?: boolean;
   mockSendEmail: (order: Order) => void;
   order: Order;
   reviewSlip: (orderId: string, approved: boolean) => void;
-  updateOrder: (orderId: string, status: OrderStatus) => void;
 }) {
   return (
     <div
@@ -612,14 +731,6 @@ function SlipReview({
           <Button onClick={() => mockSendEmail(order)} size="sm" variant="outline">
             <Mail className="size-4" />
             Email
-          </Button>
-          <Button
-            onClick={() => updateOrder(order.id, "shipped")}
-            size="sm"
-            variant="secondary"
-          >
-            <Truck className="size-4" />
-            Shipped
           </Button>
         </div>
       </div>
