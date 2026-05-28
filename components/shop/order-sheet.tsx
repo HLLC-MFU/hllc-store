@@ -137,8 +137,8 @@ function StepBar({ step }: { step: Step }) {
   
   const STEPS = [
     { key: "checkout.step.product", label: "สินค้า" },
-    { key: "checkout.step.info", label: "ข้อมูล" },
-    { key: "checkout.step.payment", label: "ชำระเงิน" }
+    { key: "checkout.step.payment", label: "ชำระเงิน" },
+    { key: "checkout.step.info", label: "ข้อมูล" }
   ];
 
   return (
@@ -270,37 +270,37 @@ export function OrderSheet({
         }),
       });
       const payload = await res.json();
+      
+      let finalOrderId = "";
       if (!res.ok) {
-        // demo mode — ข้ามไปหน้าชำระเงินแม้ไม่มี DB
-        const mockId = "DEMO" + Math.random().toString(36).slice(2, 8).toUpperCase();
-        setOrderId(mockId);
-        setStep(3);
-        setLoading(false);
-        return;
+        // demo mode
+        finalOrderId = "DEMO" + Math.random().toString(36).slice(2, 8).toUpperCase();
+      } else {
+        finalOrderId = payload.data?.id ?? "";
       }
-      setOrderId(payload.data?.id ?? "");
-      setStep(3);
+      setOrderId(finalOrderId);
+
+      // Immediately send the uploaded payment slip
+      if (slipFile && finalOrderId) {
+        try {
+          await fetch(`/api/backend/orders/${finalOrderId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageUrl: slipFile, amount: total }),
+          });
+          setSlipSent(true);
+        } catch (err) {
+          console.error("Failed to upload slip:", err);
+        }
+      }
+
+      setStep("success");
     } catch {
       const mockId = "DEMO" + Math.random().toString(36).slice(2, 8).toUpperCase();
       setOrderId(mockId);
-      setStep(3);
+      setStep("success");
     }
     setLoading(false);
-  }
-
-  async function handleSendSlip() {
-    if (!slipFile || !orderId) return;
-    setLoading(true);
-    try {
-      await fetch(`/api/backend/orders/${orderId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: slipFile, amount: total }),
-      });
-    } catch {}
-    setLoading(false);
-    setSlipSent(true);
-    setStep("success");
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -405,8 +405,78 @@ export function OrderSheet({
           </div>
         )}
 
-        {/* ── Step 2: ข้อมูลจัดส่ง ── */}
+        {/* ── Step 2: ชำระเงิน ── */}
         {step === 2 && (
+          <div className="px-5 pt-5 pb-8 flex flex-col gap-5">
+            {/* Order summary */}
+            <div className="bg-gray-50 rounded-2xl p-4">
+              <p className="text-xs text-[#85241F] mb-1 font-extrabold uppercase tracking-wider">{t("checkout.step.payment")}</p>
+              <div className="flex justify-between mt-2 text-sm">
+                <span className="text-gray-600 font-medium">{product.name} × {qty}</span>
+                <span className="font-bold">{money(total)}</span>
+              </div>
+            </div>
+
+            {/* QR Code */}
+            <div className="flex flex-col items-center">
+              <p className="text-sm font-bold text-gray-800 mb-3">{t("checkout.scan_qr")}</p>
+              <div className="w-52 h-52 border-2 border-gray-200 rounded-2xl overflow-hidden flex items-center justify-center bg-gray-50 shadow-xs">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/qr-payment.png"
+                  alt="QR Payment"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
+                  }}
+                />
+                <div className="hidden flex-col items-center gap-2 text-gray-300">
+                  <span className="text-4xl">📱</span>
+                  <span className="text-[10px] text-center px-4">Place QR Code at<br />/public/images/qr-payment.png</span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-2 text-center">
+                {t("checkout.payment_amount")} <span className="font-black text-[#85241F] text-sm">{money(total)}</span>
+              </p>
+            </div>
+
+            {/* Slip upload */}
+            <div>
+              <p className="text-sm font-bold text-gray-800 mb-3">{t("checkout.upload_slip")}</p>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              {slipPreview ? (
+                <div className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={slipPreview} alt="slip" className="w-full max-h-52 object-contain rounded-2xl border border-gray-200" />
+                  <button
+                    onClick={() => { setSlipPreview(null); setSlipFile(null); }}
+                    className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center cursor-pointer"
+                  >
+                    <X className="w-4 h-4 text-gray-500" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="w-full border-2 border-dashed border-gray-200 rounded-2xl py-8 flex flex-col items-center gap-2 hover:border-[#85241F]/40 transition-colors cursor-pointer"
+                >
+                  <Upload className="w-6 h-6 text-gray-400 animate-bounce" />
+                  <span className="text-sm text-gray-400 font-medium">{t("checkout.upload_tap")}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 3: ข้อมูลจัดส่ง ── */}
+        {step === 3 && (
           <div className="px-5 pt-5 pb-8 flex flex-col gap-3">
             <h2 className="text-base font-bold text-gray-900 mb-1">{t("checkout.delivery_method")}</h2>
 
@@ -523,77 +593,6 @@ export function OrderSheet({
           </div>
         )}
 
-        {/* ── Step 3: ชำระเงิน ── */}
-        {step === 3 && (
-          <div className="px-5 pt-5 pb-8 flex flex-col gap-5">
-            {/* Order summary */}
-            <div className="bg-gray-50 rounded-2xl p-4">
-              <p className="text-xs text-gray-400 mb-1 font-semibold">{t("checkout.order_id")}</p>
-              <p className="font-black text-[#85241F] text-lg">#{orderId.slice(-8).toUpperCase()}</p>
-              <div className="flex justify-between mt-2 text-sm">
-                <span className="text-gray-600 font-medium">{product.name} × {qty}</span>
-                <span className="font-bold">{money(total)}</span>
-              </div>
-            </div>
-
-            {/* QR Code */}
-            <div className="flex flex-col items-center">
-              <p className="text-sm font-bold text-gray-800 mb-3">{t("checkout.scan_qr")}</p>
-              <div className="w-52 h-52 border-2 border-gray-200 rounded-2xl overflow-hidden flex items-center justify-center bg-gray-50 shadow-xs">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/images/qr-payment.png"
-                  alt="QR Payment"
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = "none";
-                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
-                  }}
-                />
-                <div className="hidden flex-col items-center gap-2 text-gray-300">
-                  <span className="text-4xl">📱</span>
-                  <span className="text-[10px] text-center px-4">Place QR Code at<br />/public/images/qr-payment.png</span>
-                </div>
-              </div>
-              <p className="text-xs text-gray-400 mt-2 text-center">
-                {t("checkout.payment_amount")} <span className="font-black text-[#85241F] text-sm">{money(total)}</span>
-              </p>
-            </div>
-
-            {/* Slip upload */}
-            <div>
-              <p className="text-sm font-bold text-gray-800 mb-3">{t("checkout.upload_slip")}</p>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              {slipPreview ? (
-                <div className="relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={slipPreview} alt="slip" className="w-full max-h-52 object-contain rounded-2xl border border-gray-200" />
-                  <button
-                    onClick={() => { setSlipPreview(null); setSlipFile(null); }}
-                    className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center cursor-pointer"
-                  >
-                    <X className="w-4 h-4 text-gray-500" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  className="w-full border-2 border-dashed border-gray-200 rounded-2xl py-8 flex flex-col items-center gap-2 hover:border-[#85241F]/40 transition-colors cursor-pointer"
-                >
-                  <Upload className="w-6 h-6 text-gray-400 animate-bounce" />
-                  <span className="text-sm text-gray-400 font-medium">{t("checkout.upload_tap")}</span>
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* ── Success ── */}
         {step === "success" && (
           <div className="flex flex-col items-center justify-center text-center px-6 py-16">
@@ -626,6 +625,15 @@ export function OrderSheet({
           )}
           {step === 2 && (
             <button
+              onClick={() => setStep(3)}
+              disabled={!slipFile}
+              className="w-full bg-[#85241F] text-white font-bold py-4 rounded-2xl text-sm hover:bg-[#B72D2A] transition-colors disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#85241F]/10 active:scale-98"
+            >
+              {t("checkout.continue")}
+            </button>
+          )}
+          {step === 3 && (
+            <button
               onClick={handleCreateOrder}
               disabled={loading}
               className="w-full bg-[#85241F] text-white font-bold py-4 rounded-2xl text-sm hover:bg-[#B72D2A] transition-colors disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#85241F]/10 active:scale-98"
@@ -640,17 +648,6 @@ export function OrderSheet({
                 </>
               ) : `${t("checkout.confirm_button")} · ${money(total)}`}
             </button>
-          )}
-          {step === 3 && (
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleSendSlip}
-                disabled={!slipFile || loading}
-                className="w-full bg-[#85241F] text-white font-bold py-4 rounded-2xl text-sm hover:bg-[#B72D2A] transition-colors disabled:opacity-40 cursor-pointer shadow-lg shadow-[#85241F]/10 active:scale-98"
-              >
-                {loading ? t("checkout.sending") : t("checkout.confirm_payment")}
-              </button>
-            </div>
           )}
         </div>
       )}

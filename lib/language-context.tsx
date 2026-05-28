@@ -91,6 +91,15 @@ const DICTIONARY: TranslationDict = {
   "checkout.success.no_slip": { th: "กรุณาส่งสลิปการโอนเงินให้ทีมงาน", en: "Please submit your payment slip to the team." },
   "checkout.success.back": { th: "กลับไปเลือกสินค้า", en: "Back to Shop" },
 
+  // Admin Login
+  "admin.login.title": { th: "เข้าสู่ระบบผู้ดูแลระบบ", en: "Admin Login Portal" },
+  "admin.login.subtitle": { th: "กรุณาเข้าสู่ระบบด้วยบัญชีผู้ดูแลระบบเพื่อเข้าจัดการสโตร์ HLLC", en: "Please sign in with your administrator account to manage HLLC Store" },
+  "admin.login.username": { th: "ชื่อผู้ใช้", en: "Username" },
+  "admin.login.password": { th: "รหัสผ่าน", en: "Password" },
+  "admin.login.button": { th: "เข้าสู่ระบบหลังบ้าน", en: "Sign In as Admin" },
+  "admin.login.error": { th: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", en: "Invalid username or password" },
+  "admin.login.desc": { th: "ข้อมูลรับรองเริ่มต้น: admin / password", en: "Default credentials: admin / password" },
+
   // Admin Header
   "admin.header": { th: "HLLC หลังบ้าน", en: "HLLC Admin Portal" },
   "admin.pending_badge": { th: "รอตรวจ {count} รายการ", en: "Pending {count} reviews" },

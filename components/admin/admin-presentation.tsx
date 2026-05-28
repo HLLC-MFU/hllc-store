@@ -135,8 +135,27 @@ const STATUS_COLOR: Record<OrderStatus, string> = {
 
 /* ─── Main ────────────────────────────────────────────────────────────────── */
 
+async function api<T>(path: string, init?: RequestInit): Promise<{ data?: T; error?: string }> {
+  try {
+    const response = await fetch(path, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...init?.headers,
+      },
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      return { error: payload.error || "Request failed" };
+    }
+    return payload;
+  } catch (err: any) {
+    return { error: err.message || "Network error" };
+  }
+}
+
 export function AdminPresentation() {
-  const [orders, setOrders] = React.useState<Order[]>(MOCK_ORDERS);
+  const [orders, setOrders] = React.useState<Order[]>([]);
   const [products, setProducts] = React.useState<Product[]>([]);
   const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all">("all");
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -147,7 +166,45 @@ export function AdminPresentation() {
   const [lightbox, setLightbox] = React.useState<string | null>(null);
   const { lang, setLang, t } = useLanguage();
 
+  const [loading, setLoading] = React.useState(false);
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [loginError, setLoginError] = React.useState("");
+
   const notify = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
+
+  // Persistence check for admin login
+  React.useEffect(() => {
+    const adminSession = sessionStorage.getItem("admin-logged-in");
+    if (adminSession === "true") {
+      setIsLoggedIn(true);
+    }
+  }, []);
+
+  const loadData = React.useCallback(async () => {
+    setLoading(true);
+    const [ordersRes, productsRes] = await Promise.all([
+      api<Order[]>("/api/backend/admin/orders"),
+      api<Product[]>("/api/backend/admin/products"),
+    ]);
+    
+    // Use Mock Data as an intelligent local fallback in case database collections are entirely empty during setup
+    if (ordersRes.data) {
+      setOrders(ordersRes.data.length > 0 ? ordersRes.data : MOCK_ORDERS);
+    } else {
+      setOrders(MOCK_ORDERS);
+    }
+
+    if (productsRes.data) {
+      setProducts(productsRes.data);
+    }
+    setLoading(false);
+  }, []);
+
+  React.useEffect(() => {
+    if (isLoggedIn) {
+      loadData();
+    }
+  }, [isLoggedIn, loadData]);
 
   const pendingSlips = orders.filter((o) => o.slip.status === "pending");
 
@@ -175,20 +232,36 @@ export function AdminPresentation() {
     setConfirm({ orderId, approved });
   }
 
-  function confirmApprove() {
+  async function confirmApprove() {
     if (!confirm) return;
-    setOrders((prev) => prev.map((o) =>
-      o.id === confirm.orderId
-        ? { ...o, status: confirm.approved ? "paid" : o.status, slip: { ...o.slip, status: confirm.approved ? "approved" : "rejected" } }
-        : o
-    ));
-    notify(confirm.approved ? t("admin.toast.slip_approved") : t("admin.toast.slip_rejected"));
+    setLoading(true);
+    const res = await api<Order>(`/api/backend/admin/slips/${confirm.orderId}`, {
+      method: "POST",
+      body: JSON.stringify({ approved: confirm.approved, reviewedBy: "admin" }),
+    });
+    setLoading(false);
+    if (res.error) {
+      notify(res.error);
+    } else {
+      notify(confirm.approved ? t("admin.toast.slip_approved") : t("admin.toast.slip_rejected"));
+      loadData();
+    }
     setConfirm(null);
   }
 
-  function updateStatus(orderId: string, status: OrderStatus) {
-    setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status } : o));
-    notify(t("admin.toast.product_updated"));
+  async function updateStatus(orderId: string, status: OrderStatus) {
+    setLoading(true);
+    const res = await api<Order>(`/api/backend/admin/orders/${orderId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+    setLoading(false);
+    if (res.error) {
+      notify(res.error);
+    } else {
+      notify(t("admin.toast.product_updated"));
+      loadData();
+    }
   }
 
   function triggerStatusConfirm(orderId: string, status: OrderStatus) {
@@ -201,32 +274,67 @@ export function AdminPresentation() {
     setStatusConfirm(null);
   }
 
-  function addProduct(formData: FormData) {
+  async function addProduct(formData: FormData) {
     const name = String(formData.get("name") ?? "").trim();
     if (!name) return;
-    const discount = Number(formData.get("discount")) || undefined;
-    setProducts((prev) => [{
-      id: `p-${Date.now()}`,
-      name,
-      slug: name.toLowerCase().replace(/\s+/g, "-"),
-      description: String(formData.get("description") ?? "").trim() || undefined,
-      price: Number(formData.get("price")) || 0,
-      stock: Number(formData.get("stock")) || 0,
-      discount,
-      imageUrl: String(formData.get("imageUrl") ?? "").trim() || undefined,
-      active: true,
-    }, ...prev]);
-    notify(t("admin.toast.product_added"));
+    setLoading(true);
+    const res = await api<Product>("/api/backend/admin/products", {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        slug: name.toLowerCase().replace(/\s+/g, "-"),
+        description: String(formData.get("description") ?? "").trim() || undefined,
+        price: Number(formData.get("price")) || 0,
+        stock: Number(formData.get("stock")) || 0,
+        discount: Number(formData.get("discount")) || undefined,
+        imageUrl: String(formData.get("imageUrl") ?? "").trim() || undefined,
+        active: true,
+      }),
+    });
+    setLoading(false);
+    if (res.error) {
+      notify(res.error);
+    } else {
+      notify(t("admin.toast.product_added"));
+      loadData();
+    }
   }
 
-  function updateProduct(updated: Product) {
-    setProducts((prev) => prev.map((p) => p.id === updated.id ? updated : p));
-    notify(t("admin.toast.product_updated"));
+  async function updateProduct(updated: Product) {
+    setLoading(true);
+    const res = await api<Product>(`/api/backend/admin/products/${updated.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        name: updated.name,
+        description: updated.description,
+        price: updated.price,
+        stock: updated.stock,
+        discount: updated.discount,
+        imageUrl: updated.imageUrl,
+        active: updated.active,
+      }),
+    });
+    setLoading(false);
+    if (res.error) {
+      notify(res.error);
+    } else {
+      notify(t("admin.toast.product_updated"));
+      loadData();
+    }
   }
 
-  function deleteProduct(id: string) {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
-    notify(t("admin.toast.product_deleted"));
+  async function deleteProduct(id: string) {
+    setLoading(true);
+    const res = await api<{ success: boolean }>(`/api/backend/admin/products/${id}`, {
+      method: "DELETE",
+    });
+    setLoading(false);
+    if (res.error) {
+      notify(res.error);
+    } else {
+      notify(t("admin.toast.product_deleted"));
+      loadData();
+    }
   }
 
   // Stats dashboard data aggregates
@@ -234,6 +342,113 @@ export function AdminPresentation() {
   const statsPending = pendingSlips.length;
   const statsActive = orders.filter(o => ["packing", "shipped"].includes(o.status)).length;
   const statsTotal = orders.length;
+
+  if (!isLoggedIn) {
+    return (
+      <main 
+        className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-sans"
+        style={{ background: "radial-gradient(circle, #5c1613 0%, #240a08 50%, #0d0303 100%)" }}
+      >
+        {/* Floating background glowing orbs */}
+        <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-red-900/10 blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-amber-900/10 blur-[120px] pointer-events-none" />
+        
+        {/* Card Container with glassmorphism */}
+        <div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-[32px] p-8 shadow-2xl flex flex-col gap-6 relative z-10 animate-in fade-in zoom-in-95 duration-500">
+          
+          {/* Floating Language Switcher */}
+          <div className="absolute top-6 right-6 flex items-center gap-1 bg-white/5 border border-white/10 p-1 rounded-xl shadow-inner">
+            <Globe className="w-3.5 h-3.5 text-white/50 ml-1.5 shrink-0" />
+            <button
+              onClick={() => setLang("th")}
+              className={`px-2 py-0.5 rounded-lg text-[9px] font-black transition-all cursor-pointer ${
+                lang === "th"
+                  ? "bg-[#85241F] text-white shadow-md shadow-[#85241F]/30"
+                  : "text-white/40 hover:text-white/80"
+              }`}
+            >
+              TH
+            </button>
+            <button
+              onClick={() => setLang("en")}
+              className={`px-2 py-0.5 rounded-lg text-[9px] font-black transition-all cursor-pointer ${
+                lang === "en"
+                  ? "bg-[#85241F] text-white shadow-md shadow-[#85241F]/30"
+                  : "text-white/40 hover:text-white/80"
+              }`}
+            >
+              EN
+            </button>
+          </div>
+
+          <div className="flex flex-col items-center text-center mt-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#85241F] to-[#b8332b] flex items-center justify-center shadow-lg shadow-[#85241F]/35 mb-4 animate-pulse">
+              <Package className="w-7 h-7 text-white" />
+            </div>
+            <h1 className="text-lg font-black text-white tracking-tight leading-none block">{t("admin.login.title")}</h1>
+            <p className="text-[10px] text-white/55 mt-2 leading-relaxed max-w-xs block">{t("admin.login.subtitle")}</p>
+          </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              const username = String(fd.get("username")).trim();
+              const password = String(fd.get("password")).trim();
+              
+              if (username === "admin" && password === "password") {
+                sessionStorage.setItem("admin-logged-in", "true");
+                setIsLoggedIn(true);
+              } else {
+                setLoginError(t("admin.login.error"));
+                setTimeout(() => setLoginError(""), 3000);
+              }
+            }}
+            className="flex flex-col gap-4 mt-2"
+          >
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[9px] text-white/50 font-bold uppercase tracking-wider pl-1">{t("admin.login.username")}</label>
+              <input
+                name="username"
+                type="text"
+                required
+                defaultValue="admin"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#85241F] focus:ring-1 focus:ring-[#85241F] transition-all"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[9px] text-white/50 font-bold uppercase tracking-wider pl-1">{t("admin.login.password")}</label>
+              <input
+                name="password"
+                type="password"
+                required
+                defaultValue="password"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#85241F] focus:ring-1 focus:ring-[#85241F] transition-all"
+              />
+            </div>
+
+            {loginError && (
+              <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold py-2.5 px-3 rounded-2xl text-center">
+                {loginError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full bg-gradient-to-r from-[#85241F] to-[#b8332b] hover:opacity-95 text-white font-black py-3.5 px-4 rounded-2xl text-xs shadow-lg shadow-[#85241F]/20 active:scale-98 transition-all cursor-pointer mt-2"
+            >
+              {t("admin.login.button")}
+            </button>
+          </form>
+
+          <div className="text-center text-[9px] text-white/35 border-t border-white/5 pt-4 mt-2">
+            {t("admin.login.desc")}
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#f8fafc]">
