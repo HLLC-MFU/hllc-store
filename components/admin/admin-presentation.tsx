@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  BarChart3,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -25,6 +26,9 @@ import {
   Calendar,
   AlertCircle,
   FileCheck2,
+  PackageX,
+  Percent,
+  Tags,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,6 +50,7 @@ type Product = {
   id: string; name: string; slug: string;
   description?: string; price: number; stock: number;
   discount?: number; // percent 0-100
+  category?: string;
   imageUrl?: string; active: boolean;
 };
 
@@ -123,6 +128,10 @@ function timeAgo(iso: string, lang: "th" | "en") {
   return lang === "th" ? `${Math.floor(h / 24)} วันที่แล้ว` : `${Math.floor(h / 24)}d ago`;
 }
 
+function isPickupOrder(order: Order) {
+  return /รับเอง|pickup|self pickup|D1/i.test(order.customer.address);
+}
+
 const STATUS_COLOR: Record<OrderStatus, string> = {
   pending_payment: "bg-amber-50 text-amber-700 border-amber-200/60",
   payment_review: "bg-orange-50 text-orange-700 border-orange-200/60",
@@ -159,6 +168,8 @@ export function AdminPresentation() {
   const [products, setProducts] = React.useState<Product[]>([]);
   const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all">("all");
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [productSearch, setProductSearch] = React.useState("");
+  const [productCategory, setProductCategory] = React.useState("all");
   const [shippingFilter, setShippingFilter] = React.useState<"all" | "delivery" | "pickup">("all");
   const [toast, setToast] = React.useState("");
   const [confirm, setConfirm] = React.useState<{ orderId: string; approved: boolean } | null>(null);
@@ -219,7 +230,7 @@ export function AdminPresentation() {
       o.customer.phone.includes(q) ||
       o.id.toLowerCase().includes(q);
 
-    const isPickup = o.customer.address.includes("รับเอง");
+    const isPickup = isPickupOrder(o);
     const matchShipping =
       shippingFilter === "all" ||
       (shippingFilter === "pickup" && isPickup) ||
@@ -244,6 +255,11 @@ export function AdminPresentation() {
       notify(res.error);
     } else {
       notify(confirm.approved ? t("admin.toast.slip_approved") : t("admin.toast.slip_rejected"));
+      if (res.data) {
+        setOrders((current) =>
+          current.map((order) => (order.id === res.data?.id ? res.data : order)),
+        );
+      }
       loadData();
     }
     setConfirm(null);
@@ -287,6 +303,7 @@ export function AdminPresentation() {
         price: Number(formData.get("price")) || 0,
         stock: Number(formData.get("stock")) || 0,
         discount: Number(formData.get("discount")) || undefined,
+        category: String(formData.get("category") ?? "").trim() || undefined,
         imageUrl: String(formData.get("imageUrl") ?? "").trim() || undefined,
         active: true,
       }),
@@ -342,6 +359,39 @@ export function AdminPresentation() {
   const statsPending = pendingSlips.length;
   const statsActive = orders.filter(o => ["packing", "shipped"].includes(o.status)).length;
   const statsTotal = orders.length;
+  const statusOverview = ORDER_STATUSES.map((status) => ({
+    status,
+    count: orders.filter((order) => {
+      const displayStatus = order.status === "payment_review" ? "paid" : order.status;
+      return displayStatus === status;
+    }).length,
+  })).filter((item) => item.count > 0);
+  const productCategories = React.useMemo(() => {
+    const values = products
+      .map((product) => product.category?.trim())
+      .filter((value): value is string => Boolean(value));
+
+    return Array.from(new Set(values));
+  }, [products]);
+  const filteredProducts = React.useMemo(() => {
+    const query = productSearch.trim().toLowerCase();
+
+    return products.filter((product) => {
+      const matchSearch =
+        !query ||
+        product.name.toLowerCase().includes(query) ||
+        product.description?.toLowerCase().includes(query);
+      const matchCategory =
+        productCategory === "all" || (product.category || "uncategorized") === productCategory;
+
+      return matchSearch && matchCategory;
+    });
+  }, [products, productCategory, productSearch]);
+  const productStats = {
+    total: products.length,
+    outOfStock: products.filter((product) => product.stock <= 0).length,
+    onSale: products.filter((product) => Number(product.discount || 0) > 0).length,
+  };
 
   if (!isLoggedIn) {
     return (
@@ -536,7 +586,7 @@ export function AdminPresentation() {
 
       {/* Header */}
       <div className="bg-white border-b border-slate-100 sticky top-0 z-40 shadow-xs">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4.5 flex items-center justify-between">
+        <div className="max-w-[960px] mx-auto px-4 sm:px-6 py-4.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#85241F] flex items-center justify-center shrink-0 shadow-lg shadow-[#85241F]/20">
               <Package className="w-4.5 h-4.5 text-white" />
@@ -582,7 +632,7 @@ export function AdminPresentation() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
+      <div className="max-w-[960px] mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
         <Tabs defaultValue="orders">
           <TabsList className="w-full grid grid-cols-2 bg-white border border-slate-100 rounded-2xl p-1.5 h-auto shadow-xs">
             <TabsTrigger value="orders" className="h-11 rounded-xl data-[state=active]:bg-[#85241F] data-[state=active]:text-white font-bold text-xs gap-2 transition-all cursor-pointer">
@@ -648,6 +698,52 @@ export function AdminPresentation() {
             </div>
 
 
+            <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-xs">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-xs font-black text-gray-900">
+                  {lang === "th" ? "สรุปสถานะคำสั่งซื้อ" : "Order Status Overview"}
+                </span>
+                <BarChart3 className="h-4 w-4 text-gray-400" />
+              </div>
+              <div className="flex h-3 overflow-hidden rounded-full bg-gray-100">
+                {statusOverview.length > 0 ? (
+                  statusOverview.map((item) => (
+                    <button
+                      key={item.status}
+                      type="button"
+                      onClick={() => setStatusFilter(item.status)}
+                      className={`${STATUS_COLOR[item.status].split(" ")[0]} transition-opacity hover:opacity-80`}
+                      style={{ width: `${Math.max(6, (item.count / Math.max(1, statsTotal)) * 100)}%` }}
+                      aria-label={t(`admin.status.${item.status}`)}
+                    />
+                  ))
+                ) : (
+                  <div className="h-full w-full bg-gray-200" />
+                )}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {ORDER_STATUSES.map((status) => {
+                  const count = statusOverview.find((item) => item.status === status)?.count ?? 0;
+
+                  return (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => setStatusFilter(status)}
+                      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold transition-colors ${
+                        statusFilter === status
+                          ? "border-[#85241F] bg-[#85241F] text-white"
+                          : "border-gray-200 bg-white text-gray-500 hover:border-[#85241F]/30"
+                      }`}
+                    >
+                      <span className={`h-2 w-2 rounded-full ${STATUS_COLOR[status].split(" ")[0]}`} />
+                      {t(`admin.status.${status}`)}
+                      <span className="font-black">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Zone 2: All orders */}
             <div>
@@ -735,15 +831,59 @@ export function AdminPresentation() {
 
           {/* ── Products Tab ── */}
           <TabsContent value="products" className="mt-4 flex flex-col gap-4 animate-in fade-in duration-200">
+            <div className="grid grid-cols-3 gap-3">
+              <ProductStatCard icon={<Package className="h-4 w-4" />} label={lang === "th" ? "สินค้าทั้งหมด" : "Products"} value={productStats.total} tone="slate" />
+              <ProductStatCard icon={<PackageX className="h-4 w-4" />} label={lang === "th" ? "สินค้าหมด" : "Out of stock"} value={productStats.outOfStock} tone="red" />
+              <ProductStatCard icon={<Percent className="h-4 w-4" />} label={lang === "th" ? "ลดราคา" : "On sale"} value={productStats.onSale} tone="emerald" />
+            </div>
+
             <AddProductForm onSubmit={addProduct} notify={notify} t={t} />
-            {products.length > 0 && (
+
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-bold text-gray-900">{t("admin.tab.products")}</h2>
+              </div>
+              <div className="mb-3 flex items-center gap-3 rounded-2xl border border-gray-200/60 bg-white px-4 py-3 shadow-2xs transition-all focus-within:border-[#85241F] focus-within:ring-2 focus-within:ring-[#85241F]/5">
+                <Search className="h-4 w-4 shrink-0 text-gray-400" />
+                <input
+                  value={productSearch}
+                  onChange={(event) => setProductSearch(event.target.value)}
+                  placeholder={lang === "th" ? "ค้นหาสินค้าหลังบ้าน..." : "Search products..."}
+                  className="flex-1 border-none bg-transparent text-xs text-gray-800 outline-none placeholder:text-gray-400"
+                />
+                {productSearch ? (
+                  <button onClick={() => setProductSearch("")} className="text-gray-400 hover:text-gray-600">
+                    <XCircle className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
+              </div>
+              <div className="mb-4 flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+                {["all", ...productCategories].map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => setProductCategory(category)}
+                    className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[11px] font-bold transition-all ${
+                      productCategory === category
+                        ? "border-[#85241F] bg-[#85241F] text-white shadow-sm shadow-[#85241F]/10"
+                        : "border-gray-200 bg-white text-gray-600 hover:border-[#85241F]/30 hover:bg-gray-50"
+                    }`}
+                  >
+                    <Tags className="h-3 w-3" />
+                    {category === "all" ? t("admin.orders.filter_all") : category}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {filteredProducts.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
-                {products.map((p) => (
+                {filteredProducts.map((p) => (
                   <ProductCard key={p.id} product={p} onUpdate={updateProduct} onDelete={deleteProduct} t={t} />
                 ))}
               </div>
             )}
-            {products.length === 0 && (
+            {filteredProducts.length === 0 && (
               <div className="bg-white border border-gray-100 rounded-3xl py-12 flex flex-col items-center justify-center text-center shadow-2xs">
                 <Package className="w-8 h-8 text-gray-300 mb-2" />
                 <p className="text-xs text-gray-400 font-semibold">{t("admin.products.empty")}</p>
@@ -760,6 +900,39 @@ export function AdminPresentation() {
 
 /* ─── Order Row with Stepper timeline & mock parcel ────────────────────────── */
 
+function ProductStatCard({ icon, label, value, tone }: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  tone: "slate" | "red" | "emerald";
+}) {
+  const borderClass = {
+    slate: "border-slate-100",
+    red: "border-red-100",
+    emerald: "border-emerald-100",
+  }[tone];
+  const iconClass = {
+    slate: "bg-slate-50 text-slate-700",
+    red: "bg-red-50 text-red-600",
+    emerald: "bg-emerald-50 text-emerald-600",
+  }[tone];
+  const valueClass = {
+    slate: "text-gray-900",
+    red: "text-red-600",
+    emerald: "text-emerald-600",
+  }[tone];
+
+  return (
+    <div className={`rounded-2xl border bg-white p-4 shadow-xs ${borderClass}`}>
+      <div className={`mb-2 flex h-9 w-9 items-center justify-center rounded-xl ${iconClass}`}>
+        {icon}
+      </div>
+      <p className="text-[10px] font-bold uppercase text-gray-400">{label}</p>
+      <p className={`mt-1 text-lg font-black ${valueClass}`}>{value}</p>
+    </div>
+  );
+}
+
 function OrderRow({ order, onStatusChange, onApproveSlip, t, onViewSlip }: {
   order: Order;
   onStatusChange: (id: string, s: OrderStatus) => void;
@@ -770,7 +943,7 @@ function OrderRow({ order, onStatusChange, onApproveSlip, t, onViewSlip }: {
   const [open, setOpen] = React.useState(false);
   const { lang } = useLanguage();
 
-  const isPickup = order.customer.address.includes("รับเอง");
+  const isPickup = isPickupOrder(order);
 
   // Premium Logistics Stepper States
   const timelineSteps: OrderStatus[] = [
@@ -1073,6 +1246,7 @@ function AddProductForm({ onSubmit, notify, t }: {
   const [imageMode, setImageMode] = React.useState<"upload" | "url">("upload");
   const fileRef = React.useRef<HTMLInputElement>(null);
   const formRef = React.useRef<HTMLFormElement>(null);
+  const { lang } = useLanguage();
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -1164,6 +1338,12 @@ function AddProductForm({ onSubmit, notify, t }: {
                     className="rounded-xl border-gray-200 pr-8 text-xs h-10" />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
                 </div>
+              </div>
+              <div className="col-span-2">
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">
+                  {lang === "th" ? "หมวดหมู่สินค้า" : "Product Category"}
+                </Label>
+                <Input name="category" placeholder="raincoat, umbrella, shoes" className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
               <div className="col-span-2">
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.description")}</Label>
@@ -1259,6 +1439,11 @@ function ProductCard({ product, onUpdate, onDelete, t }: {
               </p>
             ) : null}
           </div>
+          <div>
+            <Label className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Category</Label>
+            <Input value={form.category ?? ""} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+              placeholder="raincoat" className="rounded-xl border-gray-200 text-xs h-9" />
+          </div>
           <div className="flex gap-2 mt-1 border-t border-gray-50 pt-2.5">
             <Button onClick={handleSave} className="flex-1 bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-9 text-[10px] font-bold shadow-sm cursor-pointer transition-all active:scale-97">
               {t("admin.products.edit.save")}
@@ -1297,6 +1482,11 @@ function ProductCard({ product, onUpdate, onDelete, t }: {
       </div>
       <div className="p-3.5 flex-1 flex flex-col justify-between">
         <p className="font-extrabold text-xs text-gray-800 truncate leading-tight">{translatedName}</p>
+        {product.category ? (
+          <p className="mt-1 inline-flex w-fit items-center rounded-md bg-slate-50 px-1.5 py-0.5 text-[9px] font-bold text-slate-500">
+            {product.category}
+          </p>
+        ) : null}
         <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
           <div>
             {discountedPrice ? (

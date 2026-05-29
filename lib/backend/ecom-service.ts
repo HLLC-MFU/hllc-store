@@ -56,6 +56,8 @@ function toProduct(doc: Document): Product {
     description: doc.description,
     price: doc.price,
     stock: doc.stock,
+    discount: Number(doc.discount ?? 0),
+    category: doc.category ?? "",
     imageUrl: doc.imageUrl,
     active: doc.active,
     createdAt: doc.createdAt,
@@ -110,6 +112,8 @@ export async function createProduct(input: CreateProductInput) {
       typeof input.description === "string" ? input.description.trim() : "",
     price: assertNumber(input.price, "price"),
     stock: assertNumber(input.stock, "stock"),
+    discount: Math.min(assertNumber(input.discount ?? 0, "discount"), 100),
+    category: typeof input.category === "string" ? input.category.trim() : "",
     imageUrl: typeof input.imageUrl === "string" ? input.imageUrl.trim() : "",
     active: input.active ?? true,
     createdAt: timestamp,
@@ -306,7 +310,7 @@ export async function reviewPaymentSlip(orderId: string, input: ReviewSlipInput)
         "slip.reviewedBy": assertText(input.reviewedBy, "reviewedBy"),
         "slip.reviewedAt": timestamp,
         "slip.reviewNote": input.note,
-        status: input.approved ? "paid" : "pending_payment",
+        status: input.approved ? "packing" : "pending_payment",
         updatedAt: timestamp,
       },
     },
@@ -370,6 +374,18 @@ export async function updateProduct(productId: string, input: Partial<CreateProd
   
   if (input.stock !== undefined) {
     updateData.stock = assertNumber(input.stock, "stock");
+  }
+
+  if (input.discount !== undefined) {
+    const discount = assertNumber(input.discount, "discount");
+    if (discount > 100) {
+      throw new Error("discount must be between 0 and 100");
+    }
+    updateData.discount = discount;
+  }
+
+  if (input.category !== undefined) {
+    updateData.category = typeof input.category === "string" ? input.category.trim() : "";
   }
   
   if (input.imageUrl !== undefined) {

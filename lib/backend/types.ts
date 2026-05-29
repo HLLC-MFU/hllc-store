@@ -16,6 +16,8 @@ export type Product = {
   description?: string;
   price: number;
   stock: number;
+  discount: number;
+  category?: string;
   imageUrl?: string;
   active: boolean;
   createdAt?: string;
@@ -81,6 +83,8 @@ export type CreateProductInput = {
   description?: string;
   price: number;
   stock: number;
+  discount?: number;
+  category?: string;
   imageUrl?: string;
   active?: boolean;
 };

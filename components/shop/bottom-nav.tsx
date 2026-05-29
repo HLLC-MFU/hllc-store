@@ -2,16 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, User } from "lucide-react";
+import { Home, ShoppingCart, User } from "lucide-react";
+import { useCart } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
 
 const tabs = [
   { href: "/home", icon: Home, labelKey: "nav.home" },
+  { href: "/cart", icon: ShoppingCart, labelKey: "nav.cart" },
   { href: "/profile", icon: User, labelKey: "nav.profile" },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { count } = useCart();
   const { t } = useLanguage();
 
   return (
@@ -25,7 +28,14 @@ export function BottomNav() {
               href={href}
               className="flex flex-col items-center gap-1 min-w-[48px]"
             >
-              <Icon className={`w-6 h-6 transition-colors ${active ? "text-blue-600" : "text-gray-400"}`} />
+              <div className="relative">
+                <Icon className={`w-6 h-6 transition-colors ${active ? "text-blue-600" : "text-gray-400"}`} />
+                {href === "/cart" && count > 0 ? (
+                  <span className="absolute -top-2 -right-2 min-w-4 h-4 rounded-full bg-[#85241F] px-1 text-[9px] leading-4 text-white font-black text-center">
+                    {count > 9 ? "9+" : count}
+                  </span>
+                ) : null}
+              </div>
               <span className={`text-[10px] font-medium transition-colors ${active ? "text-blue-600" : "text-gray-400"}`}>
                 {t(labelKey)}
               </span>

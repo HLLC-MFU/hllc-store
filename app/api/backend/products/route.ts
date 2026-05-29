@@ -1,10 +1,3 @@
-import { badRequest, ok } from "@/lib/backend/http";
-import { listProducts } from "@/lib/backend/ecom-service";
+import { productRouter } from "@/lib/backend/products/product-router";
 
-export async function GET() {
-  try {
-    return ok(await listProducts());
-  } catch (error) {
-    return badRequest(error);
-  }
-}
+export const GET = productRouter.GET;

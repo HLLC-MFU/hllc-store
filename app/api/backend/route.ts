@@ -7,6 +7,7 @@ export function GET() {
     endpoints: {
       products: "GET /api/backend/products",
       adminProducts: "GET|POST /api/backend/admin/products",
+      adminProductDetail: "PATCH|DELETE /api/backend/admin/products/:productId",
       createOrder: "POST /api/backend/orders",
       userOrders: "GET /api/backend/orders?customerPhone=0800000000",
       orderDetail: "GET /api/backend/orders/:orderId",

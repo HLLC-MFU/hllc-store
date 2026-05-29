@@ -5,7 +5,9 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 export type CartItem = {
   productId: string;
   name: string;
+  description?: string;
   price: number;
+  stock?: number;
   imageUrl?: string;
   quantity: number;
 };
@@ -41,9 +43,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   function addItem(item: Omit<CartItem, "quantity">) {
     setItems((prev) => {
       const found = prev.find((i) => i.productId === item.productId);
+      const maxQty = item.stock ?? Number.MAX_SAFE_INTEGER;
       if (found)
         return prev.map((i) =>
-          i.productId === item.productId ? { ...i, quantity: i.quantity + 1 } : i
+          i.productId === item.productId
+            ? { ...i, ...item, quantity: Math.min(i.quantity + 1, maxQty) }
+            : i
         );
       return [...prev, { ...item, quantity: 1 }];
     });
@@ -59,7 +64,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
     setItems((prev) =>
-      prev.map((i) => (i.productId === productId ? { ...i, quantity: qty } : i))
+      prev.map((i) =>
+        i.productId === productId
+          ? { ...i, quantity: Math.min(qty, i.stock ?? qty) }
+          : i,
+      )
     );
   }
 
