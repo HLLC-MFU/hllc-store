@@ -27,7 +27,6 @@ import {
   AlertCircle,
   FileCheck2,
   PackageX,
-  Percent,
   Tags,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -49,9 +48,14 @@ type SlipStatus = "none" | "pending" | "approved" | "rejected";
 type Product = {
   id: string; name: string; slug: string;
   description?: string; price: number; stock: number;
-  discount?: number; // percent 0-100
   category?: string;
+  options?: ProductOption[];
   imageUrl?: string; active: boolean;
+};
+
+type ProductOption = {
+  label: string;
+  imageUrl?: string;
 };
 
 type Order = {
@@ -61,6 +65,7 @@ type Order = {
   total: number;
   status: OrderStatus;
   slip: { imageUrl?: string; amount?: number; status: SlipStatus };
+  trackingNumber?: string;
   createdAt: string;
 };
 
@@ -130,6 +135,28 @@ function timeAgo(iso: string, lang: "th" | "en") {
 
 function isPickupOrder(order: Order) {
   return /รับเอง|pickup|self pickup|D1/i.test(order.customer.address);
+}
+
+function parseProductOptions(value: string): ProductOption[] {
+  return value
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => {
+      const [label = "", imageUrl = ""] = item.split("|").map((part) => part.trim());
+      return { label, imageUrl };
+    })
+    .filter((option) => option.label);
+}
+
+function productOptionsText(options?: ProductOption[]) {
+  return (options ?? [])
+    .map((option) => `${option.label}${option.imageUrl ? ` | ${option.imageUrl}` : ""}`)
+    .join("\n");
+}
+
+function productOptionLabels(options?: ProductOption[]) {
+  return (options ?? []).map((option) => option.label).join(" / ");
 }
 
 const STATUS_COLOR: Record<OrderStatus, string> = {
@@ -280,6 +307,26 @@ export function AdminPresentation() {
     }
   }
 
+  async function saveTrackingNumber(orderId: string, trackingNumber: string) {
+    setLoading(true);
+    const res = await api<Order>(`/api/backend/admin/orders/${orderId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ trackingNumber }),
+    });
+    setLoading(false);
+    if (res.error) {
+      notify(res.error);
+    } else {
+      notify(lang === "th" ? "บันทึกเลขพัสดุแล้ว" : "Tracking number saved");
+      if (res.data) {
+        setOrders((current) =>
+          current.map((order) => (order.id === res.data?.id ? res.data : order)),
+        );
+      }
+      loadData();
+    }
+  }
+
   function triggerStatusConfirm(orderId: string, status: OrderStatus) {
     setStatusConfirm({ orderId, status });
   }
@@ -302,8 +349,8 @@ export function AdminPresentation() {
         description: String(formData.get("description") ?? "").trim() || undefined,
         price: Number(formData.get("price")) || 0,
         stock: Number(formData.get("stock")) || 0,
-        discount: Number(formData.get("discount")) || undefined,
         category: String(formData.get("category") ?? "").trim() || undefined,
+        options: parseProductOptions(String(formData.get("options") ?? "")),
         imageUrl: String(formData.get("imageUrl") ?? "").trim() || undefined,
         active: true,
       }),
@@ -326,7 +373,8 @@ export function AdminPresentation() {
         description: updated.description,
         price: updated.price,
         stock: updated.stock,
-        discount: updated.discount,
+        category: updated.category,
+        options: updated.options,
         imageUrl: updated.imageUrl,
         active: updated.active,
       }),
@@ -390,7 +438,7 @@ export function AdminPresentation() {
   const productStats = {
     total: products.length,
     outOfStock: products.filter((product) => product.stock <= 0).length,
-    onSale: products.filter((product) => Number(product.discount || 0) > 0).length,
+    withOptions: products.filter((product) => product.options?.length).length,
   };
 
   if (!isLoggedIn) {
@@ -817,7 +865,7 @@ export function AdminPresentation() {
 
               <div className="flex flex-col gap-3">
                 {filteredOrders.map((order) => (
-                  <OrderRow key={order.id} order={order} onStatusChange={triggerStatusConfirm} onApproveSlip={approveSlip} t={t} onViewSlip={setLightbox} />
+                  <OrderRow key={order.id} order={order} onStatusChange={triggerStatusConfirm} onSaveTracking={saveTrackingNumber} onApproveSlip={approveSlip} t={t} onViewSlip={setLightbox} />
                 ))}
                 {filteredOrders.length === 0 && (
                   <div className="bg-white border border-gray-100 rounded-3xl py-12 flex flex-col items-center justify-center text-center shadow-2xs">
@@ -834,7 +882,7 @@ export function AdminPresentation() {
             <div className="grid grid-cols-3 gap-3">
               <ProductStatCard icon={<Package className="h-4 w-4" />} label={lang === "th" ? "สินค้าทั้งหมด" : "Products"} value={productStats.total} tone="slate" />
               <ProductStatCard icon={<PackageX className="h-4 w-4" />} label={lang === "th" ? "สินค้าหมด" : "Out of stock"} value={productStats.outOfStock} tone="red" />
-              <ProductStatCard icon={<Percent className="h-4 w-4" />} label={lang === "th" ? "ลดราคา" : "On sale"} value={productStats.onSale} tone="emerald" />
+              <ProductStatCard icon={<Tags className="h-4 w-4" />} label={lang === "th" ? "มีตัวเลือก" : "Options"} value={productStats.withOptions} tone="emerald" />
             </div>
 
             <AddProductForm onSubmit={addProduct} notify={notify} t={t} />
@@ -933,26 +981,44 @@ function ProductStatCard({ icon, label, value, tone }: {
   );
 }
 
-function OrderRow({ order, onStatusChange, onApproveSlip, t, onViewSlip }: {
+function OrderRow({ order, onStatusChange, onSaveTracking, onApproveSlip, t, onViewSlip }: {
   order: Order;
   onStatusChange: (id: string, s: OrderStatus) => void;
+  onSaveTracking: (id: string, trackingNumber: string) => void;
   onApproveSlip: (orderId: string, approved: boolean) => void;
   t: (key: string, replacements?: Record<string, string | number>) => string;
   onViewSlip: (url: string) => void;
 }) {
   const [open, setOpen] = React.useState(false);
+  const [trackingNumber, setTrackingNumber] = React.useState(order.trackingNumber ?? "");
   const { lang } = useLanguage();
 
-  const isPickup = isPickupOrder(order);
+  React.useEffect(() => {
+    setTrackingNumber(order.trackingNumber ?? "");
+  }, [order.trackingNumber]);
 
-  // Premium Logistics Stepper States
-  const timelineSteps: OrderStatus[] = [
+  const isPickup = isPickupOrder(order);
+  const canEditTracking = ["shipped", "completed"].includes(order.status) && !isPickup;
+
+  const logisticsSteps = [
+    { label: lang === "th" ? "รอตรวจสลิป" : "Reviewing slip" },
+    { label: lang === "th" ? "จัดส่งแล้ว" : "Shipped" },
+    { label: lang === "th" ? "สำเร็จ" : "Complete" },
+  ];
+  const transitionSteps: OrderStatus[] = [
     "paid",
     "packing",
     "shipped",
     "completed",
   ];
 
+  const logisticsIdx =
+    order.status === "completed"
+      ? 2
+      : ["paid", "packing", "shipped"].includes(order.status)
+        ? 1
+        : 0;
+  const timelineSteps = transitionSteps;
   const stepperStatus = order.status === "payment_review" ? "paid" : order.status;
   const currentIdx = timelineSteps.indexOf(stepperStatus);
 
@@ -1004,9 +1070,77 @@ function OrderRow({ order, onStatusChange, onApproveSlip, t, onViewSlip }: {
 
       {open && (
         <div className="border-t border-slate-100 p-4.5 bg-slate-50/20 flex flex-col gap-5 animate-in slide-in-from-top-2 duration-200">
+          <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-3xs">
+            <div className="mb-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <p className="text-[9px] font-bold uppercase text-gray-400">
+                  {lang === "th" ? "ชื่อคนสั่ง" : "Customer"}
+                </p>
+                <p className="mt-1 text-sm font-black text-gray-900">{order.customer.name}</p>
+              </div>
+              <div>
+                <p className="text-[9px] font-bold uppercase text-gray-400">
+                  {lang === "th" ? "เบอร์โทร" : "Phone"}
+                </p>
+                <p className="mt-1 text-sm font-black text-gray-900">{order.customer.phone}</p>
+              </div>
+            </div>
+            <div className="border-t border-gray-100 pt-3">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-[9px] font-bold uppercase text-gray-400">
+                  {lang === "th" ? "ของที่สั่ง" : "Items"}
+                </p>
+                <p className="text-sm font-black text-[#85241F]">{money(order.total)}</p>
+              </div>
+              <div className="space-y-1.5">
+                {order.items.map((item) => (
+                  <div key={`${order.id}-${item.productId}`} className="flex items-center justify-between gap-3 text-xs">
+                    <span className="min-w-0 truncate font-semibold text-gray-700">{item.name}</span>
+                    <span className="shrink-0 font-black text-gray-500">
+                      x{item.quantity} · {money(item.subtotal)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
 
           {/* Redesigned Premium Logistics Stepper */}
           <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-3xs">
+            <p className="mb-4 text-[10px] font-black text-slate-800">
+              {lang === "th" ? "การจัดส่ง (LOGISTICS)" : "LOGISTICS"}
+            </p>
+            <div className="flex items-start justify-between relative px-2">
+              <div className="absolute top-3 left-6 right-6 h-0.5 bg-gray-100 z-0" />
+              <div
+                className="absolute top-3 left-6 h-0.5 bg-[#96231F] z-0 transition-all duration-500"
+                style={{ width: logisticsIdx === 0 ? "0%" : logisticsIdx === 1 ? "50%" : "calc(100% - 3rem)" }}
+              />
+              {logisticsSteps.map((stepItem, idx) => {
+                const active = idx <= logisticsIdx;
+
+                return (
+                  <div key={stepItem.label} className="flex flex-col items-center z-10 w-20">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-[10px] text-white ${active ? "bg-[#96231F]" : "bg-gray-300"}`}>
+                      {idx + 1}
+                    </div>
+                    <span className={`mt-2 text-[9px] font-black text-center ${active ? "text-slate-800" : "text-gray-400"}`}>
+                      {stepItem.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            {order.status === "completed" ? (
+              <div className="mt-4 border-t border-gray-100 pt-3">
+                <p className="flex items-center gap-2 text-sm font-black text-emerald-600">
+                  <CheckCircle2 className="w-4 h-4" />
+                  {t("admin.order.is_completed")}
+                </p>
+              </div>
+            ) : null}
+          </div>
+          <div className="hidden">
             <div className="flex items-center justify-between relative">
               {/* Connector line */}
               <div className="absolute top-3.5 left-6 right-6 h-0.5 bg-gray-100 z-0" />
@@ -1071,6 +1205,28 @@ function OrderRow({ order, onStatusChange, onApproveSlip, t, onViewSlip }: {
                     <span className="text-[9px] text-gray-400 block shrink-0">{t("admin.order.phone")}</span>
                     <span className="text-gray-700 font-mono">{order.customer.phone}</span>
                   </div>
+                  {canEditTracking ? (
+                    <div className="mt-3 rounded-xl border border-amber-200/60 bg-white/80 p-2.5">
+                      <Label className="mb-1.5 block text-[9px] font-black uppercase text-amber-700">
+                        {lang === "th" ? "เลขพัสดุ" : "Tracking number"}
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={trackingNumber}
+                          onChange={(event) => setTrackingNumber(event.target.value)}
+                          placeholder={lang === "th" ? "ใส่เลขพัสดุ" : "Enter tracking number"}
+                          className="h-9 rounded-lg border-amber-200 bg-white text-xs font-bold"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => onSaveTracking(order.id, trackingNumber)}
+                          className="shrink-0 rounded-lg bg-[#85241F] px-3 text-[10px] font-black text-white transition-colors hover:bg-[#B72D2A]"
+                        >
+                          {lang === "th" ? "บันทึก" : "Save"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -1332,18 +1488,24 @@ function AddProductForm({ onSubmit, notify, t }: {
                 <Input name="stock" type="number" min="0" required className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
               <div className="col-span-2">
-                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.discount")}</Label>
-                <div className="relative">
-                  <Input name="discount" type="number" min="0" max="100" placeholder="0"
-                    className="rounded-xl border-gray-200 pr-8 text-xs h-10" />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
-                </div>
-              </div>
-              <div className="col-span-2">
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">
                   {lang === "th" ? "หมวดหมู่สินค้า" : "Product Category"}
                 </Label>
                 <Input name="category" placeholder="raincoat, umbrella, shoes" className="rounded-xl border-gray-200 text-xs h-10" />
+              </div>
+              <div className="col-span-2">
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">
+                  {lang === "th" ? "ตัวเลือกสินค้า" : "Product Options"}
+                </Label>
+                <Textarea
+                  name="options"
+                  rows={3}
+                  placeholder="สีดำ / M | /images/black-m.jpg"
+                  className="rounded-xl border-gray-200 text-xs resize-none"
+                />
+                <p className="mt-1 text-[9px] font-bold text-gray-400">
+                  {lang === "th" ? "ใส่ 1 ตัวเลือกต่อบรรทัด: ชื่อตัวเลือก | URL รูป" : "One option per line: label | image URL"}
+                </p>
               </div>
               <div className="col-span-2">
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.description")}</Label>
@@ -1375,8 +1537,6 @@ function ProductCard({ product, onUpdate, onDelete, t }: {
   const fileRef = React.useRef<HTMLInputElement>(null);
 
   const translatedName = t(`product.${product.id}.name`) === `product.${product.id}.name` ? product.name : t(`product.${product.id}.name`);
-
-  const discountedPrice = form.discount ? Math.round(form.price * (1 - form.discount / 100)) : null;
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -1426,23 +1586,24 @@ function ProductCard({ product, onUpdate, onDelete, t }: {
             </div>
           </div>
           <div>
-            <Label className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">{t("admin.products.label.discount")}</Label>
-            <div className="relative">
-              <Input type="number" min="0" max="100" value={form.discount ?? ""}
-                onChange={(e) => setForm((f) => ({ ...f, discount: e.target.value ? Number(e.target.value) : undefined }))}
-                placeholder="0" className="rounded-xl border-gray-200 text-xs h-9 pr-7" />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
-            </div>
-            {form.discount ? (
-              <p className="text-[10px] text-emerald-600 mt-1.5 font-bold">
-                {t("admin.products.edit.discounted")} <span className="font-extrabold">{money(Math.round(form.price * (1 - form.discount / 100)))}</span>
-              </p>
-            ) : null}
-          </div>
-          <div>
             <Label className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Category</Label>
             <Input value={form.category ?? ""} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
               placeholder="raincoat" className="rounded-xl border-gray-200 text-xs h-9" />
+          </div>
+          <div>
+            <Label className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Options</Label>
+            <Textarea
+              value={productOptionsText(form.options)}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  options: parseProductOptions(e.target.value),
+                }))
+              }
+              placeholder="สีดำ / M | /images/black-m.jpg"
+              className="rounded-xl border-gray-200 text-xs resize-none"
+              rows={3}
+            />
           </div>
           <div className="flex gap-2 mt-1 border-t border-gray-50 pt-2.5">
             <Button onClick={handleSave} className="flex-1 bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-9 text-[10px] font-bold shadow-sm cursor-pointer transition-all active:scale-97">
@@ -1463,11 +1624,6 @@ function ProductCard({ product, onUpdate, onDelete, t }: {
         {imagePreview
           ? <img src={imagePreview} alt={translatedName} className="w-full h-full object-cover" />
           : <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-8 h-8 text-gray-300" /></div>}
-        {product.discount ? (
-          <span className="absolute top-2.5 left-2.5 bg-[#85241F] text-white text-[9px] font-black px-2 py-0.5 rounded-lg shadow-sm">
-            -{product.discount}%
-          </span>
-        ) : null}
         {/* Action buttons with nice group hover reveal */}
         <div className="absolute top-2.5 right-2.5 flex gap-1.5 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
           <button onClick={() => setEditing(true)}
@@ -1487,16 +1643,14 @@ function ProductCard({ product, onUpdate, onDelete, t }: {
             {product.category}
           </p>
         ) : null}
+        {product.options?.length ? (
+          <p className="mt-1 text-[9px] font-bold text-gray-400">
+            {productOptionLabels(product.options)}
+          </p>
+        ) : null}
         <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
           <div>
-            {discountedPrice ? (
-              <div>
-                <span className="font-black text-[#85241F] text-xs">{money(discountedPrice)}</span>
-                <span className="text-[9px] text-gray-400 line-through ml-1.5 font-bold">{money(product.price)}</span>
-              </div>
-            ) : (
-              <span className="font-black text-[#85241F] text-xs">{money(product.price)}</span>
-            )}
+            <span className="font-black text-[#85241F] text-xs">{money(product.price)}</span>
           </div>
           <span className="text-[10px] text-gray-400 font-bold bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-lg">{product.stock} {t("admin.products.edit.units")}</span>
         </div>

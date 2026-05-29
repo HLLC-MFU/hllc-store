@@ -20,16 +20,6 @@ function assertNumber(value: unknown, field: string) {
   return numberValue;
 }
 
-function assertPercent(value: unknown, field: string) {
-  const numberValue = assertNumber(value ?? 0, field);
-
-  if (numberValue > 100) {
-    throw new Error(`${field} must be between 0 and 100`);
-  }
-
-  return numberValue;
-}
-
 function assertObjectId(id: string) {
   if (!ObjectId.isValid(id)) {
     throw new Error("invalid product id");
@@ -50,6 +40,54 @@ function now() {
   return new Date().toISOString();
 }
 
+function normalizeOptions(value: unknown) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "string") {
+          const [label = "", imageUrl = ""] = item.split("|").map((part) => part.trim());
+          return label ? { label, imageUrl } : null;
+        }
+
+        if (item && typeof item === "object") {
+          const option = item as { label?: unknown; name?: unknown; value?: unknown; imageUrl?: unknown; image?: unknown };
+          const label =
+            typeof option.label === "string"
+              ? option.label.trim()
+              : typeof option.name === "string"
+                ? option.name.trim()
+                : typeof option.value === "string"
+                  ? option.value.trim()
+                  : "";
+          const imageUrl =
+            typeof option.imageUrl === "string"
+              ? option.imageUrl.trim()
+              : typeof option.image === "string"
+                ? option.image.trim()
+                : "";
+
+          return label ? { label, imageUrl } : null;
+        }
+
+        return null;
+      })
+      .filter((item): item is { label: string; imageUrl: string } => Boolean(item));
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(/\r?\n|,/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((item) => {
+        const [label = "", imageUrl = ""] = item.split("|").map((part) => part.trim());
+        return { label, imageUrl };
+      });
+  }
+
+  return [];
+}
+
 export function toProduct(doc: Document): Product {
   return {
     id: doc._id.toString(),
@@ -58,8 +96,8 @@ export function toProduct(doc: Document): Product {
     description: doc.description ?? "",
     price: Number(doc.price ?? 0),
     stock: Number(doc.stock ?? 0),
-    discount: Number(doc.discount ?? 0),
     category: doc.category ?? "",
+    options: normalizeOptions(doc.options),
     imageUrl: doc.imageUrl ?? "",
     active: doc.active ?? true,
     createdAt: doc.createdAt,
@@ -78,8 +116,8 @@ function buildCreateProduct(input: CreateProductInput) {
       typeof input.description === "string" ? input.description.trim() : "",
     price: assertNumber(input.price, "price"),
     stock: assertNumber(input.stock, "stock"),
-    discount: assertPercent(input.discount, "discount"),
     category: typeof input.category === "string" ? input.category.trim() : "",
+    options: normalizeOptions(input.options),
     imageUrl: typeof input.imageUrl === "string" ? input.imageUrl.trim() : "",
     active: input.active ?? true,
     createdAt: timestamp,
@@ -139,13 +177,13 @@ export async function updateProduct(
     updateData.stock = assertNumber(input.stock, "stock");
   }
 
-  if (input.discount !== undefined) {
-    updateData.discount = assertPercent(input.discount, "discount");
-  }
-
   if (input.category !== undefined) {
     updateData.category =
       typeof input.category === "string" ? input.category.trim() : "";
+  }
+
+  if (input.options !== undefined) {
+    updateData.options = normalizeOptions(input.options);
   }
 
   if (input.imageUrl !== undefined) {

@@ -14,6 +14,7 @@ type RouteContext = {
 
 type UpdateOrderBody = {
   status?: unknown;
+  trackingNumber?: unknown;
 };
 
 export async function GET(_request: NextRequest, context: RouteContext) {
@@ -32,11 +33,23 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const { orderId } = await context.params;
     const body = (await request.json()) as UpdateOrderBody;
 
-    if (typeof body.status !== "string" || !isOrderStatus(body.status)) {
+    const nextStatus =
+      typeof body.status === "string" && isOrderStatus(body.status)
+        ? body.status
+        : undefined;
+
+    if (body.status !== undefined && !nextStatus) {
       throw new Error("status is invalid");
     }
 
-    return ok(await updateOrderStatus(orderId, body.status));
+    const trackingNumber =
+      typeof body.trackingNumber === "string" ? body.trackingNumber : undefined;
+
+    if (!nextStatus && trackingNumber === undefined) {
+      throw new Error("status or trackingNumber is required");
+    }
+
+    return ok(await updateOrderStatus(orderId, nextStatus, trackingNumber));
   } catch (error) {
     return badRequest(error);
   }
