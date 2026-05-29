@@ -19,6 +19,15 @@ export type OrderProduct = {
 
 type Step = 1 | 2 | 3 | "success";
 
+type OrderStatus =
+  | "pending_payment"
+  | "payment_review"
+  | "paid"
+  | "packing"
+  | "shipped"
+  | "completed"
+  | "cancelled";
+
 const PROVINCES = [
   "กรุงเทพมหานคร","กระบี่","กาญจนบุรี","กาฬสินธุ์","กำแพงเพชร","ขอนแก่น",
   "จันทบุรี","ฉะเชิงเทรา","ชลบุรี","ชัยนาท","ชัยภูมิ","ชุมพร","เชียงราย","เชียงใหม่",
@@ -137,8 +146,8 @@ function StepBar({ step }: { step: Step }) {
   
   const STEPS = [
     { key: "checkout.step.product", label: "สินค้า" },
-    { key: "checkout.step.info", label: "ข้อมูล" },
-    { key: "checkout.step.payment", label: "ชำระเงิน" }
+    { key: "checkout.step.payment", label: "ชำระเงิน" },
+    { key: "checkout.step.info", label: "ข้อมูล" }
   ];
 
   return (
@@ -205,8 +214,32 @@ export function OrderSheet({
   const [slipPreview, setSlipPreview] = useState<string | null>(null);
   const [slipFile, setSlipFile] = useState<string | null>(null);
   const [slipSent, setSlipSent] = useState(false);
+  const [orderDetail, setOrderDetail] = useState<any>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { lang, t } = useLanguage();
+
+  async function fetchOrderStatus() {
+    if (!orderId) return;
+    try {
+      const res = await fetch(`/api/backend/orders/${orderId}`);
+      if (res.ok) {
+        const payload = await res.json();
+        if (payload.data) {
+          setOrderDetail(payload.data);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  useEffect(() => {
+    if (step === "success" && orderId) {
+      fetchOrderStatus();
+      const interval = setInterval(fetchOrderStatus, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [step, orderId]);
 
   useEffect(() => {
     if (product) {
@@ -223,6 +256,7 @@ export function OrderSheet({
       setSlipPreview(null);
       setSlipFile(null);
       setSlipSent(false);
+      setOrderDetail(null);
     }
   }, [product]);
 
@@ -270,37 +304,37 @@ export function OrderSheet({
         }),
       });
       const payload = await res.json();
+      
+      let finalOrderId = "";
       if (!res.ok) {
-        // demo mode — ข้ามไปหน้าชำระเงินแม้ไม่มี DB
-        const mockId = "DEMO" + Math.random().toString(36).slice(2, 8).toUpperCase();
-        setOrderId(mockId);
-        setStep(3);
-        setLoading(false);
-        return;
+        // demo mode
+        finalOrderId = "DEMO" + Math.random().toString(36).slice(2, 8).toUpperCase();
+      } else {
+        finalOrderId = payload.data?.id ?? "";
       }
-      setOrderId(payload.data?.id ?? "");
-      setStep(3);
+      setOrderId(finalOrderId);
+
+      // Immediately send the uploaded payment slip
+      if (slipFile && finalOrderId) {
+        try {
+          await fetch(`/api/backend/orders/${finalOrderId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageUrl: slipFile, amount: total }),
+          });
+          setSlipSent(true);
+        } catch (err) {
+          console.error("Failed to upload slip:", err);
+        }
+      }
+
+      setStep("success");
     } catch {
       const mockId = "DEMO" + Math.random().toString(36).slice(2, 8).toUpperCase();
       setOrderId(mockId);
-      setStep(3);
+      setStep("success");
     }
     setLoading(false);
-  }
-
-  async function handleSendSlip() {
-    if (!slipFile || !orderId) return;
-    setLoading(true);
-    try {
-      await fetch(`/api/backend/orders/${orderId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: slipFile, amount: total }),
-      });
-    } catch {}
-    setLoading(false);
-    setSlipSent(true);
-    setStep("success");
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -405,8 +439,78 @@ export function OrderSheet({
           </div>
         )}
 
-        {/* ── Step 2: ข้อมูลจัดส่ง ── */}
+        {/* ── Step 2: ชำระเงิน ── */}
         {step === 2 && (
+          <div className="px-5 pt-5 pb-8 flex flex-col gap-5">
+            {/* Order summary */}
+            <div className="bg-gray-50 rounded-2xl p-4">
+              <p className="text-xs text-[#85241F] mb-1 font-extrabold uppercase tracking-wider">{t("checkout.step.payment")}</p>
+              <div className="flex justify-between mt-2 text-sm">
+                <span className="text-gray-600 font-medium">{product.name} × {qty}</span>
+                <span className="font-bold">{money(total)}</span>
+              </div>
+            </div>
+
+            {/* QR Code */}
+            <div className="flex flex-col items-center">
+              <p className="text-sm font-bold text-gray-800 mb-3">{t("checkout.scan_qr")}</p>
+              <div className="w-52 h-52 border-2 border-gray-200 rounded-2xl overflow-hidden flex items-center justify-center bg-gray-50 shadow-xs">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/qr-payment.png"
+                  alt="QR Payment"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
+                  }}
+                />
+                <div className="hidden flex-col items-center gap-2 text-gray-300">
+                  <span className="text-4xl">📱</span>
+                  <span className="text-[10px] text-center px-4">Place QR Code at<br />/public/images/qr-payment.png</span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-2 text-center">
+                {t("checkout.payment_amount")} <span className="font-black text-[#85241F] text-sm">{money(total)}</span>
+              </p>
+            </div>
+
+            {/* Slip upload */}
+            <div>
+              <p className="text-sm font-bold text-gray-800 mb-3">{t("checkout.upload_slip")}</p>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              {slipPreview ? (
+                <div className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={slipPreview} alt="slip" className="w-full max-h-52 object-contain rounded-2xl border border-gray-200" />
+                  <button
+                    onClick={() => { setSlipPreview(null); setSlipFile(null); }}
+                    className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center cursor-pointer"
+                  >
+                    <X className="w-4 h-4 text-gray-500" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="w-full border-2 border-dashed border-gray-200 rounded-2xl py-8 flex flex-col items-center gap-2 hover:border-[#85241F]/40 transition-colors cursor-pointer"
+                >
+                  <Upload className="w-6 h-6 text-gray-400 animate-bounce" />
+                  <span className="text-sm text-gray-400 font-medium">{t("checkout.upload_tap")}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 3: ข้อมูลจัดส่ง ── */}
+        {step === 3 && (
           <div className="px-5 pt-5 pb-8 flex flex-col gap-3">
             <h2 className="text-base font-bold text-gray-900 mb-1">{t("checkout.delivery_method")}</h2>
 
@@ -523,92 +627,121 @@ export function OrderSheet({
           </div>
         )}
 
-        {/* ── Step 3: ชำระเงิน ── */}
-        {step === 3 && (
-          <div className="px-5 pt-5 pb-8 flex flex-col gap-5">
-            {/* Order summary */}
-            <div className="bg-gray-50 rounded-2xl p-4">
-              <p className="text-xs text-gray-400 mb-1 font-semibold">{t("checkout.order_id")}</p>
-              <p className="font-black text-[#85241F] text-lg">#{orderId.slice(-8).toUpperCase()}</p>
-              <div className="flex justify-between mt-2 text-sm">
-                <span className="text-gray-600 font-medium">{product.name} × {qty}</span>
-                <span className="font-bold">{money(total)}</span>
-              </div>
-            </div>
-
-            {/* QR Code */}
-            <div className="flex flex-col items-center">
-              <p className="text-sm font-bold text-gray-800 mb-3">{t("checkout.scan_qr")}</p>
-              <div className="w-52 h-52 border-2 border-gray-200 rounded-2xl overflow-hidden flex items-center justify-center bg-gray-50 shadow-xs">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/images/qr-payment.png"
-                  alt="QR Payment"
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = "none";
-                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
-                  }}
-                />
-                <div className="hidden flex-col items-center gap-2 text-gray-300">
-                  <span className="text-4xl">📱</span>
-                  <span className="text-[10px] text-center px-4">Place QR Code at<br />/public/images/qr-payment.png</span>
-                </div>
-              </div>
-              <p className="text-xs text-gray-400 mt-2 text-center">
-                {t("checkout.payment_amount")} <span className="font-black text-[#85241F] text-sm">{money(total)}</span>
-              </p>
-            </div>
-
-            {/* Slip upload */}
-            <div>
-              <p className="text-sm font-bold text-gray-800 mb-3">{t("checkout.upload_slip")}</p>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              {slipPreview ? (
-                <div className="relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={slipPreview} alt="slip" className="w-full max-h-52 object-contain rounded-2xl border border-gray-200" />
-                  <button
-                    onClick={() => { setSlipPreview(null); setSlipFile(null); }}
-                    className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center cursor-pointer"
-                  >
-                    <X className="w-4 h-4 text-gray-500" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  className="w-full border-2 border-dashed border-gray-200 rounded-2xl py-8 flex flex-col items-center gap-2 hover:border-[#85241F]/40 transition-colors cursor-pointer"
-                >
-                  <Upload className="w-6 h-6 text-gray-400 animate-bounce" />
-                  <span className="text-sm text-gray-400 font-medium">{t("checkout.upload_tap")}</span>
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── Success ── */}
+        {/* ── Success/Order Status ── */}
         {step === "success" && (
-          <div className="flex flex-col items-center justify-center text-center px-6 py-16">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4 text-4xl">✅</div>
-            <h2 className="text-xl font-black text-gray-900 mb-1">{t("checkout.success.title")}</h2>
-            <p className="text-gray-500 text-sm mb-1 font-mono">Order #{orderId.slice(-8).toUpperCase()}</p>
-            <p className="text-[#85241F] font-black text-lg mb-2">{money(total)}</p>
-            {slipSent && <p className="text-xs text-green-600 bg-green-50 rounded-xl px-4 py-2 mb-6 font-semibold">{t("checkout.success.slip_sent")}</p>}
-            {!slipSent && <p className="text-xs text-gray-400 mb-6 font-medium">{t("checkout.success.no_slip")}</p>}
-            <button
-              onClick={onClose}
-              className="bg-[#85241F] text-white font-bold px-10 py-3.5 rounded-2xl text-sm hover:bg-[#B72D2A] transition-colors cursor-pointer shadow-lg shadow-[#85241F]/10 active:scale-98"
-            >
-              {t("checkout.success.back")}
-            </button>
+          <div className="px-5 pt-3 pb-8 flex flex-col gap-5 max-w-xl mx-auto animate-in fade-in duration-300">
+            {/* Header Success info */}
+            <div className="text-center flex flex-col items-center py-2">
+              <div className="w-14 h-14 bg-emerald-50 text-emerald-500 border border-emerald-100 rounded-full flex items-center justify-center mb-3 text-2xl shadow-xs animate-pulse">
+                ✓
+              </div>
+              <h2 className="text-base font-black text-gray-900">{t("checkout.success.title")}</h2>
+              <p className="text-[10px] text-gray-400 mt-1 font-mono font-black">ORDER ID: #{orderId.slice(-8).toUpperCase()}</p>
+            </div>
+
+            {/* Stepper timeline */}
+            {(() => {
+              const currentStatus = orderDetail?.status || (slipSent ? "payment_review" : "pending_payment");
+              
+              const timelineSteps: { key: OrderStatus; labelTH: string; labelEN: string }[] = [
+                { key: "payment_review", labelTH: "รอตรวจสลิป", labelEN: "Reviewing Slip" },
+                { key: "paid", labelTH: "ชำระแล้ว / เตรียมของ", labelEN: "Paid / Packing" },
+                { key: "shipped", labelTH: "จัดส่งแล้ว", labelEN: "Shipped" },
+                { key: "completed", labelTH: "เสร็จสิ้น", labelEN: "Completed" }
+              ];
+              
+              const currentIdx = timelineSteps.findIndex(s => s.key === currentStatus || (s.key === "paid" && currentStatus === "packing"));
+              const isCancelled = currentStatus === "cancelled";
+
+              if (isCancelled) {
+                return (
+                  <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3 text-red-800 text-xs font-semibold shadow-xs">
+                    <span className="text-xl">⚠️</span>
+                    <div>
+                      <p className="font-bold text-red-950">{lang === "th" ? "คำสั่งซื้อถูกยกเลิก" : "Order Cancelled"}</p>
+                      <p className="text-[10px] text-red-600/80 mt-0.5">{lang === "th" ? "คำสั่งซื้อนี้ถูกยกเลิกแล้วโดยผู้ดูแลระบบ" : "This order has been cancelled by administrator."}</p>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-xs flex flex-col gap-4">
+                  <div className="flex items-center justify-between border-b border-gray-50 pb-2.5">
+                    <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">{lang === "th" ? "สถานะการจัดส่ง" : "Logistics Status"}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between relative px-2 py-1">
+                    {/* Stepper line */}
+                    <div className="absolute top-3.5 left-6 right-6 h-0.5 bg-gray-100 z-0" />
+                    <div 
+                      className="absolute top-3.5 left-6 h-0.5 bg-emerald-500 z-0 transition-all duration-500"
+                      style={{ width: `${currentIdx <= 0 ? 0 : (currentIdx / (timelineSteps.length - 1)) * 88}%` }}
+                    />
+                    
+                    {timelineSteps.map((stepItem, idx) => {
+                      const done = idx < currentIdx || currentStatus === "completed";
+                      const active = idx === currentIdx;
+                      
+                      return (
+                        <div key={stepItem.key} className="flex flex-col items-center z-10">
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all duration-300 font-bold text-[9px] shadow-2xs ${
+                            done ? "bg-emerald-500 border-emerald-500 text-white" :
+                            active ? "bg-white border-[#85241F] text-[#85241F] scale-110 ring-4 ring-[#85241F]/5" :
+                            "bg-white border-gray-100 text-gray-300"
+                          }`}>
+                            {done ? "✓" : idx + 1}
+                          </div>
+                          <span className={`text-[7.5px] font-bold mt-2 text-center max-w-[65px] leading-tight block ${
+                            active ? "text-[#85241F] font-black" : done ? "text-emerald-600" : "text-gray-400"
+                          }`}>
+                            {lang === "th" ? stepItem.labelTH : stepItem.labelEN}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Receipt Summary details */}
+            <div className="bg-linear-to-br from-amber-50/20 to-amber-100/10 border-2 border-dashed border-amber-200/60 rounded-3xl p-5 shadow-3xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between border-b border-amber-200/40 pb-2 mb-3">
+                  <span className="text-amber-800 text-[9px] font-black uppercase tracking-wider">
+                    {deliveryMode === "pickup" ? t("admin.order.pickup_label") : t("admin.order.shipping_label")}
+                  </span>
+                  <span className="text-[8px] text-amber-500 font-bold font-mono">CODE: #{orderId.slice(-6).toUpperCase()}</span>
+                </div>
+                
+                <div className="text-xs text-gray-700 space-y-2.5 leading-relaxed font-semibold">
+                  <div>
+                    <span className="text-[8.5px] text-gray-400 block mb-0.5">{deliveryMode === "pickup" ? t("admin.order.pickup_details") : t("admin.order.address")}</span>
+                    <p className="text-gray-800 leading-relaxed border-l-2 border-amber-300 pl-2">
+                      {deliveryMode === "pickup" 
+                        ? `รับเองที่ D1 — เวลา ${pickupTime.trim()}`
+                        : `${streetAddress.trim()}, ${district.trim()}, ${province} ${postalCode.trim()}`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2 border-t border-amber-200/10 pt-2">
+                    <span className="text-[8.5px] text-gray-400 shrink-0">{t("admin.order.phone")}</span>
+                    <span className="text-gray-700 font-mono">{deliveryMode === "pickup" ? pickupPhone : phone}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Order Items detail */}
+            <div className="bg-gray-50/80 border border-gray-100 rounded-3xl p-4 flex flex-col gap-2">
+              <span className="text-[8.5px] text-gray-400 font-bold uppercase tracking-wider">{t("admin.order.item")}</span>
+              <div className="flex justify-between items-center text-xs text-gray-800 font-bold">
+                <span>{product.name} × {qty}</span>
+                <span className="text-[#85241F] font-black">{money(total)}</span>
+              </div>
+            </div>
+
+
           </div>
         )}
       </div>
@@ -626,6 +759,15 @@ export function OrderSheet({
           )}
           {step === 2 && (
             <button
+              onClick={() => setStep(3)}
+              disabled={!slipFile}
+              className="w-full bg-[#85241F] text-white font-bold py-4 rounded-2xl text-sm hover:bg-[#B72D2A] transition-colors disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#85241F]/10 active:scale-98"
+            >
+              {t("checkout.continue")}
+            </button>
+          )}
+          {step === 3 && (
+            <button
               onClick={handleCreateOrder}
               disabled={loading}
               className="w-full bg-[#85241F] text-white font-bold py-4 rounded-2xl text-sm hover:bg-[#B72D2A] transition-colors disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#85241F]/10 active:scale-98"
@@ -640,17 +782,6 @@ export function OrderSheet({
                 </>
               ) : `${t("checkout.confirm_button")} · ${money(total)}`}
             </button>
-          )}
-          {step === 3 && (
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleSendSlip}
-                disabled={!slipFile || loading}
-                className="w-full bg-[#85241F] text-white font-bold py-4 rounded-2xl text-sm hover:bg-[#B72D2A] transition-colors disabled:opacity-40 cursor-pointer shadow-lg shadow-[#85241F]/10 active:scale-98"
-              >
-                {loading ? t("checkout.sending") : t("checkout.confirm_payment")}
-              </button>
-            </div>
           )}
         </div>
       )}

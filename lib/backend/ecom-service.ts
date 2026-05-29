@@ -346,3 +346,63 @@ export function isOrderStatus(value: string): value is OrderStatus {
     "cancelled",
   ].includes(value);
 }
+
+export async function updateProduct(productId: string, input: Partial<CreateProductInput>) {
+  const db = await getDb();
+  const timestamp = now();
+  
+  const updateData: any = {};
+  
+  if (input.name !== undefined) {
+    updateData.name = assertText(input.name, "name");
+    updateData.slug = createSlug(input.slug || input.name);
+  } else if (input.slug !== undefined) {
+    updateData.slug = createSlug(input.slug);
+  }
+  
+  if (input.description !== undefined) {
+    updateData.description = typeof input.description === "string" ? input.description.trim() : "";
+  }
+  
+  if (input.price !== undefined) {
+    updateData.price = assertNumber(input.price, "price");
+  }
+  
+  if (input.stock !== undefined) {
+    updateData.stock = assertNumber(input.stock, "stock");
+  }
+  
+  if (input.imageUrl !== undefined) {
+    updateData.imageUrl = typeof input.imageUrl === "string" ? input.imageUrl.trim() : "";
+  }
+  
+  if (input.active !== undefined) {
+    updateData.active = input.active;
+  }
+  
+  updateData.updatedAt = timestamp;
+
+  const result = await db.collection("products").findOneAndUpdate(
+    { _id: assertObjectId(productId) },
+    { $set: updateData },
+    { returnDocument: "after" }
+  );
+
+  if (!result) {
+    throw new Error("product not found");
+  }
+
+  return toProduct(result);
+}
+
+export async function deleteProduct(productId: string) {
+  const db = await getDb();
+  const result = await db.collection("products").deleteOne({ _id: assertObjectId(productId) });
+  
+  if (result.deletedCount === 0) {
+    throw new Error("product not found");
+  }
+  
+  return { success: true };
+}
+

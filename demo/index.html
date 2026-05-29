@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HLLC E-Commerce & Admin Portal</title>
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Beautiful Premium Styling -->
+  <!-- Modular Stylesheets -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/shop.css">
+  <link rel="stylesheet" href="css/checkout.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+  <!-- Floating Language Selector -->
+  <div class="global-lang-switch">
+    <i data-lucide="globe" style="width: 14px; height: 14px;"></i>
+    <button onclick="setLanguage('th')" id="lang-btn-th" class="active">TH</button>
+    <button onclick="setLanguage('en')" id="lang-btn-en">EN</button>
+  </div>
+
+  <!-- Main View Container router -->
+  <main id="app-router">
+
+    <!-- VIEW 1: INDEX SELECT ROUTE -->
+    <section id="view-select" class="fade-in">
+      <div class="index-card">
+        <div class="index-logo-area">
+          <!-- Logo image with text fallback -->
+          <img src="/images/HLLCLOGO.png" alt="HLLC Logo" class="shop-logo-img" style="height: 64px; margin-bottom: 8px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+          <div class="fallback-logo" style="display: none;">HLLC STORE</div>
+        </div>
+        <h1 class="index-title" data-t="select.title">HLLC สโตร์</h1>
+        <p class="index-subtitle" data-t="select.subtitle">กรุณาเลือกช่องทางที่คุณต้องการไป</p>
+        <div class="index-actions">
+          <button onclick="navigate('shop')" class="btn btn-primary" data-t="select.home">
+            <i data-lucide="store" style="width: 18px; height: 18px;"></i> เข้าสู่หน้าหลักร้านค้า
+          </button>
+          <button onclick="navigate('admin')" class="btn btn-secondary" data-t="select.admin">
+            <i data-lucide="layout-dashboard" style="width: 18px; height: 18px;"></i> เข้าสู่ระบบหลังบ้าน
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: SHOP CLIENT FRONT OFFICE -->
+    <section id="view-shop" class="fade-in hide">
+      <header class="shop-header">
+        <div class="shop-header-container">
+          <div onclick="navigate('select')" class="logo-box">
+            <img src="/images/HLLCLOGO.png" alt="HLLC Logo" class="shop-logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <div class="fallback-logo" style="display: none; font-size: 20px;">HLLC</div>
+          </div>
+          <div class="shop-search-bar">
+            <i data-lucide="search" style="width: 16px; height: 16px;"></i>
+            <input type="text" id="shop-search-input" placeholder="ค้นหาสินค้า..." data-t-placeholder="shop.search_placeholder" oninput="handleShopSearch(this.value)">
+          </div>
+        </div>
+      </header>
+
+      <div class="shop-main">
+        <!-- Sidebar Navigation (Desktop) -->
+        <aside class="shop-sidebar">
+          <h4 class="sidebar-title" data-t="shop.categories">หมวดหมู่</h4>
+          <div id="shop-category-list">
+            <!-- Populated dynamically in JavaScript -->
+          </div>
+        </aside>
+
+        <!-- Product Listings Area -->
+        <div class="shop-content">
+          <!-- Flash Sale Promotional Timer Card -->
+          <div class="sale-banner">
+            <div class="sale-text">
+              <h3>Flash Sale ⚡</h3>
+              <p data-t="checkout.free_shipping_banner">ฟรีค่าจัดส่ง (1–3 วัน)</p>
+            </div>
+            <div class="timer-container">
+              <i data-lucide="hourglass" style="width: 16px; height: 16px;"></i>
+              <span class="timer-val" id="countdown-timer">02 : 12 : 56</span>
+            </div>
+          </div>
+
+          <!-- Mobile categories list (Hidden on desktop) -->
+          <div class="mobile-category-bar">
+            <div class="mobile-category-scroll" id="shop-mobile-categories">
+              <!-- Populated dynamically in JS -->
+            </div>
+          </div>
+
+          <!-- Product Grid List -->
+          <div>
+            <h2 class="product-list-title">
+              <span id="shop-active-category-label" data-t="shop.all_products">สินค้าทั้งหมด</span>
+              <span class="product-list-count" id="shop-product-count">(8 รายการ)</span>
+            </h2>
+            <div class="product-grid" id="shop-products-grid">
+              <!-- Populated dynamically in JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: ADMIN BACK OFFICE OPERATIONS -->
+    <section id="view-admin" class="fade-in hide">
+      
+      <!-- AUTH COVER DIALOG OVERLAY -->
+      <div id="admin-login-cover" class="admin-login-overlay hide">
+        <div class="admin-login-orb1"></div>
+        <div class="admin-login-orb2"></div>
+        <div class="admin-login-card">
+          <div class="admin-login-badge">
+            <i data-lucide="package"></i>
+          </div>
+          <h2 class="admin-login-title" data-t="admin.login.title">เข้าสู่ระบบผู้ดูแลระบบ</h2>
+          <p class="admin-login-desc" data-t="admin.login.subtitle">กรุณาเข้าสู่ระบบด้วยบัญชีผู้ดูแลระบบเพื่อเข้าจัดการสโตร์ HLLC</p>
+          
+          <form onsubmit="handleAdminLogin(event)">
+            <div class="admin-login-input-group">
+              <label data-t="admin.login.username">ชื่อผู้ใช้</label>
+              <input type="text" id="admin-user-field" required value="admin">
+            </div>
+            <div class="admin-login-input-group">
+              <label data-t="admin.login.password">รหัสผ่าน</label>
+              <input type="password" id="admin-pass-field" required value="password">
+            </div>
+            <div class="admin-login-err hide" id="admin-login-error" data-t="admin.login.error">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</div>
+            <button type="submit" class="btn btn-primary btn-admin-login" data-t="admin.login.button">เข้าสู่ระบบหลังบ้าน</button>
+          </form>
+          <div class="admin-login-footer" data-t="admin.login.desc">ข้อมูลรับรองเริ่มต้น: admin / password</div>
+        </div>
+      </div>
+
+      <!-- MAIN ADMIN INTERFACE -->
+      <div id="admin-dashboard-view">
+        <header class="admin-header">
+          <div class="admin-header-container">
+            <div class="admin-header-title">
+              <div onclick="navigate('select')" class="admin-header-title-badge" style="cursor: pointer;">
+                <i data-lucide="package" style="width: 18px; height: 18px;"></i>
+              </div>
+              <div class="admin-header-text">
+                <h2 data-t="admin.header">HLLC หลังบ้าน</h2>
+                <p id="admin-stats-summary-subtitle">0 คำสั่งซื้อ · 0 สินค้า</p>
+              </div>
+            </div>
+            <div class="admin-header-badge-review hide" id="admin-badge-pending-container">
+              <span></span>
+              <p id="admin-badge-pending-text">รอตรวจ 0 รายการ</p>
+            </div>
+          </div>
+        </header>
+
+        <div class="admin-main">
+          <!-- Tab switch buttons -->
+          <div class="admin-tabs">
+            <button onclick="switchAdminTab('orders')" id="admin-tab-btn-orders" class="admin-tab-btn active">
+              <i data-lucide="clipboard-list" style="width: 16px; height: 16px;"></i>
+              <span data-t="admin.tab.orders">คำสั่งซื้อ</span>
+              <span class="badge hide" id="admin-tab-badge-orders-count">0</span>
+            </button>
+            <button onclick="switchAdminTab('products')" id="admin-tab-btn-products" class="admin-tab-btn">
+              <i data-lucide="package" style="width: 16px; height: 16px;"></i>
+              <span data-t="admin.tab.products">สินค้า</span>
+            </button>
+          </div>
+
+          <!-- TAB CONTENT: ORDERS -->
+          <div id="admin-content-orders" class="fade-in">
+            <!-- Aggregate executive dashboard panels -->
+            <div class="admin-kpi-grid">
+              <div class="kpi-card revenue">
+                <div class="kpi-icon"><i data-lucide="trending-up"></i></div>
+                <div class="kpi-details">
+                  <span class="kpi-label" data-t="admin.stats.revenue">ยอดขายรวม</span>
+                  <span class="kpi-value" id="kpi-revenue">฿0</span>
+                </div>
+              </div>
+              <div class="kpi-card pending-review" id="kpi-card-pending">
+                <div class="kpi-icon"><i data-lucide="file-check-2"></i></div>
+                <div class="kpi-details">
+                  <span class="kpi-label" data-t="admin.stats.pending">สลิปที่รอตรวจ</span>
+                  <span class="kpi-value" id="kpi-pending">0</span>
+                </div>
+              </div>
+              <div class="kpi-card active-ships">
+                <div class="kpi-icon"><i data-lucide="truck"></i></div>
+                <div class="kpi-details">
+                  <span class="kpi-label" data-t="admin.stats.active">กำลังดำเนินการ</span>
+                  <span class="kpi-value" id="kpi-active">0</span>
+                </div>
+              </div>
+              <div class="kpi-card font-total">
+                <div class="kpi-icon"><i data-lucide="clipboard-list"></i></div>
+                <div class="kpi-details">
+                  <span class="kpi-label" data-t="admin.stats.completed">เสร็จสิ้นคำสั่งซื้อ</span>
+                  <span class="kpi-value" id="kpi-total">0</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dynamic segmented overview status gauge panel -->
+            <div class="admin-status-overview-panel" id="admin-status-overview-card" style="margin-top: 16px;">
+              <div class="admin-status-overview-header">
+                <span data-t="admin.gauge.title">สรุปสถานะสัดส่วนพัสดุรวม</span>
+                <i data-lucide="bar-chart-3" style="width: 16px; height: 16px;"></i>
+              </div>
+              <div class="admin-status-gauge" id="admin-segmented-status-gauge">
+                <!-- Segments populated dynamically in JavaScript -->
+              </div>
+              <div class="admin-status-overview-legend" id="admin-status-legend">
+                <!-- Legend items populated dynamically in JavaScript -->
+              </div>
+            </div>
+
+            <!-- Operations management section -->
+            <div style="margin-top: 24px;">
+              <div class="admin-panel-title">
+                <span data-t="admin.orders.all">คำสั่งซื้อทั้งหมด</span>
+              </div>
+              
+              <!-- Filter Options -->
+              <div class="admin-filter-bar">
+                <div class="admin-filter-search">
+                  <i data-lucide="search" style="width: 14px; height: 14px;"></i>
+                  <input type="text" id="admin-search-orders" placeholder="ค้นหาด้วยชื่อ, เบอร์โทร..." data-t-placeholder="admin.orders.search_placeholder" oninput="handleAdminSearch(this.value)">
+                </div>
+                <div class="admin-filter-group">
+                  <div class="admin-filter-toggle">
+                    <button onclick="setAdminShippingFilter('all')" id="ship-filter-all" class="active" data-t="admin.orders.filter_all">ทั้งหมด</button>
+                    <button onclick="setAdminShippingFilter('delivery')" id="ship-filter-delivery" data-t="admin.orders.filter_delivery">🚚 จัดส่ง</button>
+                    <button onclick="setAdminShippingFilter('pickup')" id="ship-filter-pickup" data-t="admin.orders.filter_pickup">🏪 รับเอง</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Status chips filters -->
+              <div class="mobile-category-bar" style="display: block; margin-bottom: 16px;">
+                <div class="mobile-category-scroll" id="admin-status-chips">
+                  <!-- Populated in JS -->
+                </div>
+              </div>
+
+              <!-- Orders List Rows -->
+              <div class="admin-order-list" id="admin-orders-rows-container">
+                <!-- Populated dynamically in JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB CONTENT: PRODUCTS -->
+          <div id="admin-content-products" class="fade-in hide">
+            <!-- Product Inventory Summary Stats -->
+            <div class="admin-prod-stats-bar" id="admin-product-stats-summary-bar">
+              <div class="prod-stat-card">
+                <span class="prod-stat-lbl" data-t="admin.stat.total_products">สินค้าทั้งหมด</span>
+                <div class="prod-stat-val" id="admin-prod-stat-total">0</div>
+              </div>
+              <div class="prod-stat-card out-of-stock">
+                <span class="prod-stat-lbl" data-t="admin.stat.out_of_stock">สินค้าที่หมดเกลี้ยง</span>
+                <div class="prod-stat-val" id="admin-prod-stat-outofstock">0</div>
+              </div>
+              <div class="prod-stat-card on-sale">
+                <span class="prod-stat-lbl" data-t="admin.stat.discounted_products">สินค้าลดราคา</span>
+                <div class="prod-stat-val" id="admin-prod-stat-onsale">0</div>
+              </div>
+            </div>
+
+            <!-- Add New Product card forms -->
+            <div class="admin-product-creator">
+              <h3 class="admin-product-creator-title">
+                <i data-lucide="package-plus" style="width: 18px; height: 18px; color: hsl(var(--primary))"></i>
+                <span data-t="admin.products.add_title">เพิ่มสินค้าใหม่</span>
+              </h3>
+              
+              <form id="admin-add-product-form" onsubmit="handleProductCreation(event)">
+                <div class="admin-product-form-grid">
+                  <div class="input-group">
+                    <label data-t="admin.products.label.name">ชื่อสินค้า *</label>
+                    <input type="text" id="add-prod-name" class="input-field" required>
+                  </div>
+                  <div class="input-group">
+                    <label data-t="admin.products.label.price">ราคา (฿) *</label>
+                    <input type="number" id="add-prod-price" class="input-field" required min="1">
+                  </div>
+                  <div class="input-group">
+                    <label data-t="admin.products.label.stock">สต็อกสินค้า *</label>
+                    <input type="number" id="add-prod-stock" class="input-field" required min="0">
+                  </div>
+                </div>
+                <div class="admin-product-form-grid">
+                  <div class="input-group">
+                    <label data-t="admin.products.label.discount">ส่วนลด (%)</label>
+                    <input type="number" id="add-prod-discount" class="input-field" min="0" max="100" placeholder="0">
+                  </div>
+                </div>
+                
+                <!-- Image File Upload Container -->
+                <div class="input-group" style="margin-bottom: 20px;">
+                  <label style="font-weight: 800; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="upload-cloud" style="width: 14px; height: 14px; color: hsl(var(--primary));"></i>
+                    <span>อัปโหลดรูปภาพสินค้า * (เลือกอัปโหลดพร้อมกันได้หลายรูป)</span>
+                  </label>
+                  
+                  <div id="product-upload-dropzone" onclick="triggerProductFileInput()" style="
+                    border: 2px dashed #cbd5e1;
+                    border-radius: var(--radius-lg);
+                    padding: 32px 20px;
+                    text-align: center;
+                    cursor: pointer;
+                    background: #f8fafc;
+                    transition: var(--transition-normal);
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 8px;
+                  " ondragover="event.preventDefault(); this.style.borderColor='hsl(var(--primary))'; this.style.background='rgba(133,36,31,0.02)';" ondragleave="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc';" ondrop="handleProductFileDrop(event)">
+                    <i data-lucide="image" style="width: 32px; height: 32px; color: #94a3b8;"></i>
+                    <div>
+                      <p style="font-size: 13px; font-weight: 700; color: #1e293b;">แตะหรือลากไฟล์รูปภาพมาวางที่นี่</p>
+                      <p style="font-size: 11px; color: #64748b; margin-top: 4px;">รองรับไฟล์รูปภาพ PNG, JPG, JPEG (เลือกอัปโหลดได้มากกว่า 1 รูป)</p>
+                    </div>
+                  </div>
+                  
+                  <input type="file" id="product-file-input" accept="image/*" multiple class="hide" onchange="handleProductFileSelect(event)">
+                  
+                  <!-- Multi image previews -->
+                  <div id="add-prod-imgs-preview-container" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
+                    <span style="font-size: 11px; color: #94a3b8;">ยังไม่ได้อัปโหลดรูปภาพ</span>
+                  </div>
+                </div>
+
+                <!-- Product Variants List Creator -->
+                <div class="input-group" style="margin-bottom: 20px; border-top: 1px solid #f1f5f9; padding-top: 16px;">
+                  <label style="font-weight: 800; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="sliders" style="width: 14px; height: 14px; color: hsl(var(--primary));"></i>
+                    <span>ตัวเลือกสินค้า (Variants - เช่น ขนาด, สี)</span>
+                  </label>
+                  <div id="add-prod-variants-list" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Dynamically added variant rows -->
+                  </div>
+                  <button type="button" class="btn btn-secondary" style="padding: 8px 16px; font-size: 12px; margin-top: 8px; align-self: flex-start; display: inline-flex; align-items: center; gap: 6px;" onclick="addVariantInputRow()">
+                    <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+                    <span>เพิ่มตัวเลือกสินค้า (เช่น ขนาด, สี)</span>
+                  </button>
+                </div>
+
+                <div class="input-group">
+                  <label data-t="admin.products.label.description">คำอธิบายสินค้า</label>
+                  <textarea id="add-prod-desc" class="input-field" style="resize: vertical; min-height: 80px;"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-buy" style="padding: 12px;" data-t="admin.products.add_button">เพิ่มสินค้าเข้าระบบ</button>
+              </form>
+            </div>
+
+            <!-- Existing Products Catalog CRUD list -->
+            <div class="admin-panel-title">
+              <span data-t="admin.tab.products">สินค้า</span>
+            </div>
+            
+            <!-- Product Catalog search and category filters -->
+            <div class="admin-filter-bar" style="margin-top: 12px; margin-bottom: 16px;">
+              <div class="admin-filter-search">
+                <i data-lucide="search" style="width: 14px; height: 14px;"></i>
+                <input type="text" id="admin-search-products" placeholder="ค้นหาสินค้าหลังบ้าน..." data-t-placeholder="admin.search.product_placeholder" oninput="handleAdminProductSearch(this.value)">
+              </div>
+              <div class="mobile-category-bar" style="display: block; margin-bottom: 0; padding: 0; background: transparent; border: none;">
+                <div class="mobile-category-scroll" id="admin-product-categories-filter" style="padding: 0;">
+                  <!-- Dynamic categories chips loaded in JS -->
+                </div>
+              </div>
+            </div>
+            <div class="admin-products-grid" id="admin-products-grid-container">
+              <!-- Populated dynamically in JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MULTI-STAGE CHECKOUT MODAL (ORDER SHEET) -->
+  <div class="modal-overlay hide" id="checkout-modal">
+    <div class="modal-container slide-up" id="checkout-container">
+      <div class="modal-header">
+        <button class="btn-icon-close" id="checkout-back-btn" onclick="handleCheckoutBack()">
+          <i data-lucide="chevron-left" style="width: 18px; height: 18px;"></i>
+        </button>
+        <img src="/images/HLLCLOGO.png" alt="HLLC Logo" class="modal-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <div class="fallback-logo" style="display: none; font-size: 16px;">HLLC</div>
+        <button class="btn-icon-close" onclick="closeCheckout()">
+          <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+        </button>
+      </div>
+
+      <!-- Progressive step indicators -->
+      <div class="step-bar" id="checkout-step-stepper">
+        <div class="step-item active" id="checkout-step-node-1">
+          <span class="step-num">1</span>
+          <span class="step-label" data-t="checkout.step.product">สินค้า</span>
+        </div>
+        <i data-lucide="chevron-right" class="step-divider" style="width: 12px; height: 12px;"></i>
+        <div class="step-item" id="checkout-step-node-2">
+          <span class="step-num">2</span>
+          <span class="step-label" data-t="checkout.step.payment">ชำระเงิน</span>
+        </div>
+        <i data-lucide="chevron-right" class="step-divider" style="width: 12px; height: 12px;"></i>
+        <div class="step-item" id="checkout-step-node-3">
+          <span class="step-num">3</span>
+          <span class="step-label" data-t="checkout.step.info">ข้อมูล</span>
+        </div>
+      </div>
+
+      <!-- Responsive modal content -->
+      <div class="modal-body" id="checkout-modal-body">
+        
+        <!-- STEP 1: PRODUCT SELECTION CONFIG -->
+        <div id="checkout-step-1" class="fade-in">
+          <div class="checkout-product-row">
+            <div id="checkout-item-image-container">
+              <!-- Rendered in JS -->
+            </div>
+            <div class="checkout-product-details">
+              <h4 class="checkout-product-name" id="checkout-item-name">ชื่อสินค้า</h4>
+              <p class="checkout-product-desc" id="checkout-item-desc">คำอธิบายย่อสินค้า</p>
+              <span class="checkout-product-price" id="checkout-item-price">฿0</span>
+            </div>
+          </div>
+
+          <!-- Product Variants Selector -->
+          <div id="checkout-variants-container" style="margin-top: 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px;">
+            <!-- Dynamically populated in JS -->
+          </div>
+          
+          <div class="qty-selector">
+            <span class="qty-label" data-t="checkout.qty">จำนวน</span>
+            <div class="qty-ctrls">
+              <button class="qty-btn" onclick="updateCheckoutQty(-1)"><i data-lucide="minus" style="width: 14px; height: 14px;"></i></button>
+              <span class="qty-val" id="checkout-item-qty">1</span>
+              <button class="qty-btn" onclick="updateCheckoutQty(1)"><i data-lucide="plus" style="width: 14px; height: 14px;"></i></button>
+            </div>
+          </div>
+          
+          <div class="breakdown-card">
+            <div class="breakdown-row hide" id="checkout-row-discount">
+              <span data-t="checkout.discount">ส่วนลด</span>
+              <span class="breakdown-discount-val" id="checkout-val-discount">-฿0</span>
+            </div>
+            <div class="breakdown-row">
+              <span data-t="checkout.shipping">ค่าจัดส่ง</span>
+              <span class="breakdown-shipping-val" data-t="checkout.shipping.free">ฟรี</span>
+            </div>
+            <div class="breakdown-row total">
+              <span data-t="checkout.total">ยอดรวม</span>
+              <span id="checkout-val-total">฿0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: QR CODE & SLIP IMAGE UPLOAD -->
+        <div id="checkout-step-2" class="fade-in hide">
+          <div class="qr-container">
+            <p class="qr-title" data-t="checkout.scan_qr">สแกน QR Code เพื่อชำระเงิน</p>
+            <div class="qr-box">
+              <img src="/images/qr-payment.png" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+              <div class="qr-image-mockup" style="display: none;">
+                <i data-lucide="smartphone"></i>
+                <p>QR Payment Ready</p>
+                <p style="font-size: 8px; margin-top: 4px;">HLLC ACCOUNT</p>
+              </div>
+            </div>
+            <p class="qr-amount-info">
+              <span data-t="checkout.payment_amount">ยอดชำระ</span>
+              <span class="qr-amount-val" id="checkout-qr-total">฿0</span>
+            </p>
+          </div>
+          
+          <div class="slip-upload-container">
+            <p class="input-label" data-t="checkout.upload_slip">อัพโหลดสลิปหลังโอนเงิน</p>
+            <input type="file" id="slip-file-input" accept="image/*" class="hide" onchange="handleSlipFileSelect(event)">
+            
+            <div class="slip-upload-box" id="slip-upload-dropzone" onclick="triggerSlipFileInput()">
+              <i data-lucide="upload-cloud"></i>
+              <p class="slip-upload-text" data-t="checkout.upload_tap">แตะเพื่ออัพโหลดสลิป</p>
+            </div>
+            
+            <div class="slip-preview-container hide" id="slip-preview-card">
+              <img id="slip-preview-img" src="" class="slip-preview-img" alt="Payment slip preview">
+              <button class="btn-slip-remove" onclick="removeSelectedSlip()"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 3: CUSTOMER DELIVERY INFORMATION FORM -->
+        <div id="checkout-step-3" class="fade-in hide">
+          <h3 class="input-label" style="margin-bottom: 12px;" data-t="checkout.delivery_method">วิธีรับสินค้า</h3>
+          
+          <!-- Tab switch for delivery modes -->
+          <div class="delivery-toggle">
+            <button onclick="setDeliveryMode('delivery')" id="del-mode-btn-delivery" class="active" data-t="checkout.method.delivery">จัดส่ง</button>
+            <button onclick="setDeliveryMode('pickup')" id="del-mode-btn-pickup" data-t="checkout.method.pickup">รับเอง</button>
+          </div>
+
+          <!-- COURIER DELIVERY FORM FIELDS -->
+          <div id="form-delivery-inputs">
+            <div class="form-row-2">
+              <div class="input-group">
+                <label data-t="checkout.label.firstname">*ชื่อ</label>
+                <input type="text" id="field-firstname" class="input-field">
+              </div>
+              <div class="input-group">
+                <label data-t="checkout.label.lastname">*นามสกุล</label>
+                <input type="text" id="field-lastname" class="input-field">
+              </div>
+            </div>
+            <div class="input-group">
+              <label data-t="checkout.label.address">*ที่อยู่</label>
+              <input type="text" id="field-street" class="input-field">
+            </div>
+            <div class="form-row-2">
+              <div class="input-group">
+                <label data-t="checkout.label.district">*เขต/อำเภอ</label>
+                <input type="text" id="field-district" class="input-field">
+              </div>
+              <div class="input-group">
+                <label data-t="checkout.label.province">จังหวัด</label>
+                <div class="province-dropdown-container">
+                  <button type="button" id="province-select-trigger" class="province-btn placeholder" onclick="toggleProvinceMenu()">
+                    <span id="province-selected-txt" data-t="checkout.select_province">เลือกจังหวัด</span>
+                    <i data-lucide="chevron-down" style="width: 14px; height: 14px;"></i>
+                  </button>
+                  <div class="province-menu hide" id="province-dropdown-menu">
+                    <div class="province-search-box">
+                      <input type="text" id="province-search" placeholder="ค้นหาจังหวัด..." data-t-placeholder="checkout.search_province" oninput="filterProvinceOptions(this.value)">
+                    </div>
+                    <div id="province-options-list">
+                      <!-- Populated in JS -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-row-2">
+              <div class="input-group">
+                <label data-t="checkout.label.postal">รหัสไปรษณีย์</label>
+                <input type="text" id="field-postal" class="input-field" maxlength="5">
+              </div>
+              <div class="input-group">
+                <label data-t="checkout.label.phone">*เบอร์โทรศัพท์</label>
+                <input type="tel" id="field-phone" class="input-field" placeholder="099-999-9999" oninput="formatPhoneInput(this)">
+              </div>
+            </div>
+            
+            <div class="free-shipping-card">
+              <div class="left">
+                <span class="dot"></span>
+                <span data-t="checkout.free_shipping_banner">ฟรีค่าจัดส่ง (1–3 วัน)</span>
+              </div>
+              <span class="val" data-t="checkout.shipping.free">ฟรี</span>
+            </div>
+          </div>
+
+          <!-- LOCAL STORE PICK-UP FIELDS -->
+          <div id="form-pickup-inputs" class="hide">
+            <div class="pickup-info-banner">
+              <i data-lucide="map-pin" style="flex-shrink:0;"></i>
+              <div>
+                <h4 data-t="checkout.pickup.location">รับที่ D1</h4>
+                <p data-t="checkout.pickup.sub">กรุณาแจ้งชื่อ เวลา และเบอร์ติดต่อ</p>
+              </div>
+            </div>
+            <div class="input-group">
+              <label data-t="checkout.pickup.name">*ชื่อผู้รับ</label>
+              <input type="text" id="field-pickup-name" class="input-field">
+            </div>
+            <div class="input-group">
+              <label data-t="checkout.pickup.time">*เวลาที่จะมารับ</label>
+              <input type="text" id="field-pickup-time" class="input-field" placeholder="เช่น 14:00 น.">
+            </div>
+            <div class="input-group">
+              <label data-t="checkout.label.phone">*เบอร์โทรศัพท์</label>
+              <input type="tel" id="field-pickup-phone" class="input-field" placeholder="099-999-9999" oninput="formatPhoneInput(this)">
+            </div>
+          </div>
+        </div>
+
+        <!-- SUCCESS TIMELINE STATUS TRACKING VIEW -->
+        <div id="checkout-step-success" class="fade-in hide">
+          <div class="success-card">
+            <div class="success-check-badge">✓</div>
+            <h3 class="success-title" data-t="checkout.success.title">สั่งซื้อสำเร็จ!</h3>
+            <p class="success-order-id" id="tracking-order-id">ORDER ID: #XXXXXX</p>
+            
+            <!-- Dynamic order timeline stepper track -->
+            <div class="timeline-card">
+              <div class="timeline-header" data-t="admin.order.slip_status">สถานะจัดส่ง</div>
+              <div class="timeline-steps">
+                <div class="timeline-line-bg"></div>
+                <div class="timeline-line-active" id="timeline-bar-progress"></div>
+                
+                <div class="timeline-step" id="timeline-node-review">
+                  <div class="timeline-node">1</div>
+                  <span class="timeline-label" data-t="admin.status.payment_review">รอตรวจสลิป</span>
+                </div>
+                <div class="timeline-step" id="timeline-node-shipped">
+                  <div class="timeline-node">2</div>
+                  <span class="timeline-label" id="timeline-label-shipped" data-t="admin.status.shipped">จัดส่งแล้ว</span>
+                </div>
+                <div class="timeline-step" id="timeline-node-completed">
+                  <div class="timeline-node">3</div>
+                  <span class="timeline-label" data-t="admin.status.completed">เสร็จสิ้น</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Receipt Detail Print Box -->
+            <div class="receipt-card">
+              <div class="receipt-header">
+                <span class="receipt-tag" id="tracking-shipping-tag" data-t="admin.order.shipping_label">ใบจ่าหน้าพัสดุ</span>
+                <span class="receipt-code" id="tracking-short-code">CODE: #XXXXXX</span>
+              </div>
+              <div class="receipt-body">
+                <span class="receipt-label" id="tracking-receipt-address-label" data-t="admin.order.address">ที่อยู่จัดส่ง</span>
+                <p class="receipt-val-address" id="tracking-receipt-address">กรุงเทพมหานคร</p>
+                <div class="receipt-phone-row">
+                  <span class="receipt-phone-label" data-t="admin.order.phone">เบอร์โทรศัพท์:</span>
+                  <span class="receipt-phone-val" id="tracking-receipt-phone">099-999-9999</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Purchased List Summary Box -->
+            <div class="success-items-list">
+              <span class="success-items-header" data-t="admin.order.item">รายการสินค้า</span>
+              <div class="success-item-row">
+                <span id="tracking-purchased-name">สินค้า × 1</span>
+                <span class="success-item-total" id="tracking-purchased-total">฿0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Action footers -->
+      <div class="modal-footer" id="checkout-modal-footer">
+        <button onclick="handleCheckoutNext()" id="checkout-action-btn" class="btn btn-primary" style="width: 100%;">
+          <span data-t="checkout.continue">ดำเนินการต่อ</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GENERIC CONFLICT/DIALOG MODAL -->
+  <div class="modal-overlay hide" id="dialog-modal" style="z-index: 1300;">
+    <div class="dialog-box">
+      <div class="dialog-icon" id="dialog-icon-badge"><i data-lucide="help-circle"></i></div>
+      <h4 class="dialog-title" id="dialog-modal-title">หัวข้อ</h4>
+      <p class="dialog-desc" id="dialog-modal-desc">รายละเอียดที่นี่</p>
+      <div class="dialog-actions">
+        <button class="btn btn-secondary" onclick="closeDialog()" id="dialog-cancel-btn" data-t="admin.modal.cancel">ยกเลิก</button>
+        <button class="btn btn-primary" id="dialog-confirm-btn" data-t="admin.modal.confirm">ยืนยัน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DYNAMIC COURIER PRINT PREVIEW MODAL -->
+  <div class="modal-overlay hide" id="admin-print-modal" style="z-index: 1350;">
+    <div class="print-box-modal slide-up">
+      <div class="modal-header" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 class="admin-edit-modal-title" style="font-size: 14px;">
+          <i data-lucide="printer" style="width: 16px; height: 16px; color: hsl(var(--primary));"></i>
+          <span data-t="admin.action.print_label">พิมพ์ใบแปะหน้าพัสดุ</span>
+        </h3>
+        <button class="btn-icon-close" onclick="closePrintLabelModal()">
+          <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 0;">
+        <div id="print-area-wrapper">
+          <!-- Populated dynamically with shipping label content -->
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 16px 0 0 0; border-top: 1px solid #f1f5f9; margin-top: 16px; display: flex; gap: 10px;">
+        <button class="btn btn-secondary" onclick="closePrintLabelModal()" style="flex: 1;" data-t="admin.modal.cancel">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="triggerPhysicalPrint()" style="flex: 1; display: inline-flex; align-items: center; gap: 8px;">
+          <i data-lucide="printer" style="width: 16px; height: 16px;"></i>
+          <span data-t="admin.action.print_label">พิมพ์</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIP VIEWER LIGHTBOX MODAL -->
+  <div class="modal-overlay hide" id="lightbox-modal" onclick="closeLightbox()" style="background: rgba(0,0,0,0.85); z-index: 1400;">
+    <button class="btn-icon-close" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.15); color: white;" onclick="closeLightbox()">
+      <i data-lucide="x"></i>
+    </button>
+    <div class="lightbox-img-wrapper" onclick="event.stopPropagation()">
+      <img src="" id="lightbox-img" class="lightbox-img" alt="slip expanded view">
+    </div>
+  </div>
+
+  <!-- PRODUCT EDIT MODAL DYNAMIC FORM -->
+  <div class="modal-overlay hide" id="product-edit-modal">
+    <div class="modal-container slide-up" style="max-width: 460px;">
+      <div class="modal-header">
+        <h3 class="admin-edit-modal-title">
+          <i data-lucide="pencil" style="width: 16px; height: 16px; color: hsl(var(--primary));"></i>
+          <span>แก้ไขข้อมูลสินค้า</span>
+        </h3>
+        <button class="btn-icon-close" onclick="closeProductEditor()">
+          <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="admin-edit-product-form" onsubmit="handleProductUpdateSubmit(event)">
+          <input type="hidden" id="edit-prod-id">
+          <div class="input-group">
+            <label data-t="admin.products.label.name">ชื่อสินค้า *</label>
+            <input type="text" id="edit-prod-name" class="input-field" required>
+          </div>
+          <div class="form-row-2">
+            <div class="input-group">
+              <label data-t="admin.products.label.price">ราคา (฿) *</label>
+              <input type="number" id="edit-prod-price" class="input-field" required min="1">
+            </div>
+            <div class="input-group">
+              <label data-t="admin.products.label.stock">สต็อกสินค้า *</label>
+              <input type="number" id="edit-prod-stock" class="input-field" required min="0">
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div class="input-group">
+              <label data-t="admin.products.label.discount">ส่วนลด (%)</label>
+              <input type="number" id="edit-prod-discount" class="input-field" min="0" max="100">
+            </div>
+            <div class="input-group" style="display: flex; align-items: center; justify-content: center; padding-top: 18px;">
+              <label class="input-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none;">
+                <input type="checkbox" id="edit-prod-active" style="width: 16px; height: 16px; accent-color: hsl(var(--primary));">
+                <span>แสดงในร้านค้า (Active)</span>
+              </label>
+            </div>
+          </div>
+          <div class="input-group" style="display: flex; gap: 16px; align-items: flex-end;">
+            <div style="flex: 1;">
+              <label data-t="admin.products.url">🔗 URL รูปภาพ</label>
+              <input type="text" id="edit-prod-img" class="input-field" oninput="handleProductImgPreview('edit')">
+            </div>
+            <div class="form-image-preview-container" id="edit-prod-img-preview">
+              <span>No Preview</span>
+            </div>
+          </div>
+          <div class="input-group">
+            <label data-t="admin.products.label.description">คำอธิบายสินค้า</label>
+            <textarea id="edit-prod-desc" class="input-field" style="resize: vertical; min-height: 80px;"></textarea>
+          </div>
+          
+          <div class="dialog-actions" style="margin-top: 20px;">
+            <button type="button" class="btn btn-secondary" onclick="closeProductEditor()" data-t="admin.modal.cancel">ยกเลิก</button>
+            <button type="submit" class="btn btn-primary" data-t="admin.products.edit.save">บันทึก</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dynamic Toast Area -->
+  <div id="toast-wrapper"></div>
+
+  <!-- Dynamic Application JS Engine -->
+
+  <!-- Modular JS Application Scripts -->
+  <script src="js/i18n.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/router.js"></script>
+  <script src="js/shop.js"></script>
+  <script src="js/checkout.js"></script>
+  <script src="js/admin.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
