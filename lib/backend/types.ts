@@ -16,17 +16,25 @@ export type Product = {
   description?: string;
   price: number;
   stock: number;
-  discount: number;
   category?: string;
+  options?: ProductOption[];
   imageUrl?: string;
   active: boolean;
   createdAt?: string;
   updatedAt?: string;
 };
 
+export type ProductOption = {
+  label: string;
+  imageUrl?: string;
+};
+
+export type ProductOptionInput = string | ProductOption;
+
 export type CartItemInput = {
   productId: string;
   quantity: number;
+  selectedOption?: string;
 };
 
 export type CustomerInput = {
@@ -48,6 +56,7 @@ export type OrderItem = {
   price: number;
   quantity: number;
   subtotal: number;
+  selectedOption?: string;
 };
 
 export type PaymentSlip = {
@@ -68,6 +77,7 @@ export type Order = {
   total: number;
   status: OrderStatus;
   slip: PaymentSlip;
+  trackingNumber?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -83,8 +93,8 @@ export type CreateProductInput = {
   description?: string;
   price: number;
   stock: number;
-  discount?: number;
   category?: string;
+  options?: ProductOptionInput[] | string;
   imageUrl?: string;
   active?: boolean;
 };

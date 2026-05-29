@@ -69,7 +69,7 @@ export default function CartPage() {
 
   function confirmRemove() {
     if (!removeTarget) return;
-    removeItem(removeTarget.productId);
+    removeItem(removeTarget.productId, removeTarget.selectedOption);
     setRemoveTarget(null);
   }
 
@@ -79,7 +79,7 @@ export default function CartPage() {
       return;
     }
 
-    updateQty(item.productId, item.quantity - 1);
+    updateQty(item.productId, item.quantity - 1, item.selectedOption);
   }
 
   function handleSlipFile(event: React.ChangeEvent<HTMLInputElement>) {
@@ -147,6 +147,7 @@ export default function CartPage() {
           items: items.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
+            selectedOption: item.selectedOption,
           })),
         }),
       });
@@ -197,7 +198,7 @@ export default function CartPage() {
       ) : null}
 
       {items.map((item) => (
-        <div key={item.productId} className="flex gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
+        <div key={`${item.productId}-${item.selectedOption ?? ""}`} className="flex gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
           <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-50">
             {item.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -208,6 +209,9 @@ export default function CartPage() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-black text-gray-900">{item.name}</p>
+            {item.selectedOption ? (
+              <p className="mt-0.5 text-[10px] font-bold text-gray-400">{item.selectedOption}</p>
+            ) : null}
             <p className="mt-1 text-xs font-semibold text-[#85241F]">{money(item.price)}</p>
             <div className="mt-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 rounded-xl border border-gray-200 px-2 py-1">
@@ -219,7 +223,7 @@ export default function CartPage() {
                 </button>
                 <span className="w-6 text-center text-sm font-black">{item.quantity}</span>
                 <button
-                  onClick={() => updateQty(item.productId, item.quantity + 1)}
+                  onClick={() => updateQty(item.productId, item.quantity + 1, item.selectedOption)}
                   disabled={item.stock !== undefined && item.quantity >= item.stock}
                   className="flex h-7 w-7 items-center justify-center text-gray-500 disabled:opacity-30"
                 >

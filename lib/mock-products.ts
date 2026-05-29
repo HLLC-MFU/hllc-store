@@ -3,7 +3,6 @@ export type MockProduct = {
   name: string;
   description: string;
   price: number;
-  originalPrice?: number;
   stock: number;
   category: string;
   gradient: string;
@@ -19,7 +18,6 @@ export const MOCK_PRODUCTS: MockProduct[] = [
     name: "เสื้อกันฝน Classic",
     description: "กันน้ำ 100% เนื้อผ้าเบา มีฮูด ใส่ง่าย",
     price: 290,
-    originalPrice: 390,
     stock: 15,
     category: "เสื้อกันฝน",
     gradient: "from-blue-500 to-blue-700",
@@ -46,7 +44,6 @@ export const MOCK_PRODUCTS: MockProduct[] = [
     name: "ชุดกันฝน Pro Set",
     description: "เสื้อ + กางเกง กันน้ำ กันลม ครบชุด",
     price: 550,
-    originalPrice: 680,
     stock: 8,
     category: "ชุดกันฝน",
     gradient: "from-indigo-500 to-indigo-700",
@@ -73,7 +70,6 @@ export const MOCK_PRODUCTS: MockProduct[] = [
     name: "เสื้อกันฝน Reflective",
     description: "ติดแถบสะท้อนแสง ปลอดภัยขับมอเตอร์ไซค์",
     price: 490,
-    originalPrice: 590,
     stock: 6,
     category: "เสื้อกันฝน",
     gradient: "from-blue-400 to-cyan-600",
@@ -100,7 +96,6 @@ export const MOCK_PRODUCTS: MockProduct[] = [
     name: "รองเท้ากันน้ำ",
     description: "วัสดุ EVA อย่างดี กันน้ำ 100% ทนทาน",
     price: 590,
-    originalPrice: 750,
     stock: 5,
     category: "รองเท้า",
     gradient: "from-blue-600 to-indigo-700",

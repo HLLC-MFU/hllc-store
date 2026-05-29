@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { ChevronLeft, Minus, Plus, Upload, X, Search } from "lucide-react";
+import { CheckCircle2, ChevronLeft, Minus, Plus, Upload, X, Search } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 
 export type OrderProduct = {
@@ -9,7 +9,6 @@ export type OrderProduct = {
   name: string;
   description: string;
   price: number;
-  originalPrice?: number;
   stock: number;
   category: string;
   gradient?: string;
@@ -137,6 +136,80 @@ function money(value: number) {
     currency: "THB",
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+const LOGISTICS_STEPS = [
+  { th: "รอตรวจสลิป", en: "Reviewing slip" },
+  { th: "จัดส่งแล้ว", en: "Shipped" },
+  { th: "สำเร็จ", en: "Complete" },
+];
+
+function logisticsIndex(status: OrderStatus) {
+  if (status === "completed") return 2;
+  if (["paid", "packing", "shipped"].includes(status)) return 1;
+  return 0;
+}
+
+function LogisticsStatusCard({
+  status,
+  lang,
+}: {
+  status: OrderStatus;
+  lang: "th" | "en";
+}) {
+  const activeIndex = logisticsIndex(status);
+  const complete = status === "completed";
+
+  if (status === "cancelled") {
+    return (
+      <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
+        {lang === "th" ? "คำสั่งซื้อนี้ถูกยกเลิก" : "This order has been cancelled."}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-xs">
+      <p className="text-[10px] font-black text-slate-800">
+        {lang === "th" ? "การจัดส่ง (LOGISTICS)" : "LOGISTICS"}
+      </p>
+      <div className="mt-5 px-2">
+        <div className="relative flex items-start justify-between">
+          <div className="absolute left-4 right-4 top-3 h-0.5 bg-gray-200" />
+          <div
+            className="absolute left-4 top-3 h-0.5 bg-[#96231F] transition-all duration-500"
+            style={{ width: activeIndex === 0 ? "0%" : activeIndex === 1 ? "50%" : "calc(100% - 2rem)" }}
+          />
+          {LOGISTICS_STEPS.map((step, index) => {
+            const active = index <= activeIndex;
+
+            return (
+              <div key={step.en} className="relative z-10 flex w-20 flex-col items-center">
+                <span
+                  className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black text-white ${
+                    active ? "bg-[#96231F]" : "bg-gray-300"
+                  }`}
+                >
+                  {index + 1}
+                </span>
+                <span className={`mt-2 text-center text-[9px] font-black ${active ? "text-slate-800" : "text-gray-400"}`}>
+                  {lang === "th" ? step.th : step.en}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      {complete ? (
+        <div className="mt-5 border-t border-gray-100 pt-3">
+          <p className="flex items-center gap-2 text-sm font-black text-emerald-600">
+            <CheckCircle2 className="h-4 w-4" />
+            {lang === "th" ? "คำสั่งซื้อเสร็จสิ้นแล้ว" : "Order completed"}
+          </p>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function StepBar({ step }: { step: Step }) {
@@ -267,9 +340,7 @@ export function OrderSheet({
 
   if (!product) return null;
 
-  const discount = product.originalPrice ? product.originalPrice - product.price : 0;
   const total = product.price * qty;
-  const originalTotal = (product.originalPrice ?? product.price) * qty;
 
   async function handleCreateOrder() {
     if (!product) return;
@@ -414,14 +485,6 @@ export function OrderSheet({
 
             {/* Price breakdown */}
             <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
-              {discount > 0 && (
-                <div className="flex justify-between px-4 py-3 border-b border-gray-100">
-                  <span className="text-sm text-gray-600 font-medium">{t("checkout.discount")}</span>
-                  <span className="text-sm text-[#85241F] font-bold">
-                    -{money(discount * qty)}
-                  </span>
-                </div>
-              )}
               <div className="flex justify-between px-4 py-3 border-b border-gray-100">
                 <span className="text-sm text-gray-600 font-medium">{t("checkout.shipping")}</span>
                 <span className="text-sm text-green-600 font-bold">{t("checkout.shipping.free")}</span>
@@ -430,9 +493,6 @@ export function OrderSheet({
                 <span className="text-sm font-bold text-gray-900">{t("checkout.total")}</span>
                 <div className="text-right">
                   <span className="text-base font-black text-gray-900">{money(total)}</span>
-                  {discount > 0 && (
-                    <span className="text-xs text-gray-400 line-through ml-2">{money(originalTotal)}</span>
-                  )}
                 </div>
               </div>
             </div>
@@ -639,6 +699,11 @@ export function OrderSheet({
               <p className="text-[10px] text-gray-400 mt-1 font-mono font-black">ORDER ID: #{orderId.slice(-8).toUpperCase()}</p>
             </div>
 
+            <LogisticsStatusCard
+              status={(orderDetail?.status || (slipSent ? "payment_review" : "pending_payment")) as OrderStatus}
+              lang={lang}
+            />
+
             {/* Stepper timeline */}
             {(() => {
               const currentStatus = orderDetail?.status || (slipSent ? "payment_review" : "pending_payment");
@@ -655,7 +720,7 @@ export function OrderSheet({
 
               if (isCancelled) {
                 return (
-                  <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3 text-red-800 text-xs font-semibold shadow-xs">
+                  <div className="hidden">
                     <span className="text-xl">⚠️</span>
                     <div>
                       <p className="font-bold text-red-950">{lang === "th" ? "คำสั่งซื้อถูกยกเลิก" : "Order Cancelled"}</p>
@@ -666,7 +731,7 @@ export function OrderSheet({
               }
 
               return (
-                <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-xs flex flex-col gap-4">
+                <div className="hidden">
                   <div className="flex items-center justify-between border-b border-gray-50 pb-2.5">
                     <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">{lang === "th" ? "สถานะการจัดส่ง" : "Logistics Status"}</span>
                   </div>

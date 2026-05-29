@@ -47,7 +47,6 @@ const DICTIONARY: TranslationDict = {
   
   // Order Sheet Step 1
   "checkout.qty": { th: "จำนวน", en: "Quantity" },
-  "checkout.discount": { th: "ส่วนลด", en: "Discount" },
   "checkout.shipping": { th: "ค่าจัดส่ง", en: "Shipping Cost" },
   "checkout.shipping.free": { th: "ฟรี", en: "FREE" },
   "checkout.total": { th: "ยอดรวม", en: "Total" },
@@ -168,12 +167,10 @@ const DICTIONARY: TranslationDict = {
   "admin.products.label.name": { th: "ชื่อสินค้า *", en: "Product Name *" },
   "admin.products.label.price": { th: "ราคา (฿) *", en: "Price (฿) *" },
   "admin.products.label.stock": { th: "สต็อกสินค้า *", en: "Stock Quantity *" },
-  "admin.products.label.discount": { th: "ส่วนลด (%)", en: "Discount (%)" },
   "admin.products.label.description": { th: "คำอธิบายสินค้า", en: "Product Description" },
   "admin.products.add_button": { th: "เพิ่มสินค้าเข้าระบบ", en: "Add Product to Inventory" },
   "admin.products.empty": { th: "ยังไม่มีสินค้า — เพิ่มได้ที่ด้านบน", en: "No products in store — add one above" },
   "admin.products.edit.change_image": { th: "เปลี่ยนรูป", en: "Change" },
-  "admin.products.edit.discounted": { th: "ราคาหลังลด:", en: "Discounted Price:" },
   "admin.products.edit.save": { th: "บันทึก", en: "Save" },
   "admin.products.edit.delete_confirm": { th: "คุณแน่ใจหรือไม่ที่จะลบสินค้านี้?", en: "Are you sure you want to delete this product?" },
   "admin.products.edit.units": { th: "ชิ้น", en: "units" },
