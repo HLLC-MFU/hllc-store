@@ -342,21 +342,61 @@ export function OrderSheet({
 
   const total = product.price * qty;
 
+  function validationMessage() {
+    const isPickup = deliveryMode === "pickup";
+    const missing: string[] = [];
+    const invalid: string[] = [];
+
+    if (isPickup) {
+      if (!pickupName.trim()) missing.push(lang === "th" ? "ชื่อผู้รับสินค้า" : "pickup name");
+      if (!pickupTime.trim()) missing.push(lang === "th" ? "เวลารับสินค้า" : "pickup time");
+      if (!pickupPhone.trim()) {
+        missing.push(lang === "th" ? "เบอร์โทรศัพท์" : "phone number");
+      } else if (pickupPhone.replace(/\D/g, "").length < 9) {
+        invalid.push(lang === "th" ? "เบอร์โทรศัพท์ต้องมีอย่างน้อย 9 หลัก" : "phone number must be at least 9 digits");
+      }
+    } else {
+      if (!firstName.trim()) missing.push(lang === "th" ? "ชื่อ" : "first name");
+      if (!lastName.trim()) missing.push(lang === "th" ? "นามสกุล" : "last name");
+      if (!streetAddress.trim()) missing.push(lang === "th" ? "ที่อยู่จัดส่ง" : "shipping address");
+      if (!district.trim()) missing.push(lang === "th" ? "เขต/อำเภอ" : "district");
+      if (!province) missing.push(lang === "th" ? "จังหวัด" : "province");
+
+      const trimmedPostalCode = postalCode.trim();
+      if (!trimmedPostalCode) {
+        missing.push(lang === "th" ? "รหัสไปรษณีย์" : "postal code");
+      } else if (trimmedPostalCode.length !== 5) {
+        invalid.push(lang === "th" ? "รหัสไปรษณีย์ต้องมี 5 หลัก" : "postal code must be 5 digits");
+      }
+
+      const rawPhone = phone.replace(/\D/g, "");
+      if (!phone.trim()) {
+        missing.push(lang === "th" ? "เบอร์โทรศัพท์" : "phone number");
+      } else if (rawPhone.length < 9) {
+        invalid.push(lang === "th" ? "เบอร์โทรศัพท์ต้องมีอย่างน้อย 9 หลัก" : "phone number must be at least 9 digits");
+      }
+    }
+
+    const messages: string[] = [];
+    if (missing.length) {
+      messages.push(
+        lang === "th"
+          ? `กรุณากรอก: ${missing.join(", ")}`
+          : `Please fill in: ${missing.join(", ")}`
+      );
+    }
+    messages.push(...invalid);
+
+    return messages.join(lang === "th" ? " • " : " • ");
+  }
+
   async function handleCreateOrder() {
     if (!product) return;
     const isPickup = deliveryMode === "pickup";
-    if (isPickup) {
-      if (!pickupName.trim() || !pickupTime.trim() || pickupPhone.replace(/\D/g, "").length < 9) {
-        setError(t("checkout.error.fill_fields"));
-        return;
-      }
-    } else {
-      const rawPhone = phone.replace(/\D/g, "");
-      if (!firstName.trim() || !lastName.trim() || !streetAddress.trim() ||
-          !district.trim() || !province || !postalCode.trim() || rawPhone.length < 9) {
-        setError(t("checkout.error.fill_fields"));
-        return;
-      }
+    const formError = validationMessage();
+    if (formError) {
+      setError(formError);
+      return;
     }
     setLoading(true);
     setError("");

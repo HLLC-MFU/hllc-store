@@ -11,6 +11,7 @@ import {
   Package,
   PackagePlus,
   Pencil,
+  Plus,
   Trash2,
   Upload,
   XCircle,
@@ -119,6 +120,9 @@ const ORDER_STATUSES: OrderStatus[] = [
 
 /* ─── Helpers ─────────────────────────────────────────────────────────────── */
 
+const ADMIN_USERNAME = "adminae";
+const ADMIN_PASSWORD = "admin12315";
+
 function money(v: number) {
   return new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 }).format(v);
 }
@@ -137,7 +141,46 @@ function isPickupOrder(order: Order) {
   return /รับเอง|pickup|self pickup|D1/i.test(order.customer.address);
 }
 
-function parseProductOptions(value: string): ProductOption[] {
+function parseProductOptions(value: unknown): ProductOption[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "string") {
+          const [label = "", imageUrl = ""] = item.split("|").map((part) => part.trim());
+          return { label, imageUrl };
+        }
+
+        if (item && typeof item === "object") {
+          const option = item as { label?: unknown; imageUrl?: unknown; image?: unknown };
+          const label = typeof option.label === "string" ? option.label.trim() : "";
+          const imageUrl =
+            typeof option.imageUrl === "string"
+              ? option.imageUrl.trim()
+              : typeof option.image === "string"
+                ? option.image.trim()
+                : "";
+
+          return { label, imageUrl };
+        }
+
+        return { label: "", imageUrl: "" };
+      })
+      .filter((option) => option.label);
+  }
+
+  if (typeof value !== "string") return [];
+  const trimmed = value.trim();
+  if (!trimmed) return [];
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) {
+      return parseProductOptions(parsed);
+    }
+  } catch {
+    // Fall back to the legacy "label | image URL" text format.
+  }
+
   return value
     .split(/\r?\n|,/)
     .map((item) => item.trim())
@@ -157,6 +200,19 @@ function productOptionsText(options?: ProductOption[]) {
 
 function productOptionLabels(options?: ProductOption[]) {
   return (options ?? []).map((option) => option.label).join(" / ");
+}
+
+function optionRows(options?: ProductOption[]) {
+  return options?.length ? options : [{ label: "", imageUrl: "" }];
+}
+
+function cleanProductOptions(options: ProductOption[]) {
+  return options
+    .map((option) => ({
+      label: option.label.trim(),
+      imageUrl: option.imageUrl?.trim() ?? "",
+    }))
+    .filter((option) => option.label);
 }
 
 const STATUS_COLOR: Record<OrderStatus, string> = {
@@ -225,12 +281,10 @@ export function AdminPresentation() {
       api<Product[]>("/api/backend/admin/products"),
     ]);
     
-    // Use Mock Data as an intelligent local fallback in case database collections are entirely empty during setup
-    if (ordersRes.data) {
-      setOrders(ordersRes.data.length > 0 ? ordersRes.data : MOCK_ORDERS);
-    } else {
-      setOrders(MOCK_ORDERS);
-    }
+    const loadedOrders = ordersRes.data ?? MOCK_ORDERS;
+    setOrders(
+      loadedOrders.filter((order) => !order.id.startsWith("demo-"))
+    );
 
     if (productsRes.data) {
       setProducts(productsRes.data);
@@ -494,7 +548,7 @@ export function AdminPresentation() {
               const username = String(fd.get("username")).trim();
               const password = String(fd.get("password")).trim();
               
-              if (username === "admin" && password === "password") {
+              if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
                 sessionStorage.setItem("admin-logged-in", "true");
                 setIsLoggedIn(true);
               } else {
@@ -510,7 +564,7 @@ export function AdminPresentation() {
                 name="username"
                 type="text"
                 required
-                defaultValue="admin"
+                defaultValue={ADMIN_USERNAME}
                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#85241F] focus:ring-1 focus:ring-[#85241F] transition-all"
               />
             </div>
@@ -521,7 +575,7 @@ export function AdminPresentation() {
                 name="password"
                 type="password"
                 required
-                defaultValue="password"
+                defaultValue={ADMIN_PASSWORD}
                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#85241F] focus:ring-1 focus:ring-[#85241F] transition-all"
               />
             </div>
@@ -1400,6 +1454,7 @@ function AddProductForm({ onSubmit, notify, t }: {
   const [open, setOpen] = React.useState(false);
   const [imagePreview, setImagePreview] = React.useState("");
   const [imageMode, setImageMode] = React.useState<"upload" | "url">("upload");
+  const [options, setOptions] = React.useState<ProductOption[]>([{ label: "", imageUrl: "" }]);
   const fileRef = React.useRef<HTMLInputElement>(null);
   const formRef = React.useRef<HTMLFormElement>(null);
   const { lang } = useLanguage();
@@ -1416,9 +1471,11 @@ function AddProductForm({ onSubmit, notify, t }: {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     if (imageMode === "upload" && imagePreview) fd.set("imageUrl", imagePreview);
+    fd.set("options", JSON.stringify(cleanProductOptions(options)));
     onSubmit(fd);
     formRef.current?.reset();
     setImagePreview("");
+    setOptions([{ label: "", imageUrl: "" }]);
     setOpen(false);
   }
 
@@ -1497,13 +1554,14 @@ function AddProductForm({ onSubmit, notify, t }: {
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">
                   {lang === "th" ? "ตัวเลือกสินค้า" : "Product Options"}
                 </Label>
+                <ProductOptionsFields value={options} onChange={setOptions} />
                 <Textarea
                   name="options"
                   rows={3}
                   placeholder="สีดำ / M | /images/black-m.jpg"
-                  className="rounded-xl border-gray-200 text-xs resize-none"
+                  className="hidden"
                 />
-                <p className="mt-1 text-[9px] font-bold text-gray-400">
+                <p className="hidden">
                   {lang === "th" ? "ใส่ 1 ตัวเลือกต่อบรรทัด: ชื่อตัวเลือก | URL รูป" : "One option per line: label | image URL"}
                 </p>
               </div>
@@ -1524,6 +1582,91 @@ function AddProductForm({ onSubmit, notify, t }: {
 }
 
 /* ─── Product Card ───────────────────────────────────────────────────────── */
+
+function ProductOptionsFields({
+  value,
+  onChange,
+}: {
+  value: ProductOption[];
+  onChange: (value: ProductOption[]) => void;
+}) {
+  const { lang } = useLanguage();
+  const rows = optionRows(value);
+
+  function updateRow(index: number, patch: Partial<ProductOption>) {
+    onChange(rows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)));
+  }
+
+  function removeRow(index: number) {
+    const next = rows.filter((_, rowIndex) => rowIndex !== index);
+    onChange(next.length ? next : [{ label: "", imageUrl: "" }]);
+  }
+
+  function handleOptionFile(index: number, file?: File) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      updateRow(index, { imageUrl: event.target?.result as string });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {rows.map((option, index) => (
+        <div key={index} className="grid grid-cols-[minmax(0,1fr)_104px_auto] gap-2">
+          <Input
+            value={option.label}
+            onChange={(e) => updateRow(index, { label: e.target.value })}
+            placeholder={lang === "th" ? "สีดำ / M" : "Black / M"}
+            className="rounded-xl border-gray-200 text-xs h-10"
+          />
+          <label className="h-10 rounded-xl border border-gray-200 bg-white text-[10px] font-bold text-gray-500 hover:border-[#85241F]/30 hover:text-[#85241F] transition-colors flex items-center justify-center gap-1.5 overflow-hidden cursor-pointer">
+            {option.imageUrl ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={option.imageUrl} alt="" className="h-full w-10 object-cover" />
+                <span className="truncate">{lang === "th" ? "เปลี่ยนรูป" : "Change"}</span>
+              </>
+            ) : (
+              <>
+                <Upload className="h-3.5 w-3.5" />
+                <span>{lang === "th" ? "อัปโหลด" : "Upload"}</span>
+              </>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => handleOptionFile(index, event.target.files?.[0])}
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => removeRow(index)}
+            className="h-10 w-10 rounded-xl border border-gray-200 bg-white text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors flex items-center justify-center cursor-pointer"
+            aria-label={lang === "th" ? "ลบตัวเลือก" : "Remove option"}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ))}
+
+      <button
+        type="button"
+        onClick={() => onChange([...rows, { label: "", imageUrl: "" }])}
+        className="h-9 rounded-xl border border-dashed border-gray-200 bg-gray-50 text-[10px] font-bold text-gray-500 hover:border-[#85241F]/30 hover:text-[#85241F] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+      >
+        <Plus className="h-3.5 w-3.5" />
+        {lang === "th" ? "เพิ่มตัวเลือกสินค้า" : "Add option"}
+      </button>
+
+      <p className="text-[9px] font-bold text-gray-400">
+        {lang === "th" ? "เลือกรูปจากไฟล์ ระบบจะส่งเป็น JSON: [{ label, imageUrl }] เพื่อบันทึกลงฐานข้อมูล" : "Upload image files. Saved as JSON: [{ label, imageUrl }] in the database."}
+      </p>
+    </div>
+  );
+}
 
 function ProductCard({ product, onUpdate, onDelete, t }: {
   product: Product;
@@ -1551,7 +1694,11 @@ function ProductCard({ product, onUpdate, onDelete, t }: {
   }
 
   function handleSave() {
-    onUpdate({ ...form, imageUrl: imagePreview || undefined });
+    onUpdate({
+      ...form,
+      options: cleanProductOptions(form.options ?? []),
+      imageUrl: imagePreview || undefined,
+    });
     setEditing(false);
   }
 
@@ -1592,6 +1739,10 @@ function ProductCard({ product, onUpdate, onDelete, t }: {
           </div>
           <div>
             <Label className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Options</Label>
+            <ProductOptionsFields
+              value={form.options ?? [{ label: "", imageUrl: "" }]}
+              onChange={(options) => setForm((f) => ({ ...f, options }))}
+            />
             <Textarea
               value={productOptionsText(form.options)}
               onChange={(e) =>
@@ -1601,7 +1752,7 @@ function ProductCard({ product, onUpdate, onDelete, t }: {
                 }))
               }
               placeholder="สีดำ / M | /images/black-m.jpg"
-              className="rounded-xl border-gray-200 text-xs resize-none"
+              className="hidden"
               rows={3}
             />
           </div>
