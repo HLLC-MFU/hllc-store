@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import {
   ArrowLeft,
+  Check,
   CheckCircle2,
   ClipboardList,
+  Copy,
   Image as ImageIcon,
   Minus,
   Plus,
@@ -44,7 +46,7 @@ function saveOrderLookup(orderId: string, phone: string) {
       JSON.stringify(Array.from(new Set([orderId, ...existing])).slice(0, 20)),
     );
     localStorage.setItem("shop-last-phone", phone);
-  } catch {}
+  } catch { }
 }
 
 export default function CartPage() {
@@ -58,7 +60,10 @@ export default function CartPage() {
   const [slipImage, setSlipImage] = useState("");
   const [removeTarget, setRemoveTarget] = useState<CartItem | null>(null);
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("delivery");
+  const [copiedAccount, setCopiedAccount] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const bankAccountName = "นันทเดช วงศ์ไชยา";
+  const bankAccountNumber = "6621540027";
 
   const confirmRemoveText =
     lang === "th" ? "ต้องการลบสินค้านี้ออกจากตะกร้าใช่ไหม?" : "Remove this item from cart?";
@@ -99,6 +104,16 @@ export default function CartPage() {
     if (!items.length) return;
     setMessage("");
     setStep("payment");
+  }
+
+  async function copyBankAccount() {
+    try {
+      await navigator.clipboard.writeText(bankAccountNumber);
+      setCopiedAccount(true);
+      window.setTimeout(() => setCopiedAccount(false), 1800);
+    } catch {
+      setMessage(lang === "th" ? "คัดลอกเลขบัญชีไม่สำเร็จ" : "Unable to copy account number.");
+    }
   }
 
   function goInfo() {
@@ -387,9 +402,41 @@ export default function CartPage() {
               <p className="text-xs font-bold text-gray-500">{t("checkout.payment_amount")}</p>
               <p className="mt-1 text-2xl font-black text-[#85241F]">{money(total)}</p>
             </div>
-            <div className="mb-4 flex justify-center rounded-2xl border border-gray-100 bg-gray-50 p-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/images/qr-payment.png" alt="payment QR" className="max-h-56 object-contain" />
+            <div className="mb-4 rounded-2xl border border-[#1E63B6]/10 bg-[#1E63B6]/5 p-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm ring-1 ring-[#1E63B6]/10">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/images/image.png"
+                    alt="Krungthai"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-black uppercase text-[#1E63B6]">
+                    {lang === "th" ? "บัญชีรับชำระ" : "Payment account"}
+                  </p>
+                  <p className="mt-0.5 text-sm font-black text-gray-950">
+                    {lang === "th" ? "ธนาคารกรุงไทย" : "Krungthai Bank"}
+                  </p>
+                  <p className="mt-1 truncate text-xs font-bold text-gray-500">
+                    {bankAccountName}
+                  </p>
+                  <p className="mt-1 font-mono text-lg font-black tracking-wide text-[#85241F]">
+                    {bankAccountNumber}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={copyBankAccount}
+                  className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-[#1E63B6]/20 bg-white px-3 text-xs font-black text-[#1E63B6] shadow-sm transition-colors hover:bg-[#1E63B6]/5"
+                >
+                  {copiedAccount ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copiedAccount
+                    ? lang === "th" ? "คัดลอกแล้ว" : "Copied"
+                    : lang === "th" ? "คัดลอก" : "Copy"}
+                </button>
+              </div>
             </div>
             <div className="rounded-xl border border-dashed border-gray-200 p-3">
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleSlipFile} />
@@ -441,22 +488,20 @@ export default function CartPage() {
                 <button
                   type="button"
                   onClick={() => setDeliveryMode("delivery")}
-                  className={`h-10 rounded-lg text-sm font-black transition-colors ${
-                    deliveryMode === "delivery"
-                      ? "bg-white text-[#85241F] shadow-sm"
-                      : "text-gray-500"
-                  }`}
+                  className={`h-10 rounded-lg text-sm font-black transition-colors ${deliveryMode === "delivery"
+                    ? "bg-white text-[#85241F] shadow-sm"
+                    : "text-gray-500"
+                    }`}
                 >
                   {lang === "th" ? "จัดส่ง" : "Delivery"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setDeliveryMode("pickup")}
-                  className={`h-10 rounded-lg text-sm font-black transition-colors ${
-                    deliveryMode === "pickup"
-                      ? "bg-white text-[#85241F] shadow-sm"
-                      : "text-gray-500"
-                  }`}
+                  className={`h-10 rounded-lg text-sm font-black transition-colors ${deliveryMode === "pickup"
+                    ? "bg-white text-[#85241F] shadow-sm"
+                    : "text-gray-500"
+                    }`}
                 >
                   {lang === "th" ? "รับเอง" : "Pickup"}
                 </button>
