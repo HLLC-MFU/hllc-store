@@ -81,6 +81,31 @@ select {
   }
 }
 
+@keyframes shop-cart-particle-fly {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.55);
+  }
+  12% {
+    opacity: 1;
+    transform: translate3d(var(--cart-fly-lift-x), var(--cart-fly-lift-y), 0) scale(1);
+  }
+  62% {
+    opacity: 1;
+    transform: translate3d(var(--cart-fly-mid-x), var(--cart-fly-mid-y), 0) scale(0.78);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--cart-fly-end-x), var(--cart-fly-end-y), 0) scale(0.22);
+  }
+}
+
+.shop-cart-particle {
+  animation: shop-cart-particle-fly 760ms cubic-bezier(0.18, 0.82, 0.22, 1) forwards;
+  box-shadow: 0 8px 18px rgb(217 0 27 / 0.25);
+  will-change: transform, opacity;
+}
+
 .shop-page {
   animation: shop-fade-up 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }

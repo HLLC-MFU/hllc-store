@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { type CSSProperties, type MouseEvent, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Image as ImageIcon, ShoppingCart, X } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
@@ -31,8 +31,24 @@ function money(value: number) {
   }).format(value);
 }
 
+type CartParticle = {
+  id: number;
+  x: number;
+  y: number;
+  size: number;
+  color: string;
+  liftX: number;
+  liftY: number;
+  midX: number;
+  midY: number;
+  endX: number;
+  endY: number;
+};
+
 export function ProductDetailView({ product }: { product: ProductDetailProduct }) {
   const [imagePreview, setImagePreview] = useState<{ src: string; alt: string } | null>(null);
+  const [cartParticles, setCartParticles] = useState<CartParticle[]>([]);
+  const cartShortcutRef = useRef<HTMLAnchorElement>(null);
   const router = useRouter();
   const { addItem, count } = useCart();
   const { lang, setLang, t } = useLanguage();
@@ -51,8 +67,52 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [imagePreview]);
 
-  function addProductToCart(variantOption?: string, goToCart = false) {
+  function launchCartParticles(event: MouseEvent<HTMLButtonElement>) {
+    const sourceRect = event.currentTarget.getBoundingClientRect();
+    const targetRect = cartShortcutRef.current?.getBoundingClientRect();
+
+    if (!targetRect || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const startX = sourceRect.left + sourceRect.width / 2;
+    const startY = sourceRect.top + sourceRect.height / 2;
+    const endX = targetRect.left + targetRect.width / 2 - startX;
+    const endY = targetRect.top + targetRect.height / 2 - startY;
+    const colors = ["#D9001B", "#F4B63D", "#85241F", "#FFFFFF"];
+
+    const nextParticles = Array.from({ length: 7 }, (_, index) => {
+      const liftX = (index - 3) * 6;
+      const liftY = -18 - (index % 3) * 5;
+      const wobble = (index % 2 === 0 ? 1 : -1) * (14 + index * 2);
+
+      return {
+        id: Date.now() + index,
+        x: startX + (index - 3) * 2,
+        y: startY + (index % 2 === 0 ? -2 : 2),
+        size: index === 3 ? 10 : 7,
+        color: colors[index % colors.length],
+        liftX,
+        liftY,
+        midX: endX * 0.54 + wobble,
+        midY: endY * 0.46 - 42 - index * 3,
+        endX,
+        endY,
+      };
+    });
+
+    setCartParticles((current) => [...current, ...nextParticles]);
+    window.setTimeout(() => {
+      setCartParticles((current) =>
+        current.filter((particle) => !nextParticles.some((next) => next.id === particle.id)),
+      );
+    }, 900);
+  }
+
+  function addProductToCart(variantOption?: string, goToCart = false, event?: MouseEvent<HTMLButtonElement>) {
     const selectedVariant = product.options?.find((option) => option.label === variantOption);
+    if (!goToCart && event) {
+      launchCartParticles(event);
+    }
+
     addItem({
       productId: product.id,
       name: product.name,
@@ -94,6 +154,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
 
   const cartShortcut = (
     <Link
+      ref={cartShortcutRef}
       href="/cart"
       className="shop-press relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1F2937] text-white shadow-md shadow-slate-900/20 ring-1 ring-slate-900/10 hover:bg-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F4B63D]/60"
       aria-label={t("nav.cart")}
@@ -223,7 +284,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                   </button>
                   <button
                     type="button"
-                    onClick={() => addProductToCart(option.label)}
+                    onClick={(event) => addProductToCart(option.label, false, event)}
                     disabled={product.stock < 1}
                     className={`shop-press flex h-9 w-[38px] items-center justify-center rounded-full border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#85241F]/25 ${
                       product.stock < 1
@@ -269,6 +330,31 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
           </div>
         </div>
       ) : null}
+      <div className="pointer-events-none fixed inset-0 z-[90] overflow-hidden">
+        {cartParticles.map((particle) => {
+          const particleStyle = {
+            left: particle.x,
+            top: particle.y,
+            width: particle.size,
+            height: particle.size,
+            backgroundColor: particle.color,
+            "--cart-fly-lift-x": `${particle.liftX}px`,
+            "--cart-fly-lift-y": `${particle.liftY}px`,
+            "--cart-fly-mid-x": `${particle.midX}px`,
+            "--cart-fly-mid-y": `${particle.midY}px`,
+            "--cart-fly-end-x": `${particle.endX}px`,
+            "--cart-fly-end-y": `${particle.endY}px`,
+          } as CSSProperties & Record<string, string | number>;
+
+          return (
+            <span
+              key={particle.id}
+              className="shop-cart-particle absolute -ml-1 -mt-1 rounded-full border border-white/70"
+              style={particleStyle}
+            />
+          );
+        })}
+      </div>
     </main>
   );
 }

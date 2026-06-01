@@ -97,7 +97,7 @@ const DICTIONARY: TranslationDict = {
   "admin.login.password": { th: "รหัสผ่าน", en: "Password" },
   "admin.login.button": { th: "เข้าสู่ระบบหลังบ้าน", en: "Sign In as Admin" },
   "admin.login.error": { th: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", en: "Invalid username or password" },
-  "admin.login.desc": { th: "ข้อมูลรับรองเริ่มต้น: admin / password", en: "Default credentials: admin / password" },
+  "admin.login.desc": { th: "ข้อมูลรับรองเริ่มต้น: adminae / admin12315", en: "Default credentials: adminae / admin12315" },
 
   // Admin Header
   "admin.header": { th: "HLLC หลังบ้าน", en: "HLLC Admin Portal" },

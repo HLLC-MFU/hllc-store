@@ -111,11 +111,65 @@ export default function CartPage() {
     setStep("info");
   }
 
+  function checkoutValidationMessage({
+    name,
+    phone,
+    address,
+    district,
+    province,
+    postalCode,
+    pickupTime,
+  }: {
+    name: string;
+    phone: string;
+    address: string;
+    district: string;
+    province: string;
+    postalCode: string;
+    pickupTime: string;
+  }) {
+    const missing: string[] = [];
+    const invalid: string[] = [];
+
+    if (!name) missing.push(lang === "th" ? "ชื่อผู้รับ" : "recipient name");
+
+    if (!phone) {
+      missing.push(lang === "th" ? "เบอร์โทรศัพท์" : "phone number");
+    } else if (phone.length < 9) {
+      invalid.push(lang === "th" ? "เบอร์โทรศัพท์ต้องมีอย่างน้อย 9 หลัก" : "phone number must be at least 9 digits");
+    }
+
+    if (deliveryMode === "pickup") {
+      if (!pickupTime) missing.push(lang === "th" ? "เวลารับสินค้า" : "pickup time");
+    } else {
+      if (!address) missing.push(lang === "th" ? "ที่อยู่จัดส่ง" : "shipping address");
+      if (!district) missing.push(lang === "th" ? "เขต/อำเภอ" : "district");
+      if (!province) missing.push(lang === "th" ? "จังหวัด" : "province");
+
+      if (!postalCode) {
+        missing.push(lang === "th" ? "รหัสไปรษณีย์" : "postal code");
+      } else if (!/^\d{5}$/.test(postalCode)) {
+        invalid.push(lang === "th" ? "รหัสไปรษณีย์ต้องมี 5 หลัก" : "postal code must be 5 digits");
+      }
+    }
+
+    const messages: string[] = [];
+    if (missing.length) {
+      messages.push(
+        lang === "th"
+          ? `กรุณากรอก: ${missing.join(", ")}`
+          : `Please fill in: ${missing.join(", ")}`
+      );
+    }
+    messages.push(...invalid);
+
+    return messages.join(" • ");
+  }
+
   async function handleCheckout(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!items.length) return;
 
-    setLoading(true);
     setMessage("");
     setCreatedOrder(null);
 
@@ -127,16 +181,26 @@ export default function CartPage() {
     const province = String(formData.get("province") ?? "").trim();
     const postalCode = String(formData.get("postalCode") ?? "").trim();
     const pickupTime = String(formData.get("pickupTime") ?? "").trim();
+    const validationError = checkoutValidationMessage({
+      name,
+      phone,
+      address,
+      district,
+      province,
+      postalCode,
+      pickupTime,
+    });
+
+    if (validationError) {
+      setMessage(validationError);
+      return;
+    }
+
+    setLoading(true);
     const fullAddress =
       deliveryMode === "pickup"
         ? `รับเองที่ D1${pickupTime ? ` เวลา ${pickupTime}` : ""}`
         : [address, district, province, postalCode].filter(Boolean).join(" ");
-
-    if (!name || phone.length < 9 || (deliveryMode === "delivery" && !address) || (deliveryMode === "pickup" && !pickupTime)) {
-      setMessage(lang === "th" ? "กรุณากรอกข้อมูลให้ครบ" : "Please complete your information.");
-      setLoading(false);
-      return;
-    }
 
     try {
       const orderResponse = await fetch("/api/backend/orders", {
