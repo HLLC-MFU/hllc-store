@@ -14,7 +14,17 @@ export function EditProductModal({ product, onSave, onClose }: {
   onSave: (p: Product) => void;
   onClose: () => void;
 }) {
-  const [form, setForm] = React.useState({ ...product });
+  const [form, setForm] = React.useState(() => ({
+    ...product,
+    name: {
+      th: product.name?.th ?? "",
+      en: product.name?.en ?? "",
+    },
+    description: {
+      th: product.description?.th ?? "",
+      en: product.description?.en ?? "",
+    },
+  }));
   const [imagePreview, setImagePreview] = React.useState(product.imageUrl ?? "");
   const fileRef = React.useRef<HTMLInputElement>(null);
 
@@ -31,7 +41,18 @@ export function EditProductModal({ product, onSave, onClose }: {
   }
 
   function handleSave() {
-    onSave({ ...form, imageUrl: imagePreview || undefined });
+    onSave({
+      ...form,
+      name: {
+        th: form.name.th.trim(),
+        en: form.name.en?.trim() || undefined,
+      },
+      description: {
+        th: form.description.th.trim(),
+        en: form.description.en?.trim() || undefined,
+      },
+      imageUrl: imagePreview || undefined,
+    });
     onClose();
   }
 
@@ -74,8 +95,13 @@ export function EditProductModal({ product, onSave, onClose }: {
 
           {/* Fields */}
           <div>
-            <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">ชื่อสินค้า</Label>
-            <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">ชื่อสินค้า (ภาษาไทย)</Label>
+            <Input value={form.name.th} onChange={(e) => setForm((f) => ({ ...f, name: { ...f.name, th: e.target.value } }))}
+              className="rounded-xl border-gray-200 text-xs h-10" />
+          </div>
+          <div>
+            <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">ชื่อสินค้า (English)</Label>
+            <Input value={form.name.en ?? ""} onChange={(e) => setForm((f) => ({ ...f, name: { ...f.name, en: e.target.value } }))}
               className="rounded-xl border-gray-200 text-xs h-10" />
           </div>
 
@@ -97,9 +123,14 @@ export function EditProductModal({ product, onSave, onClose }: {
           )}
 
           <div>
-            <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">คำอธิบาย</Label>
-            <Textarea value={form.description ?? ""} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              rows={3} className="rounded-xl border-gray-200 text-xs resize-none" />
+            <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">คำอธิบาย (ภาษาไทย)</Label>
+            <Textarea value={form.description.th} onChange={(e) => setForm((f) => ({ ...f, description: { ...f.description, th: e.target.value } }))}
+              rows={2} className="rounded-xl border-gray-200 text-xs resize-none" />
+          </div>
+          <div>
+            <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">คำอธิบาย (English)</Label>
+            <Textarea value={form.description.en ?? ""} onChange={(e) => setForm((f) => ({ ...f, description: { ...f.description, en: e.target.value } }))}
+              rows={2} className="rounded-xl border-gray-200 text-xs resize-none" />
           </div>
 
           <div className="flex gap-2 pt-1">

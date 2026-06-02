@@ -11,12 +11,15 @@ type ProductOption = {
   imageUrl?: string;
 };
 
+type LocalizedText = {
+  th: string;
+  en?: string;
+};
+
 type DisplayProduct = {
   id: string;
-  name: string;
-  nameEn?: string;
-  description: string;
-  descriptionEn?: string;
+  name: LocalizedText;
+  description: LocalizedText;
   price: number;
   stock: number;
   category: string;
@@ -81,7 +84,7 @@ export function HomeClient({ products }: HomeClientProps) {
                 {p.imageUrl ? (
                   <img
                     src={p.imageUrl}
-                    alt={p.name}
+                    alt={p.name[lang] || p.name.th}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 ) : (
@@ -98,7 +101,7 @@ export function HomeClient({ products }: HomeClientProps) {
               {/* Info */}
               <div className="px-4 py-3.5 flex flex-col gap-0.5">
                 <p className="truncate text-sm font-black text-gray-900">
-                  {lang === "th" ? p.name : (p.nameEn || p.name)}
+                  {p.name[lang] || p.name.th}
                 </p>
                 <p className="mt-2 text-base font-black text-[#85241F]">{money(p.price)}</p>
               </div>

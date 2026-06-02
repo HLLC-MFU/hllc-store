@@ -95,11 +95,15 @@ export function toProduct(doc: Document): Product {
 
   return {
     id: doc._id.toString(),
-    name: doc.name,
-    nameEn: doc.nameEn,
+    name: {
+      th: doc.name || "",
+      en: doc.nameEn || undefined,
+    },
     slug: doc.slug,
-    description: doc.description ?? "",
-    descriptionEn: doc.descriptionEn,
+    description: {
+      th: doc.description || "",
+      en: doc.descriptionEn || undefined,
+    },
     price: Number(doc.price ?? 0),
     stock: Number(doc.stock ?? 0),
     category: doc.category ?? "",
@@ -114,17 +118,17 @@ export function toProduct(doc: Document): Product {
 
 function buildCreateProduct(input: CreateProductInput) {
   const timestamp = now();
-  const name = assertText(input.name, "name");
-  const slug = createSlug(input.slug || name) || `product-${Date.now()}`;
+  const nameTh = assertText(input.name.th, "name.th");
+  const slug = createSlug(input.slug || nameTh) || `product-${Date.now()}`;
 
   return {
-    name,
-    nameEn: typeof input.nameEn === "string" ? input.nameEn.trim() : "",
+    name: nameTh,
+    nameEn: typeof input.name.en === "string" ? input.name.en.trim() : "",
     slug,
     description:
-      typeof input.description === "string" ? input.description.trim() : "",
+      typeof input.description?.th === "string" ? input.description.th.trim() : "",
     descriptionEn:
-      typeof input.descriptionEn === "string" ? input.descriptionEn.trim() : "",
+      typeof input.description?.en === "string" ? input.description.en.trim() : "",
     price: assertNumber(input.price, "price"),
     stock: assertNumber(input.stock, "stock"),
     category: typeof input.category === "string" ? input.category.trim() : "",
@@ -170,23 +174,25 @@ export async function updateProduct(
   const updateData: Document = { updatedAt: now() };
 
   if (input.name !== undefined) {
-    updateData.name = assertText(input.name, "name");
-    updateData.slug = createSlug(input.slug || input.name);
+    if (input.name.th !== undefined) {
+      updateData.name = assertText(input.name.th, "name.th");
+      updateData.slug = createSlug(input.slug || input.name.th);
+    }
+    if (input.name.en !== undefined) {
+      updateData.nameEn = typeof input.name.en === "string" ? input.name.en.trim() : "";
+    }
   } else if (input.slug !== undefined) {
     updateData.slug = createSlug(input.slug);
   }
 
-  if (input.nameEn !== undefined) {
-    updateData.nameEn = typeof input.nameEn === "string" ? input.nameEn.trim() : "";
-  }
-
   if (input.description !== undefined) {
-    updateData.description =
-      typeof input.description === "string" ? input.description.trim() : "";
-  }
-
-  if (input.descriptionEn !== undefined) {
-    updateData.descriptionEn = typeof input.descriptionEn === "string" ? input.descriptionEn.trim() : "";
+    if (input.description.th !== undefined) {
+      updateData.description =
+        typeof input.description.th === "string" ? input.description.th.trim() : "";
+    }
+    if (input.description.en !== undefined) {
+      updateData.descriptionEn = typeof input.description.en === "string" ? input.description.en.trim() : "";
+    }
   }
 
   if (input.price !== undefined) {

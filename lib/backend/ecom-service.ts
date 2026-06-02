@@ -100,9 +100,15 @@ function createSlug(value: string) {
 function toProduct(doc: Document): Product {
   return {
     id: doc._id.toString(),
-    name: doc.name,
+    name: {
+      th: doc.name || "",
+      en: doc.nameEn || undefined,
+    },
     slug: doc.slug,
-    description: doc.description,
+    description: {
+      th: doc.description || "",
+      en: doc.descriptionEn || undefined,
+    },
     price: doc.price,
     stock: doc.stock,
     category: doc.category ?? "",
@@ -178,13 +184,16 @@ export async function listAdminProducts() {
 export async function createProduct(input: CreateProductInput) {
   const db = await getDb();
   const timestamp = now();
-  const name = assertText(input.name, "name");
-  const slug = createSlug(input.slug || name);
+  const nameTh = assertText(input.name.th, "name.th");
+  const slug = createSlug(input.slug || nameTh);
   const product = {
-    name,
+    name: nameTh,
+    nameEn: typeof input.name.en === "string" ? input.name.en.trim() : "",
     slug,
     description:
-      typeof input.description === "string" ? input.description.trim() : "",
+      typeof input.description?.th === "string" ? input.description.th.trim() : "",
+    descriptionEn:
+      typeof input.description?.en === "string" ? input.description.en.trim() : "",
     price: assertNumber(input.price, "price"),
     stock: assertNumber(input.stock, "stock"),
     category: typeof input.category === "string" ? input.category.trim() : "",
@@ -542,14 +551,24 @@ export async function updateProduct(productId: string, input: Partial<CreateProd
   const updateData: any = {};
   
   if (input.name !== undefined) {
-    updateData.name = assertText(input.name, "name");
-    updateData.slug = createSlug(input.slug || input.name);
+    if (input.name.th !== undefined) {
+      updateData.name = assertText(input.name.th, "name.th");
+      updateData.slug = createSlug(input.slug || input.name.th);
+    }
+    if (input.name.en !== undefined) {
+      updateData.nameEn = typeof input.name.en === "string" ? input.name.en.trim() : "";
+    }
   } else if (input.slug !== undefined) {
     updateData.slug = createSlug(input.slug);
   }
   
   if (input.description !== undefined) {
-    updateData.description = typeof input.description === "string" ? input.description.trim() : "";
+    if (input.description.th !== undefined) {
+      updateData.description = typeof input.description.th === "string" ? input.description.th.trim() : "";
+    }
+    if (input.description.en !== undefined) {
+      updateData.descriptionEn = typeof input.description.en === "string" ? input.description.en.trim() : "";
+    }
   }
   
   if (input.price !== undefined) {

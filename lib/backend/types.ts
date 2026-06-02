@@ -9,13 +9,16 @@ export type OrderStatus =
 
 export type SlipStatus = "none" | "pending" | "approved" | "rejected";
 
+export type LocalizedText = {
+  th: string;
+  en?: string;
+};
+
 export type Product = {
   id: string;
-  name: string;
-  nameEn?: string;
+  name: LocalizedText;
   slug: string;
-  description?: string;
-  descriptionEn?: string;
+  description?: LocalizedText;
   price: number;
   stock: number;
   category?: string;
@@ -91,11 +94,9 @@ export type CreateOrderInput = {
 };
 
 export type CreateProductInput = {
-  name: string;
-  nameEn?: string;
+  name: LocalizedText;
   slug?: string;
-  description?: string;
-  descriptionEn?: string;
+  description?: LocalizedText;
   price: number;
   stock: number;
   category?: string;

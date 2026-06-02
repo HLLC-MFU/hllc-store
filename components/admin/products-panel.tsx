@@ -28,11 +28,19 @@ export function ProductsPanel({
 
   const filteredProducts = React.useMemo(() => {
     const query = productSearch.trim().toLowerCase();
-    return products.filter((product) =>
-      !query ||
-      product.name.toLowerCase().includes(query) ||
-      product.description?.toLowerCase().includes(query)
-    );
+    return products.filter((product) => {
+      if (!query) return true;
+      const nameTh = product.name.th.toLowerCase();
+      const nameEn = product.name.en?.toLowerCase() ?? "";
+      const descTh = product.description?.th.toLowerCase() ?? "";
+      const descEn = product.description?.en?.toLowerCase() ?? "";
+      return (
+        nameTh.includes(query) ||
+        nameEn.includes(query) ||
+        descTh.includes(query) ||
+        descEn.includes(query)
+      );
+    });
   }, [products, productSearch]);
 
   return (

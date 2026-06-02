@@ -151,17 +151,21 @@ export default function AdminPage() {
   }
 
   async function addProduct(formData: FormData) {
-    const name = String(formData.get("name") ?? "").trim();
-    if (!name) return;
+    const nameTh = String(formData.get("name") ?? "").trim();
+    if (!nameTh) return;
     setLoading(true);
     const res = await api<Product>("/api/backend/admin/products", {
       method: "POST",
       body: JSON.stringify({
-        name,
-        nameEn: String(formData.get("nameEn") ?? "").trim() || undefined,
-        slug: name.toLowerCase().replace(/\s+/g, "-"),
-        description: String(formData.get("description") ?? "").trim() || undefined,
-        descriptionEn: String(formData.get("descriptionEn") ?? "").trim() || undefined,
+        name: {
+          th: nameTh,
+          en: String(formData.get("nameEn") ?? "").trim() || undefined,
+        },
+        slug: nameTh.toLowerCase().replace(/\s+/g, "-"),
+        description: {
+          th: String(formData.get("description") ?? "").trim(),
+          en: String(formData.get("descriptionEn") ?? "").trim() || undefined,
+        },
         price: Number(formData.get("price")) || 0,
         stock: Number(formData.get("stock")) || 0,
         discount: Number(formData.get("discount")) || undefined,

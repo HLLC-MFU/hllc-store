@@ -37,7 +37,7 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
         <div className="relative w-full aspect-video bg-gray-50 shrink-0">
           {product.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+            <img src={product.imageUrl} alt={product.name.th} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <ImageIcon className="w-12 h-12 text-gray-200" />
@@ -60,7 +60,7 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
         <div className="overflow-y-auto flex-1 p-5 flex flex-col gap-4">
           {/* Name + category */}
           <div>
-            <h2 className="font-black text-gray-900 text-lg leading-tight">{product.name}</h2>
+            <h2 className="font-black text-gray-900 text-lg leading-tight">{product.name.th}</h2>
             {product.category && (
               <Badge variant="outline" className="mt-1.5 text-[10px] font-bold text-slate-500 bg-slate-50">
                 {product.category}
@@ -87,8 +87,8 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
           </div>
 
           {/* Description */}
-          {product.description && (
-            <p className="text-xs text-gray-500 leading-relaxed">{product.description}</p>
+          {product.description?.th && (
+            <p className="text-xs text-gray-500 leading-relaxed">{product.description.th}</p>
           )}
 
           {/* Options */}
