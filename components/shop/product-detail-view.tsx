@@ -1,15 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { ChevronLeft, Package, ShoppingBag, Truck } from "lucide-react";
+import { useState, useRef } from "react";
+import { ChevronLeft, ShoppingBag, Truck } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
-
-export type ProductDetailOption = {
-  label: string;
-  imageUrl?: string;
-};
 
 export type LocalizedText = {
   th: string;
@@ -22,9 +17,6 @@ export type ProductDetailProduct = {
   description?: LocalizedText;
   price: number;
   stock: number;
-  category?: string;
-  options?: ProductDetailOption[];
-  imageUrl?: string;
   imageUrls?: string[];
   shipping?: number;
 };
@@ -44,15 +36,11 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   const { addItem } = useCart();
   const { lang } = useLanguage();
 
-  const images = product.imageUrls?.length
-    ? product.imageUrls
-    : product.imageUrl
-    ? [product.imageUrl]
-    : [];
+  const images = product.imageUrls ?? [];
 
   const [currentIndex, setCurrentIndex] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const tags = product.options?.map((o) => o.label).filter(Boolean) ?? [];
   const shipping = product.shipping ?? 50;
   const outOfStock = product.stock < 1;
 
@@ -63,7 +51,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
       description: product.description,
       price: product.price,
       stock: product.stock,
-      imageUrl: product.imageUrl,
+      imageUrl: images[0] ?? "",
       selectedOption: "",
     });
   }
@@ -72,6 +60,25 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
     handleAddToCart();
     router.push("/cart");
   }
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const index = Math.round(container.scrollLeft / container.clientWidth);
+    if (index !== currentIndex && index >= 0 && index < images.length) {
+      setCurrentIndex(index);
+    }
+  };
+
+  const scrollToImage = (index: number) => {
+    setCurrentIndex(index);
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.scrollTo({
+        left: index * container.clientWidth,
+        behavior: "smooth",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -86,16 +93,41 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         </button>
       </div>
 
-      {/* Main image */}
-      <div className="w-full aspect-square bg-gray-50 flex items-center justify-center">
+      {/* Main image - Horizontal Scroll Gallery */}
+      <div className="relative w-full aspect-square bg-gray-50 overflow-hidden">
         {images.length > 0 ? (
-          <img
-            src={images[currentIndex]}
-            alt={product.name[lang] || product.name.th}
-            className="w-full h-full object-contain"
-          />
+          <>
+            <div
+              ref={scrollContainerRef}
+              onScroll={handleScroll}
+              className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none"
+            >
+              {images.map((src, i) => (
+                <div key={i} className="w-full h-full shrink-0 snap-center flex items-center justify-center bg-gray-50">
+                  <img
+                    src={src}
+                    alt={`${product.name[lang] || product.name.th} ${i + 1}`}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              ))}
+            </div>
+            {/* Dot indicators overlay */}
+            {images.length > 1 && (
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-10 pointer-events-none">
+                {images.map((_, i) => (
+                  <span
+                    key={i}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      i === currentIndex ? "w-4 bg-[#85241F]" : "w-1.5 bg-gray-300"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         ) : (
-          <div className="w-full h-full bg-gray-100" />
+          <div className="w-full h-full bg-gray-100 flex items-center justify-center" />
         )}
       </div>
 
@@ -106,7 +138,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
             <button
               key={i}
               type="button"
-              onClick={() => setCurrentIndex(i)}
+              onClick={() => scrollToImage(i)}
               className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
                 i === currentIndex
                   ? "border-[#85241F]"
@@ -131,31 +163,10 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
           </h1>
         </div>
 
-        {/* Tags / condition */}
-        {tags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-
         <div className="border-t border-gray-100" />
 
-        {/* Shipping + Collection row */}
+        {/* Shipping row */}
         <div className="flex flex-col gap-2.5">
-          {product.category && (
-            <div className="flex items-center gap-2.5 text-sm text-gray-500">
-              <Package className="h-4 w-4 shrink-0 text-gray-400" />
-              <span>{lang === "th" ? "คอลเลกชัน" : "Collection"}</span>
-              <span className="ml-auto font-semibold text-gray-900">{product.category}</span>
-            </div>
-          )}
           <div className="flex items-center gap-2.5 text-sm text-gray-500">
             <Truck className="h-4 w-4 shrink-0 text-gray-400" />
             <span>{lang === "th" ? "ค่าจัดส่ง" : "Shipping"}</span>

@@ -9,6 +9,7 @@ import type {
   PaymentSlipInput,
   Product,
   ReviewSlipInput,
+  LocalizedText,
 } from "./types";
 
 function assertText(value: unknown, field: string) {
@@ -102,17 +103,37 @@ function toProduct(doc: Document): Product {
     ? doc.imageUrls.filter((u: unknown) => typeof u === "string" && u)
     : [];
 
+  let nameObj: LocalizedText = { th: "" };
+  if (doc.name && typeof doc.name === "object") {
+    nameObj = {
+      th: doc.name.th || "",
+      en: doc.name.en || undefined,
+    };
+  } else {
+    nameObj = {
+      th: typeof doc.name === "string" ? doc.name : "",
+      en: typeof doc.nameEn === "string" ? doc.nameEn : undefined,
+    };
+  }
+
+  let descObj: LocalizedText = { th: "" };
+  if (doc.description && typeof doc.description === "object") {
+    descObj = {
+      th: doc.description.th || "",
+      en: doc.description.en || undefined,
+    };
+  } else {
+    descObj = {
+      th: typeof doc.description === "string" ? doc.description : "",
+      en: typeof doc.descriptionEn === "string" ? doc.descriptionEn : undefined,
+    };
+  }
+
   return {
     id: doc._id.toString(),
-    name: {
-      th: doc.name || "",
-      en: doc.nameEn || undefined,
-    },
+    name: nameObj,
     slug: doc.slug,
-    description: {
-      th: doc.description || "",
-      en: doc.descriptionEn || undefined,
-    },
+    description: descObj,
     price: doc.price,
     stock: doc.stock,
     category: doc.category ?? "",
@@ -192,13 +213,15 @@ export async function createProduct(input: CreateProductInput) {
   const nameTh = assertText(input.name.th, "name.th");
   const slug = createSlug(input.slug || nameTh);
   const product = {
-    name: nameTh,
-    nameEn: typeof input.name.en === "string" ? input.name.en.trim() : "",
+    name: {
+      th: nameTh,
+      en: typeof input.name.en === "string" ? input.name.en.trim() : "",
+    },
     slug,
-    description:
-      typeof input.description?.th === "string" ? input.description.th.trim() : "",
-    descriptionEn:
-      typeof input.description?.en === "string" ? input.description.en.trim() : "",
+    description: {
+      th: typeof input.description?.th === "string" ? input.description.th.trim() : "",
+      en: typeof input.description?.en === "string" ? input.description.en.trim() : "",
+    },
     price: assertNumber(input.price, "price"),
     stock: assertNumber(input.stock, "stock"),
     category: typeof input.category === "string" ? input.category.trim() : "",
@@ -558,11 +581,11 @@ export async function updateProduct(productId: string, input: Partial<CreateProd
   
   if (input.name !== undefined) {
     if (input.name.th !== undefined) {
-      updateData.name = assertText(input.name.th, "name.th");
+      updateData["name.th"] = assertText(input.name.th, "name.th");
       updateData.slug = createSlug(input.slug || input.name.th);
     }
     if (input.name.en !== undefined) {
-      updateData.nameEn = typeof input.name.en === "string" ? input.name.en.trim() : "";
+      updateData["name.en"] = typeof input.name.en === "string" ? input.name.en.trim() : "";
     }
   } else if (input.slug !== undefined) {
     updateData.slug = createSlug(input.slug);
@@ -570,10 +593,10 @@ export async function updateProduct(productId: string, input: Partial<CreateProd
   
   if (input.description !== undefined) {
     if (input.description.th !== undefined) {
-      updateData.description = typeof input.description.th === "string" ? input.description.th.trim() : "";
+      updateData["description.th"] = typeof input.description.th === "string" ? input.description.th.trim() : "";
     }
     if (input.description.en !== undefined) {
-      updateData.descriptionEn = typeof input.description.en === "string" ? input.description.en.trim() : "";
+      updateData["description.en"] = typeof input.description.en === "string" ? input.description.en.trim() : "";
     }
   }
   
