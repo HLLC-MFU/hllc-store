@@ -335,6 +335,7 @@ export default function AdminPage() {
         category: String(formData.get("category") ?? "").trim() || undefined,
         imageUrl: String(formData.get("imageUrl") ?? "").trim() || undefined,
         imageUrls: (() => { try { return JSON.parse(String(formData.get("imageUrls") ?? "[]")); } catch { return undefined; } })(),
+        options: (() => { try { return JSON.parse(String(formData.get("options") ?? "[]")); } catch { return undefined; } })(),
         active: true,
       }),
     });
@@ -356,7 +357,9 @@ export default function AdminPage() {
         description: updated.description,
         price: updated.price,
         stock: updated.stock,
+        category: updated.category,
         discount: updated.discount,
+        options: updated.options,
         imageUrl: updated.imageUrl,
         imageUrls: updated.imageUrls,
         active: updated.active,

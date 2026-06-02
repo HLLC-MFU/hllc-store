@@ -54,21 +54,42 @@ export async function ensureDefaultSuperAdmin() {
   const db = await getDb();
   const users = db.collection<AdminUserDoc>("admin_users");
   await users.createIndex({ username: 1 }, { unique: true });
-  const count = await users.countDocuments();
-
-  if (count > 0) return;
-
   const timestamp = now();
-  await users.insertOne({
-    username: ADMIN_USERNAME.toLowerCase(),
-    role: "superAdmin",
-    passwordHash:
-      process.env.ADMIN_PASSWORD_HASH ||
-      hashAdminPassword(ADMIN_PASSWORD, "default-dev-admin-salt"),
-    active: true,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  });
+  const username = ADMIN_USERNAME.toLowerCase();
+  const existing = await users.findOne({ username });
+
+  await users.updateOne(
+    { username },
+    {
+      $set: {
+        role: "superAdmin",
+        active: true,
+        updatedAt: timestamp,
+      },
+      $setOnInsert: {
+        username,
+        passwordHash:
+          process.env.ADMIN_PASSWORD_HASH ||
+          hashAdminPassword(ADMIN_PASSWORD, "default-dev-admin-salt"),
+        createdAt: timestamp,
+      },
+    },
+    { upsert: true },
+  );
+
+  if (existing && !existing.passwordHash) {
+    await users.updateOne(
+      { username },
+      {
+        $set: {
+          passwordHash:
+            process.env.ADMIN_PASSWORD_HASH ||
+            hashAdminPassword(ADMIN_PASSWORD, "default-dev-admin-salt"),
+          updatedAt: timestamp,
+        },
+      },
+    );
+  }
 }
 
 export async function verifyAdminUser(usernameValue: unknown, password: string) {
