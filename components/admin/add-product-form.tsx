@@ -23,14 +23,17 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
   const isControlled = controlledOpen !== undefined;
   const isOpen = isControlled ? controlledOpen : open;
   const handleClose = () => { setOpen(false); onClose?.(); };
-  const [imagePreviews, setImagePreviews] = React.useState<string[]>(() =>
-    product?.imageUrl ? [product.imageUrl] : []
-  );
+
+  const [imagePreviews, setImagePreviews] = React.useState<string[]>(() => {
+    if (product?.imageUrls && product.imageUrls.length > 0) return product.imageUrls;
+    if (product?.imageUrl) return [product.imageUrl];
+    return [];
+  });
+  const [imageError, setImageError] = React.useState(false);
+
   const fileRef = React.useRef<HTMLInputElement>(null);
   const formRef = React.useRef<HTMLFormElement>(null);
   const { lang } = useLanguage();
-
-  // lang is used implicitly via t — keep reference
   void lang;
 
   const MAX_IMAGES = 5;
@@ -52,8 +55,6 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
     setImagePreviews((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  const [imageError, setImageError] = React.useState(false);
-
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (imagePreviews.length === 0) {
@@ -63,7 +64,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
     setImageError(false);
     const fd = new FormData(e.currentTarget);
     if (imagePreviews[0]) fd.set("imageUrl", imagePreviews[0]);
-    if (imagePreviews.length > 1) fd.set("imageUrls", JSON.stringify(imagePreviews));
+    fd.set("imageUrls", JSON.stringify(imagePreviews));
 
     if (isEditMode && onUpdate && product) {
       onUpdate({
@@ -72,7 +73,10 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
         price: Number(fd.get("price")) || product.price,
         stock: Number(fd.get("stock")) ?? product.stock,
         description: String(fd.get("description") ?? product.description ?? "").trim() || undefined,
+        category: String(fd.get("category") ?? product.category ?? "").trim() || undefined,
         imageUrl: imagePreviews[0] ?? product.imageUrl,
+        imageUrls: imagePreviews.length > 0 ? imagePreviews : undefined,
+        options: [],
       });
     } else {
       onSubmit(fd);
@@ -83,7 +87,6 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
     handleClose();
   }
 
-  // notify is available for potential future use
   void notify;
 
   if (!isOpen) return null;
@@ -109,7 +112,8 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
         {/* Form */}
         <div className="overflow-y-auto flex-1 px-5 py-4">
           <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-3.5">
-            {/* Image upload — multiple */}
+
+            {/* Product images */}
             <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleFiles} className="hidden" />
             <div className="flex flex-col gap-2">
               {imagePreviews.length > 0 && (
@@ -148,6 +152,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
               )}
             </div>
 
+            {/* Basic fields */}
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.name")}</Label>
@@ -160,6 +165,10 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
               <div>
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.stock")}</Label>
                 <Input name="stock" type="number" min="0" required defaultValue={product?.stock ?? ""} className="rounded-xl border-gray-200 text-xs h-10" />
+              </div>
+              <div className="col-span-2">
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">หมวดหมู่</Label>
+                <Input name="category" defaultValue={product?.category ?? ""} placeholder="เช่น เสื้อผ้า, รองเท้า" className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
               <div className="col-span-2">
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.description")}</Label>

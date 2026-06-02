@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Home, ShoppingCart, User } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
+import { LanguageChip } from "@/components/shared/language-chip";
 
 const tabs = [
   { href: "/home", icon: Home, labelKey: "nav.home" },
@@ -19,7 +20,7 @@ export function BottomNav() {
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] z-50">
-      <div className="flex items-center justify-around px-8 py-3">
+      <div className="flex items-center justify-around px-6 py-3">
         {tabs.map(({ href, icon: Icon, labelKey }) => {
           const active = pathname.startsWith(href);
           return (
@@ -42,6 +43,7 @@ export function BottomNav() {
             </Link>
           );
         })}
+        <LanguageChip />
       </div>
     </nav>
   );

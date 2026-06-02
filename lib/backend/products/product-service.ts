@@ -112,6 +112,10 @@ function normalizeOptions(value: unknown) {
 }
 
 export function toProduct(doc: Document): Product {
+  const imageUrls: string[] = Array.isArray(doc.imageUrls)
+    ? doc.imageUrls.filter((u: unknown) => typeof u === "string" && u)
+    : [];
+
   return {
     id: doc._id.toString(),
     name: doc.name,
@@ -121,7 +125,8 @@ export function toProduct(doc: Document): Product {
     stock: Number(doc.stock ?? 0),
     category: doc.category ?? "",
     options: normalizeOptions(doc.options),
-    imageUrl: doc.imageUrl ?? "",
+    imageUrl: doc.imageUrl ?? imageUrls[0] ?? "",
+    imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
     active: doc.active ?? true,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
@@ -131,17 +136,23 @@ export function toProduct(doc: Document): Product {
 function buildCreateProduct(input: CreateProductInput) {
   const timestamp = now();
   const name = assertText(input.name, "name");
+  const slug = createSlug(input.slug || name) || `product-${Date.now()}`;
+  const imageUrl = normalizeImageValue(input.imageUrl);
+  const imageUrls = Array.isArray(input.imageUrls)
+    ? input.imageUrls.map((url) => normalizeImageValue(url)).filter(Boolean)
+    : [];
 
   return {
     name,
-    slug: createSlug(input.slug || name),
+    slug,
     description:
       typeof input.description === "string" ? input.description.trim() : "",
     price: assertNumber(input.price, "price"),
     stock: assertNumber(input.stock, "stock"),
     category: typeof input.category === "string" ? input.category.trim() : "",
     options: normalizeOptions(input.options),
-    imageUrl: normalizeImageValue(input.imageUrl),
+    imageUrl,
+    imageUrls,
     active: input.active ?? true,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -213,6 +224,12 @@ export async function updateProduct(
     updateData.imageUrl = normalizeImageValue(input.imageUrl);
   }
 
+  if (input.imageUrls !== undefined) {
+    updateData.imageUrls = Array.isArray(input.imageUrls)
+      ? input.imageUrls.filter((u) => typeof u === "string" && u)
+      : [];
+  }
+
   if (input.active !== undefined) {
     updateData.active = input.active;
   }
@@ -232,11 +249,33 @@ export async function updateProduct(
 
 export async function deleteProduct(productId: string) {
   const collection = await getProductCollection();
-  const result = await collection.deleteOne({ _id: assertObjectId(productId) });
+  const oid = assertObjectId(productId);
+
+  const result = await collection.deleteOne({ _id: oid });
 
   if (result.deletedCount === 0) {
     throw new Error("product not found");
   }
+
+  const { getDb } = await import("@/lib/backend/mongodb");
+  const db = await getDb();
+  const timestamp = new Date().toISOString();
+
+  await db.collection("orders").updateMany(
+    {
+      "items.productId": oid,
+      status: { $in: ["pending_payment", "payment_review"] },
+    },
+    {
+      $set: {
+        status: "cancelled",
+        cancellationReason: `สินค้า ${productId} ถูกลบออกจากระบบ`,
+        cancelledBy: "system",
+        cancelledAt: timestamp,
+        updatedAt: timestamp,
+      },
+    },
+  );
 
   return { success: true };
 }

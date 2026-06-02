@@ -1,43 +1,22 @@
 "use client";
 
-import { Globe } from "lucide-react";
-import { useLanguage } from "@/lib/language-context";
+import { LanguageChip } from "@/components/shared/language-chip";
 
 type AppHeaderProps = {
   rightSlot?: React.ReactNode;
 };
 
 export function AppHeader({ rightSlot }: AppHeaderProps) {
-  const { lang, setLang } = useLanguage();
-
-  const languageSwitch = (
-    <div className="flex items-center gap-1 bg-white/90 backdrop-blur-md px-1.5 py-1 rounded-full border border-gray-200 shadow-sm">
-      <Globe className="w-3.5 h-3.5 text-gray-400 ml-1 shrink-0" />
-      {(["th", "en"] as const).map((l) => (
-        <button
-          key={l}
-          onClick={() => setLang(l)}
-          className={`px-2 py-0.5 rounded-md text-[10px] font-black transition-all cursor-pointer ${
-            lang === l ? "bg-[#85241F] text-white shadow-sm" : "text-gray-400 hover:text-gray-700"
-          }`}
-        >
-          {l.toUpperCase()}
-        </button>
-      ))}
-    </div>
-  );
-
   return (
     <div className="sticky top-0 z-40 border-b border-gray-100 bg-white">
       <div className="flex min-h-20 items-center justify-between gap-3 px-4">
-        {/* Language switcher — top right */}
         <div className="min-w-0 flex-1">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/images/HLLCLOGO.png" alt="HLLC" className="h-16 w-auto max-w-32 object-contain" />
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {rightSlot}
-          {languageSwitch}
+          <LanguageChip />
         </div>
       </div>
     </div>

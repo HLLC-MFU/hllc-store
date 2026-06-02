@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ShoppingCart, User, Store, Globe } from "lucide-react";
+import { Home, ShoppingCart, User } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
+import { LanguageChip } from "@/components/shared/language-chip";
 
 const tabs = [
   { href: "/home", icon: Home, labelKey: "nav.home" },
@@ -15,7 +16,7 @@ const tabs = [
 export function SideNav() {
   const pathname = usePathname();
   const { count } = useCart();
-  const { lang, setLang, t } = useLanguage();
+  const { t } = useLanguage();
 
   return (
     <aside className="hidden md:flex fixed left-0 top-0 h-full w-56 lg:w-64 bg-white border-r border-gray-100 flex-col z-40 shadow-sm">
@@ -68,35 +69,7 @@ export function SideNav() {
 
       {/* Language Selector + Footer */}
       <div className="px-4 py-4 border-t border-gray-100 flex flex-col gap-3">
-        {/* Language switcher inside sidebar */}
-        <div className="flex items-center justify-between bg-gray-50 p-1 rounded-xl border border-gray-100">
-          <div className="flex items-center gap-1.5 text-gray-400 text-xs font-semibold pl-2">
-            <Globe className="w-3.5 h-3.5 text-gray-400" />
-            <span>EN/TH</span>
-          </div>
-          <div className="flex gap-0.5">
-            <button
-              onClick={() => setLang("th")}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all ${
-                lang === "th"
-                  ? "bg-white text-red-600 shadow-sm border border-gray-200/50"
-                  : "text-gray-400 hover:text-gray-700"
-              }`}
-            >
-              TH
-            </button>
-            <button
-              onClick={() => setLang("en")}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all ${
-                lang === "en"
-                  ? "bg-white text-red-600 shadow-sm border border-gray-200/50"
-                  : "text-gray-400 hover:text-gray-700"
-              }`}
-            >
-              EN
-            </button>
-          </div>
-        </div>
+        <LanguageChip />
 
         <div className="flex items-center gap-3 px-2">
           <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center shrink-0">
