@@ -201,6 +201,18 @@ const DICTIONARY: TranslationDict = {
   "admin.products.edit.delete_modal_desc": { th: "การลบไม่สามารถย้อนกลับได้", en: "This action cannot be undone." },
   "admin.products.edit.delete_modal_confirm": { th: "ลบเลย", en: "Delete" },
   "admin.products.edit.delete_modal_cancel": { th: "ยกเลิก", en: "Cancel" },
+  "admin.products.label.name_th": { th: "ชื่อสินค้า (ภาษาไทย) *", en: "Product Name (Thai) *" },
+  "admin.products.label.name_en": { th: "ชื่อสินค้า (ภาษาอังกฤษ)", en: "Product Name (English)" },
+  "admin.products.label.description_th": { th: "คำอธิบายสินค้า (ภาษาไทย)", en: "Product Description (Thai)" },
+  "admin.products.label.description_en": { th: "คำอธิบายสินค้า (ภาษาอังกฤษ)", en: "Product Description (English)" },
+  "admin.products.label.price_label": { th: "ราคา (฿) *", en: "Price (฿) *" },
+  "admin.products.label.stock_label": { th: "สต็อกสินค้า *", en: "Stock Quantity *" },
+  "admin.products.edit.title": { th: "แก้ไขสินค้า", en: "Edit Product" },
+  "admin.products.image.primary": { th: "หลัก", en: "Primary" },
+  "admin.products.image.add": { th: "เพิ่ม", en: "Add" },
+  "admin.products.image.required": { th: "ต้องมีรูปอย่างน้อย 1 รูป", en: "At least 1 image is required" },
+  "admin.products.image.upload": { th: "อัปโหลดรูปสินค้า", en: "Upload product images" },
+  "admin.products.image.hint": { th: "สูงสุด {max} รูป · รูปแรก = รูปหลัก", en: "Max {max} images · First image = Primary" },
 };
 
 interface LanguageContextType {
