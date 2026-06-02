@@ -158,8 +158,10 @@ export default function AdminPage() {
       method: "POST",
       body: JSON.stringify({
         name,
+        nameEn: String(formData.get("nameEn") ?? "").trim() || undefined,
         slug: name.toLowerCase().replace(/\s+/g, "-"),
         description: String(formData.get("description") ?? "").trim() || undefined,
+        descriptionEn: String(formData.get("descriptionEn") ?? "").trim() || undefined,
         price: Number(formData.get("price")) || 0,
         stock: Number(formData.get("stock")) || 0,
         discount: Number(formData.get("discount")) || undefined,

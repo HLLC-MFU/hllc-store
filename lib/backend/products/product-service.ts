@@ -96,8 +96,10 @@ export function toProduct(doc: Document): Product {
   return {
     id: doc._id.toString(),
     name: doc.name,
+    nameEn: doc.nameEn,
     slug: doc.slug,
     description: doc.description ?? "",
+    descriptionEn: doc.descriptionEn,
     price: Number(doc.price ?? 0),
     stock: Number(doc.stock ?? 0),
     category: doc.category ?? "",
@@ -117,9 +119,12 @@ function buildCreateProduct(input: CreateProductInput) {
 
   return {
     name,
+    nameEn: typeof input.nameEn === "string" ? input.nameEn.trim() : "",
     slug,
     description:
       typeof input.description === "string" ? input.description.trim() : "",
+    descriptionEn:
+      typeof input.descriptionEn === "string" ? input.descriptionEn.trim() : "",
     price: assertNumber(input.price, "price"),
     stock: assertNumber(input.stock, "stock"),
     category: typeof input.category === "string" ? input.category.trim() : "",
@@ -171,9 +176,17 @@ export async function updateProduct(
     updateData.slug = createSlug(input.slug);
   }
 
+  if (input.nameEn !== undefined) {
+    updateData.nameEn = typeof input.nameEn === "string" ? input.nameEn.trim() : "";
+  }
+
   if (input.description !== undefined) {
     updateData.description =
       typeof input.description === "string" ? input.description.trim() : "";
+  }
+
+  if (input.descriptionEn !== undefined) {
+    updateData.descriptionEn = typeof input.descriptionEn === "string" ? input.descriptionEn.trim() : "";
   }
 
   if (input.price !== undefined) {

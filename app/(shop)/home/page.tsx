@@ -9,7 +9,9 @@ type ProductOption = {
 type ApiProduct = {
   id: string;
   name: string;
+  nameEn?: string;
   description?: string;
+  descriptionEn?: string;
   price: number;
   stock: number;
   category?: string;
@@ -21,7 +23,9 @@ type ApiProduct = {
 type DisplayProduct = {
   id: string;
   name: string;
+  nameEn?: string;
   description: string;
+  descriptionEn?: string;
   price: number;
   stock: number;
   category: string;
@@ -64,7 +68,9 @@ function apiToDisplay(product: ApiProduct): DisplayProduct {
   return {
     id: product.id,
     name: product.name,
+    nameEn: product.nameEn,
     description: product.description ?? "",
+    descriptionEn: product.descriptionEn,
     price,
     stock: Number(product.stock ?? 0),
     category: normalizeCategory(product.category),

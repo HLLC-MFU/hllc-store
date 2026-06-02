@@ -14,7 +14,9 @@ type ProductOption = {
 type DisplayProduct = {
   id: string;
   name: string;
+  nameEn?: string;
   description: string;
+  descriptionEn?: string;
   price: number;
   stock: number;
   category: string;
@@ -95,7 +97,9 @@ export function HomeClient({ products }: HomeClientProps) {
               </div>
               {/* Info */}
               <div className="px-4 py-3.5 flex flex-col gap-0.5">
-                <p className="truncate text-sm font-black text-gray-900">{p.name}</p>
+                <p className="truncate text-sm font-black text-gray-900">
+                  {lang === "th" ? p.name : (p.nameEn || p.name)}
+                </p>
                 <p className="mt-2 text-base font-black text-[#85241F]">{money(p.price)}</p>
               </div>
             </Link>

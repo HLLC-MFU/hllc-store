@@ -12,8 +12,10 @@ export type SlipStatus = "none" | "pending" | "approved" | "rejected";
 export type Product = {
   id: string;
   name: string;
+  nameEn?: string;
   slug: string;
   description?: string;
+  descriptionEn?: string;
   price: number;
   stock: number;
   category?: string;
@@ -90,8 +92,10 @@ export type CreateOrderInput = {
 
 export type CreateProductInput = {
   name: string;
+  nameEn?: string;
   slug?: string;
   description?: string;
+  descriptionEn?: string;
   price: number;
   stock: number;
   category?: string;

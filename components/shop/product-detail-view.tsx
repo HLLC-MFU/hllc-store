@@ -14,7 +14,9 @@ export type ProductDetailOption = {
 export type ProductDetailProduct = {
   id: string;
   name: string;
+  nameEn?: string;
   description?: string;
+  descriptionEn?: string;
   price: number;
   stock: number;
   category?: string;
@@ -53,7 +55,9 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
     addItem({
       productId: product.id,
       name: product.name,
+      nameEn: product.nameEn,
       description: product.description ?? "",
+      descriptionEn: product.descriptionEn,
       price: product.price,
       stock: product.stock,
       imageUrl: product.imageUrl,
@@ -120,7 +124,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
             {money(product.price)}
           </p>
           <h1 className="mt-1.5 text-lg font-bold text-gray-900 leading-snug">
-            {product.name}
+            {lang === "th" ? product.name : (product.nameEn || product.name)}
           </h1>
         </div>
 
@@ -157,14 +161,16 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         </div>
 
         {/* Description */}
-        {product.description && (
+        {(lang === "th" ? product.description : (product.descriptionEn || product.description)) && (
           <>
             <div className="border-t border-gray-100" />
             <div>
               <p className="text-sm font-bold text-gray-900 mb-1.5">
                 {lang === "th" ? "รายละเอียด" : "Description"}
               </p>
-              <p className="text-sm leading-relaxed text-gray-500">{product.description}</p>
+              <p className="text-sm leading-relaxed text-gray-500">
+                {lang === "th" ? product.description : (product.descriptionEn || product.description)}
+              </p>
             </div>
           </>
         )}

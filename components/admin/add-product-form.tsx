@@ -70,9 +70,11 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
       onUpdate({
         ...product,
         name: String(fd.get("name") ?? product.name).trim(),
+        nameEn: String(fd.get("nameEn") ?? product.nameEn ?? "").trim() || undefined,
         price: Number(fd.get("price")) || product.price,
         stock: Number(fd.get("stock")) ?? product.stock,
         description: String(fd.get("description") ?? product.description ?? "").trim() || undefined,
+        descriptionEn: String(fd.get("descriptionEn") ?? product.descriptionEn ?? "").trim() || undefined,
         category: String(fd.get("category") ?? product.category ?? "").trim() || undefined,
         imageUrl: imagePreviews[0] ?? product.imageUrl,
         imageUrls: imagePreviews.length > 0 ? imagePreviews : undefined,
@@ -158,6 +160,10 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.name")}</Label>
                 <Input name="name" required defaultValue={product?.name ?? ""} className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
+              <div className="col-span-2">
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">ชื่อสินค้า (English)</Label>
+                <Input name="nameEn" defaultValue={product?.nameEn ?? ""} placeholder="Product Name in English" className="rounded-xl border-gray-200 text-xs h-10" />
+              </div>
               <div>
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.price")}</Label>
                 <Input name="price" type="number" min="0" required defaultValue={product?.price ?? ""} className="rounded-xl border-gray-200 text-xs h-10" />
@@ -173,6 +179,10 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
               <div className="col-span-2">
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.description")}</Label>
                 <Textarea name="description" rows={2} defaultValue={product?.description ?? ""} className="rounded-xl border-gray-200 text-xs resize-none" />
+              </div>
+              <div className="col-span-2">
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">รายละเอียดสินค้า (English)</Label>
+                <Textarea name="descriptionEn" rows={2} defaultValue={product?.descriptionEn ?? ""} placeholder="Product Description in English" className="rounded-xl border-gray-200 text-xs resize-none" />
               </div>
             </div>
 

@@ -23,7 +23,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const detailProduct: ProductDetailProduct = {
     id: product.id,
     name: product.name,
+    nameEn: product.nameEn,
     description: product.description,
+    descriptionEn: product.descriptionEn,
     price: product.price,
     stock: product.stock,
     category: product.category,

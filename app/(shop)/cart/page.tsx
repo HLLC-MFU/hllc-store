@@ -303,7 +303,9 @@ export default function CartPage() {
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-black text-gray-900">{item.name}</p>
+            <p className="truncate text-sm font-black text-gray-900">
+              {lang === "th" ? item.name : (item.nameEn || item.name)}
+            </p>
             {item.selectedOption ? (
               <p className="mt-0.5 text-[10px] font-bold text-gray-400">{item.selectedOption}</p>
             ) : null}
@@ -570,7 +572,7 @@ export default function CartPage() {
             </p>
             <div className="mt-4 rounded-2xl bg-gray-50 p-3">
               <p className="truncate text-sm font-black text-gray-900">
-                {removeTarget.name}
+                {lang === "th" ? removeTarget.name : (removeTarget.nameEn || removeTarget.name)}
               </p>
               <p className="mt-1 text-xs font-bold text-[#85241F]">
                 {money(removeTarget.price)} x {removeTarget.quantity}
