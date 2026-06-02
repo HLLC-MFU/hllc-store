@@ -29,6 +29,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     category: product.category,
     options: product.options,
     imageUrl: product.imageUrl,
+    imageUrls: product.imageUrls,
   };
 
   return <ProductDetailView product={detailProduct} />;

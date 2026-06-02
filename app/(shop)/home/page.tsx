@@ -178,7 +178,7 @@ export default function HomePage() {
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
           {filteredProducts.map((p) => (
             <Link key={p.id} href={`/products/${p.id}`}
-              className="group rounded-3xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.13)] transition-all duration-300 overflow-hidden active:scale-[0.98]">
+              className="group block cursor-pointer rounded-3xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.13)] transition-all duration-300 overflow-hidden active:scale-[0.98]">
               {/* Image — full width, no frame */}
               <div className="relative aspect-square bg-[#f5f5f5] overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}{p.imageUrl

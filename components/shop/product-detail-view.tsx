@@ -46,6 +46,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const tags = product.options?.map((o) => o.label).filter(Boolean) ?? [];
+  const [selectedOption, setSelectedOption] = useState(tags[0] ?? "");
   const shipping = product.shipping ?? 50;
   const outOfStock = product.stock < 1;
 
@@ -57,7 +58,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
       price: product.price,
       stock: product.stock,
       imageUrl: product.imageUrl,
-      selectedOption: "",
+      selectedOption,
     });
   }
 
@@ -124,17 +125,28 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
           </h1>
         </div>
 
-        {/* Tags / condition */}
+        {/* Options */}
         {tags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+              {lang === "th" ? "ตัวเลือก" : "Options"}
+            </p>
+            <div className="flex flex-wrap gap-2">
             {tags.map((tag) => (
-              <span
+              <button
                 key={tag}
-                className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600"
+                type="button"
+                onClick={() => setSelectedOption(tag)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-all ${
+                  selectedOption === tag
+                    ? "border-[#85241F] bg-[#85241F] text-white shadow-sm"
+                    : "border-gray-200 bg-white text-gray-600 hover:border-[#85241F]/40"
+                }`}
               >
                 {tag}
-              </span>
+              </button>
             ))}
+            </div>
           </div>
         )}
 
