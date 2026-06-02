@@ -25,22 +25,40 @@ export function EditProductModal({ product, onSave, onClose }: {
       en: product.description?.en ?? "",
     },
   }));
-  const [imagePreview, setImagePreview] = React.useState(product.imageUrl ?? "");
+  const [imagePreviews, setImagePreviews] = React.useState<string[]>(() => {
+    if (product.imageUrls && product.imageUrls.length > 0) return product.imageUrls;
+    if (product.imageUrl) return [product.imageUrl];
+    return [];
+  });
+  const [imageError, setImageError] = React.useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target?.result as string;
-      setImagePreview(result);
-      setForm((f) => ({ ...f, imageUrl: result }));
-    };
-    reader.readAsDataURL(file);
+  const MAX_IMAGES = 5;
+
+  function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    files.slice(0, MAX_IMAGES).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const result = ev.target?.result as string;
+        setImagePreviews((p) => p.length < MAX_IMAGES && !p.includes(result) ? [...p, result] : p);
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = "";
+  }
+
+  function removeImage(idx: number) {
+    setImagePreviews((prev) => prev.filter((_, i) => i !== idx));
   }
 
   function handleSave() {
+    if (imagePreviews.length === 0) {
+      setImageError(true);
+      return;
+    }
+    setImageError(false);
+
     onSave({
       ...form,
       name: {
@@ -51,7 +69,8 @@ export function EditProductModal({ product, onSave, onClose }: {
         th: form.description.th.trim(),
         en: form.description.en?.trim() || undefined,
       },
-      imageUrl: imagePreview || undefined,
+      imageUrl: imagePreviews[0] ?? undefined,
+      imageUrls: imagePreviews.length > 0 ? imagePreviews : undefined,
     });
     onClose();
   }
@@ -74,24 +93,44 @@ export function EditProductModal({ product, onSave, onClose }: {
         {/* Form */}
         <div className="overflow-y-auto flex-1 px-5 py-4 flex flex-col gap-3.5">
 
-          {/* Image */}
-          <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
-          {imagePreview ? (
-            <div className="relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imagePreview} alt="preview" className="w-full h-40 object-cover rounded-xl border border-gray-200" />
-              <button type="button" onClick={() => fileRef.current?.click()}
-                className="absolute bottom-2 right-2 bg-white/95 rounded-xl px-3 py-1.5 text-[10px] font-bold shadow flex items-center gap-1 border border-gray-100 cursor-pointer hover:bg-gray-50">
-                <Upload className="w-3 h-3 text-[#85241F]" /> เปลี่ยนรูป
+          {/* Image upload area */}
+          <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleFiles} className="hidden" />
+          <div className="flex flex-col gap-2">
+            {imagePreviews.length > 0 && (
+              <div className="grid grid-cols-3 gap-2">
+                {imagePreviews.map((src, idx) => (
+                  <div key={idx} className="relative aspect-square">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} alt="" className="w-full h-full object-cover rounded-xl border border-gray-200" />
+                    {idx === 0 && (
+                      <span className="absolute top-1 left-1 bg-[#85241F] text-white text-[8px] font-black px-1.5 py-0.5 rounded-md">หลัก</span>
+                    )}
+                    <button type="button" onClick={() => removeImage(idx)}
+                      className="absolute top-1 right-1 w-6 h-6 bg-white rounded-full shadow flex items-center justify-center cursor-pointer">
+                      <XCircle className="w-3.5 h-3.5 text-gray-400" />
+                    </button>
+                  </div>
+                ))}
+                {imagePreviews.length < MAX_IMAGES && (
+                  <button type="button" onClick={() => fileRef.current?.click()}
+                    className="aspect-square border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 hover:border-[#85241F]/30 transition-colors cursor-pointer">
+                    <Upload className="w-4 h-4 text-gray-400" />
+                    <span className="text-[9px] text-gray-400 font-bold">เพิ่ม</span>
+                  </button>
+                )}
+              </div>
+            )}
+            {imagePreviews.length === 0 && (
+              <button type="button" onClick={() => { fileRef.current?.click(); setImageError(false); }}
+                className={`w-full border-2 border-dashed rounded-xl py-6 flex flex-col items-center gap-1.5 transition-colors cursor-pointer ${imageError ? "border-red-400 bg-red-50" : "border-gray-200 hover:border-[#85241F]/30"}`}>
+                <Upload className={`w-5 h-5 ${imageError ? "text-red-400" : "text-gray-400"}`} />
+                <span className={`text-xs font-bold ${imageError ? "text-red-500" : "text-gray-400"}`}>
+                  {imageError ? "ต้องมีรูปอย่างน้อย 1 รูป" : "อัปโหลดรูปสินค้า"}
+                </span>
+                <span className="text-[10px] text-gray-300">สูงสุด {MAX_IMAGES} รูป · รูปแรก = รูปหลัก</span>
               </button>
-            </div>
-          ) : (
-            <button type="button" onClick={() => fileRef.current?.click()}
-              className="w-full border-2 border-dashed border-gray-200 rounded-xl py-6 flex flex-col items-center gap-1.5 hover:border-[#85241F]/30 transition-colors cursor-pointer">
-              <Upload className="w-5 h-5 text-gray-400" />
-              <span className="text-xs text-gray-400 font-bold">อัปโหลดรูป</span>
-            </button>
-          )}
+            )}
+          </div>
 
           {/* Fields */}
           <div>

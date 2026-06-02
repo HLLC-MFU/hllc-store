@@ -98,6 +98,10 @@ function createSlug(value: string) {
 }
 
 function toProduct(doc: Document): Product {
+  const imageUrls: string[] = Array.isArray(doc.imageUrls)
+    ? doc.imageUrls.filter((u: unknown) => typeof u === "string" && u)
+    : [];
+
   return {
     id: doc._id.toString(),
     name: {
@@ -113,7 +117,8 @@ function toProduct(doc: Document): Product {
     stock: doc.stock,
     category: doc.category ?? "",
     options: normalizeOptions(doc.options),
-    imageUrl: doc.imageUrl,
+    imageUrl: doc.imageUrl ?? imageUrls[0] ?? "",
+    imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
     active: doc.active,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
@@ -199,6 +204,7 @@ export async function createProduct(input: CreateProductInput) {
     category: typeof input.category === "string" ? input.category.trim() : "",
     options: normalizeOptions(input.options),
     imageUrl: typeof input.imageUrl === "string" ? input.imageUrl.trim() : "",
+    imageUrls: Array.isArray(input.imageUrls) ? input.imageUrls.filter((u) => typeof u === "string" && u) : [],
     active: input.active ?? true,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -589,6 +595,12 @@ export async function updateProduct(productId: string, input: Partial<CreateProd
   
   if (input.imageUrl !== undefined) {
     updateData.imageUrl = typeof input.imageUrl === "string" ? input.imageUrl.trim() : "";
+  }
+
+  if (input.imageUrls !== undefined) {
+    updateData.imageUrls = Array.isArray(input.imageUrls)
+      ? input.imageUrls.filter((u) => typeof u === "string" && u)
+      : [];
   }
   
   if (input.active !== undefined) {
