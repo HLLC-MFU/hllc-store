@@ -13,6 +13,7 @@ import {
   Search,
   TrendingUp,
   Truck,
+  User,
   XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,31 @@ import AddProductForm from "@/components/admin/add-product-form";
 import ProductCard from "@/components/admin/product-card";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AppHeader } from "@/components/shared/app-header";
+
+type AdminRole = "superAdmin" | "admin";
+
+type CurrentAdmin = {
+  username: string;
+  role: AdminRole;
+};
+
+type AdminUser = {
+  id: string;
+  username: string;
+  role: AdminRole;
+  active: boolean;
+  registered: boolean;
+  createdAt: string;
+};
+
+type AuditLog = {
+  id: string;
+  actorUsername: string;
+  actorRole: AdminRole;
+  action: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};
 
 /* ─── Mock Data ───────────────────────────────────────────────────────────── */
 
@@ -74,6 +100,8 @@ const MOCK_ORDERS: Order[] = [
   },
 ];
 
+void MOCK_ORDERS;
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = React.useState("dashboard");
   const [orders, setOrders] = React.useState<Order[]>([]);
@@ -88,21 +116,43 @@ export default function AdminPage() {
   const [confirm, setConfirm] = React.useState<{ orderId: string; approved: boolean; note?: string } | null>(null);
   const [statusConfirm, setStatusConfirm] = React.useState<{ orderId: string; status: OrderStatus } | null>(null);
   const [lightbox, setLightbox] = React.useState<string | null>(null);
+  const [adminUsers, setAdminUsers] = React.useState<AdminUser[]>([]);
+  const [auditLogs, setAuditLogs] = React.useState<AuditLog[]>([]);
   const { lang, setLang, t } = useLanguage();
 
   const [loading, setLoading] = React.useState(false);
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [currentUser, setCurrentUser] = React.useState<CurrentAdmin | null>(null);
   const [loginError, setLoginError] = React.useState("");
+  const [loginLoading, setLoginLoading] = React.useState(false);
 
   const notify = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
 
-  // Persistence check for admin login
   React.useEffect(() => {
-    const adminSession = sessionStorage.getItem("admin-logged-in");
-    if (adminSession === "true") {
-      setIsLoggedIn(true);
-    }
+    let mounted = true;
+
+    api<{ authenticated: boolean; user: CurrentAdmin | null }>("/api/backend/admin/auth")
+      .then((res) => {
+        if (!mounted || !res.data?.authenticated || !res.data.user) return;
+        setCurrentUser(res.data.user);
+        setIsLoggedIn(true);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
+
+  const loadSuperAdminData = React.useCallback(async () => {
+    if (currentUser?.role !== "superAdmin") return;
+
+    const [usersRes, logsRes] = await Promise.all([
+      api<AdminUser[]>("/api/backend/admin/users"),
+      api<AuditLog[]>("/api/backend/admin/audit-logs"),
+    ]);
+    if (usersRes.data) setAdminUsers(usersRes.data);
+    if (logsRes.data) setAuditLogs(logsRes.data);
+  }, [currentUser]);
 
   const loadData = React.useCallback(async () => {
     setLoading(true);
@@ -111,30 +161,106 @@ export default function AdminPage() {
       api<Product[]>("/api/backend/admin/products"),
     ]);
 
-    // Use Mock Data as an intelligent local fallback in case database collections are entirely empty during setup
     if (ordersRes.data) {
-      setOrders(ordersRes.data.length > 0 ? ordersRes.data : MOCK_ORDERS);
+      setOrders(ordersRes.data.filter((order) => !order.id.startsWith("demo-")));
     } else {
-      setOrders(MOCK_ORDERS);
+      setOrders([]);
     }
 
     if (productsRes.data) {
       setProducts(productsRes.data);
     }
+    if (currentUser?.role === "superAdmin") {
+      await loadSuperAdminData();
+    }
     setLoading(false);
-  }, []);
+  }, [currentUser, loadSuperAdminData]);
 
   React.useEffect(() => {
     if (isLoggedIn) {
-      loadData();
+      void Promise.resolve().then(loadData);
     }
   }, [isLoggedIn, loadData]);
+
+  React.useEffect(() => {
+    if (!isLoggedIn || currentUser?.role !== "superAdmin") return;
+
+    void Promise.resolve().then(loadSuperAdminData);
+    const events = new EventSource("/api/backend/admin/realtime");
+    events.onmessage = () => {
+      void loadSuperAdminData();
+    };
+
+    return () => events.close();
+  }, [currentUser, isLoggedIn, loadSuperAdminData]);
 
   const pendingSlips = orders.filter((o) => o.slip.status === "pending");
 
   // Advanced search and shipping filter implementation
   // สถานะที่ซ่อนใน "ทั้งหมด" — completed จบแล้วไม่ต้องทำอะไร, shipped ยังต้อง track อยู่
   const HIDDEN_FROM_ALL: OrderStatus[] = ["completed"];
+
+  async function handleLogin(form: HTMLFormElement) {
+    setLoginLoading(true);
+    setLoginError("");
+
+    const fd = new FormData(form);
+    const res = await api<{ authenticated: boolean; user: CurrentAdmin }>("/api/backend/admin/auth", {
+      method: "POST",
+      body: JSON.stringify({
+        username: String(fd.get("username") ?? "").trim(),
+        password: String(fd.get("password") ?? ""),
+      }),
+    });
+
+    setLoginLoading(false);
+    if (res.error || !res.data?.user) {
+      setLoginError(res.error === "too many login attempts" ? "Too many login attempts. Please wait." : t("admin.login.error"));
+      setTimeout(() => setLoginError(""), 3000);
+      return;
+    }
+
+    setCurrentUser(res.data.user);
+    setIsLoggedIn(true);
+  }
+
+  async function handleLogout() {
+    await api<{ authenticated: boolean }>("/api/backend/admin/auth", {
+      method: "DELETE",
+    });
+    setOrders([]);
+    setProducts([]);
+    setAdminUsers([]);
+    setAuditLogs([]);
+    setCurrentUser(null);
+    setIsLoggedIn(false);
+    setActiveTab("dashboard");
+  }
+
+  async function createAdminAccount(formData: FormData) {
+    const username = String(formData.get("username") ?? "").trim();
+    const role = String(formData.get("role") ?? "admin") as AdminRole;
+    if (!username) return;
+
+    setLoading(true);
+    const res = await api<AdminUser>("/api/backend/admin/users", {
+      method: "POST",
+      body: JSON.stringify({ username, role }),
+    });
+    setLoading(false);
+
+    if (res.error) {
+      notify(res.error);
+      return;
+    }
+
+    notify(`สร้างสำเร็จ: ${res.data?.username ?? username}`);
+    await loadSuperAdminData();
+    return;
+
+    notify("สร้างบัญชีหลังบ้านแล้ว ให้ผู้ใช้ไปตั้งรหัสเอง");
+    await loadSuperAdminData();
+  }
 
   const filteredOrders = orders.filter((o) => {
     const matchStatus = statusFilter === "all"
@@ -374,17 +500,7 @@ export default function AdminPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              const fd = new FormData(e.currentTarget);
-              const username = String(fd.get("username")).trim();
-              const password = String(fd.get("password")).trim();
-
-              if (username === "admin" && password === "password") {
-                sessionStorage.setItem("admin-logged-in", "true");
-                setIsLoggedIn(true);
-              } else {
-                setLoginError(t("admin.login.error"));
-                setTimeout(() => setLoginError(""), 3000);
-              }
+              void handleLogin(e.currentTarget);
             }}
             className="flex flex-col gap-4 mt-2"
           >
@@ -394,7 +510,7 @@ export default function AdminPage() {
                 name="username"
                 type="text"
                 required
-                defaultValue="admin"
+                defaultValue="adminae"
                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#85241F] focus:ring-1 focus:ring-[#85241F] transition-all"
               />
             </div>
@@ -405,7 +521,7 @@ export default function AdminPage() {
                 name="password"
                 type="password"
                 required
-                defaultValue="password"
+                defaultValue="admin12315"
                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#85241F] focus:ring-1 focus:ring-[#85241F] transition-all"
               />
             </div>
@@ -418,10 +534,14 @@ export default function AdminPage() {
 
             <Button
               type="submit"
+              disabled={loginLoading}
               className="w-full bg-linear-to-r from-[#85241F] to-[#b8332b] hover:opacity-95 text-white font-black py-3.5 px-4 rounded-2xl text-xs shadow-lg shadow-[#85241F]/20 active:scale-98 transition-all cursor-pointer mt-2"
             >
-              {t("admin.login.button")}
+              {loginLoading ? "กำลังเข้าสู่ระบบ..." : t("admin.login.button")}
             </Button>
+            <a href="/admin/register" className="text-center text-[10px] font-bold text-white/50 hover:text-white">
+              ตั้งรหัสผ่านสำหรับบัญชีที่ถูกสร้างไว้
+            </a>
           </form>
 
           <div className="text-center text-[9px] text-white/35 border-t border-white/5 pt-4 mt-2">
@@ -527,32 +647,56 @@ export default function AdminPage() {
         pendingCount={pendingSlips.length}
         orderCount={orders.length}
         productCount={products.length}
+        isSuperAdmin={currentUser?.role === "superAdmin"}
       />
 
       {/* Mobile header — hidden on desktop */}
       <div className="lg:hidden">
-        <AppHeader />
+        <AppHeader
+          rightSlot={
+            <button
+              onClick={handleLogout}
+              className="h-8 rounded-full border border-gray-200 bg-white px-2.5 text-[10px] font-black text-gray-600 shadow-sm"
+            >
+              ออก
+            </button>
+          }
+        />
       </div>
 
       <div className="lg:pl-56 xl:pl-64">
         <div className="max-w-240 mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
+        <div className="hidden lg:flex items-center justify-end gap-3">
+          <span className="text-xs font-bold text-gray-500">
+            {currentUser?.username} · {currentUser?.role}
+          </span>
+          <Button variant="outline" onClick={handleLogout} className="h-9 rounded-xl text-xs font-bold">
+            Logout
+          </Button>
+        </div>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="lg:hidden w-full grid grid-cols-3 bg-transparent h-auto gap-2 p-0">
-            <TabsTrigger value="dashboard" className="h-11 rounded-2xl font-bold text-xs gap-1.5 transition-all cursor-pointer border-2 border-gray-200 text-gray-900 bg-white data-[state=active]:border-[#85241F] data-[state=active]:text-[#85241F] data-[state=active]:shadow-sm">
+          <TabsList className="lg:hidden flex w-full justify-start gap-2 overflow-x-auto bg-transparent h-auto p-0 pb-1">
+            <TabsTrigger value="dashboard" className="h-11 shrink-0 rounded-2xl px-4 font-bold text-xs gap-1.5 transition-all cursor-pointer border-2 border-gray-200 text-gray-900 bg-white data-[state=active]:border-[#85241F] data-[state=active]:text-[#85241F] data-[state=active]:shadow-sm">
               <LayoutDashboard className="w-4 h-4" />
               หน้าหลัก
             </TabsTrigger>
-            <TabsTrigger value="orders" className="h-11 rounded-2xl font-bold text-xs gap-1.5 transition-all cursor-pointer border-2 border-gray-200 text-gray-900 bg-white data-[state=active]:border-[#85241F] data-[state=active]:text-[#85241F] data-[state=active]:shadow-sm">
+            <TabsTrigger value="orders" className="h-11 shrink-0 rounded-2xl px-4 font-bold text-xs gap-1.5 transition-all cursor-pointer border-2 border-gray-200 text-gray-900 bg-white data-[state=active]:border-[#85241F] data-[state=active]:text-[#85241F] data-[state=active]:shadow-sm">
               <ClipboardList className="w-4 h-4" />
               {t("admin.tab.orders")}
               {pendingSlips.length > 0 && (
                 <span className="bg-orange-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full animate-pulse">{pendingSlips.length}</span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="products" className="h-11 rounded-2xl font-bold text-xs gap-1.5 transition-all cursor-pointer border-2 border-gray-200 text-gray-900 bg-white data-[state=active]:border-[#85241F] data-[state=active]:text-[#85241F] data-[state=active]:shadow-sm">
+            <TabsTrigger value="products" className="h-11 shrink-0 rounded-2xl px-4 font-bold text-xs gap-1.5 transition-all cursor-pointer border-2 border-gray-200 text-gray-900 bg-white data-[state=active]:border-[#85241F] data-[state=active]:text-[#85241F] data-[state=active]:shadow-sm">
               <Package className="w-4 h-4" />
               {t("admin.tab.products")}
             </TabsTrigger>
+            {currentUser?.role === "superAdmin" ? (
+              <TabsTrigger value="superAdmin" className="h-11 shrink-0 rounded-2xl px-4 font-bold text-xs gap-1.5 transition-all cursor-pointer border-2 border-gray-200 text-gray-900 bg-white data-[state=active]:border-[#85241F] data-[state=active]:text-[#85241F] data-[state=active]:shadow-sm">
+                <User className="w-4 h-4" />
+                SuperAdmin
+              </TabsTrigger>
+            ) : null}
           </TabsList>
 
           {/* ── Dashboard Tab ── */}
@@ -564,15 +708,15 @@ export default function AdminPage() {
               <div className="flex flex-col gap-3">
                 {/* Revenue — full width */}
                 <Card className="border-emerald-100 rounded-2xl shadow-sm transition-all">
-                  <CardContent className="p-6 flex flex-col gap-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex flex-col gap-0.5">
+                  <CardContent className="p-5 sm:p-6 flex flex-col gap-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1 flex flex-col gap-0.5">
                         <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">ยอดขายรวม</span>
-                        <span className="text-4xl font-black text-gray-900 tracking-tight">{money(statsRevenue)}</span>
+                        <span className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.9rem,8vw,2.25rem)] font-black leading-tight tracking-normal text-gray-900 sm:text-4xl">{money(statsRevenue)}</span>
                         <span className="text-xs text-gray-400 mt-0.5">ยอดขายสะสม</span>
                       </div>
-                      <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center border border-emerald-100 shrink-0">
-                        <TrendingUp className="w-6 h-6" />
+                      <div className="h-11 w-11 shrink-0 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center border border-emerald-100 sm:h-12 sm:w-12">
+                        <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
                       </div>
                     </div>
 
@@ -816,6 +960,96 @@ export default function AdminPage() {
               )}
             </div>
           </TabsContent>
+          {currentUser?.role === "superAdmin" ? (
+            <TabsContent value="superAdmin" className="mt-4 animate-in fade-in duration-200">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+                <Card className="rounded-2xl border-gray-100 shadow-xs">
+                  <CardContent className="p-4">
+                    <h2 className="text-sm font-black text-gray-900">สร้างบัญชี Admin</h2>
+                    <p className="mt-1 text-xs font-semibold text-gray-400">
+                      SuperAdmin สร้างได้เฉพาะ username/role ผู้ใช้ต้องไปตั้งรหัสเองที่หน้า Register
+                    </p>
+                    <form
+                      className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,260px)_auto]"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void createAdminAccount(new FormData(event.currentTarget));
+                        event.currentTarget.reset();
+                      }}
+                    >
+                      <Input name="username" required placeholder="username" className="h-11 rounded-xl text-xs" />
+                      <div className="grid h-11 grid-cols-2 rounded-xl border border-gray-200 bg-gray-50 p-1 shadow-inner">
+                        <label className="group relative cursor-pointer">
+                          <input className="peer sr-only" type="radio" name="role" value="admin" defaultChecked />
+                          <span className="flex h-full items-center justify-center rounded-lg text-xs font-black text-gray-500 transition-all peer-checked:bg-white peer-checked:text-[#85241F] peer-checked:shadow-sm group-hover:text-gray-900">
+                            Admin
+                          </span>
+                        </label>
+                        <label className="group relative cursor-pointer">
+                          <input className="peer sr-only" type="radio" name="role" value="superAdmin" />
+                          <span className="flex h-full items-center justify-center rounded-lg text-xs font-black text-gray-500 transition-all peer-checked:bg-[#85241F] peer-checked:text-white peer-checked:shadow-sm group-hover:text-gray-900 peer-checked:group-hover:text-white">
+                            SuperAdmin
+                          </span>
+                        </label>
+                      </div>
+                      <Button disabled={loading} className="h-11 rounded-xl bg-[#85241F] font-black hover:bg-[#B72D2A]">
+                        สร้าง
+                      </Button>
+                    </form>
+                    <a href="/admin/register" className="hidden">
+                      ไปหน้า Register สำหรับตั้งรหัสผ่าน
+                    </a>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-2xl border-gray-100 shadow-xs">
+                  <CardContent className="p-4">
+                    <h2 className="mb-3 text-sm font-black text-gray-900">Admin Accounts</h2>
+                    <div className="flex max-h-[360px] flex-col gap-2 overflow-y-auto">
+                      {adminUsers.map((user) => (
+                        <div key={user.id} className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
+                          <div>
+                            <p className="text-xs font-black text-gray-900">{user.username}</p>
+                            <p className="text-[10px] font-bold text-gray-400">{user.registered ? "registered" : "waiting for register"}</p>
+                          </div>
+                          <span className={`rounded-full px-2 py-1 text-[10px] font-black ${user.role === "superAdmin" ? "bg-[#85241F]/10 text-[#85241F]" : "bg-slate-100 text-slate-600"}`}>
+                            {user.role}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-2xl border-gray-100 shadow-xs lg:col-span-2">
+                  <CardContent className="p-4">
+                    <h2 className="mb-3 text-sm font-black text-gray-900">Audit Logs</h2>
+                    <div className="flex max-h-[420px] flex-col gap-2 overflow-y-auto">
+                      {auditLogs.map((log) => (
+                        <div key={log.id} className="rounded-xl border border-gray-100 px-3 py-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="text-xs font-black text-gray-900">{log.action}</p>
+                              <p className="text-[10px] font-bold text-gray-400">{log.actorUsername} · {log.actorRole}</p>
+                            </div>
+                            <span className="shrink-0 text-[10px] font-bold text-gray-400">
+                              {new Date(log.createdAt).toLocaleString("th-TH")}
+                            </span>
+                          </div>
+                          <pre className="mt-2 overflow-x-auto rounded-lg bg-gray-50 p-2 text-[10px] font-semibold text-gray-500">
+                            {JSON.stringify(log.metadata, null, 2)}
+                          </pre>
+                        </div>
+                      ))}
+                      {auditLogs.length === 0 ? (
+                        <p className="py-8 text-center text-xs font-bold text-gray-400">No audit logs</p>
+                      ) : null}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          ) : null}
         </Tabs>
         </div>
       </div>

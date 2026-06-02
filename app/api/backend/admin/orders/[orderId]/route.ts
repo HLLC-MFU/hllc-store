@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { getAdminIdentity, requireAdmin } from "@/lib/backend/admin-auth";
+import { writeAuditLog } from "@/lib/backend/admin-user-service";
 import { badRequest, notFound, ok } from "@/lib/backend/http";
 import {
   addAdminNote,
@@ -9,6 +11,7 @@ import {
   updateTrackingNumber,
 } from "@/lib/backend/ecom-service";
 import { sendEmail, slipResetEmail } from "@/lib/backend/email-service";
+import { readLimitedJson } from "@/lib/backend/request-utils";
 
 type RouteContext = {
   params: Promise<{
@@ -25,6 +28,9 @@ type UpdateOrderBody = {
 };
 
 export async function GET(_request: NextRequest, context: RouteContext) {
+  const authError = requireAdmin(_request);
+  if (authError) return authError;
+
   const { orderId } = await context.params;
   const order = await getOrder(orderId);
 
@@ -36,16 +42,24 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
+  const authError = requireAdmin(request);
+  if (authError) return authError;
+
   try {
     const { orderId } = await context.params;
-    const body = (await request.json()) as UpdateOrderBody;
+    const body = await readLimitedJson<UpdateOrderBody>(request, 16_000);
+    const actor = getAdminIdentity(request);
 
     if (typeof body.trackingNumber === "string") {
-      return ok(await updateTrackingNumber(orderId, body.trackingNumber));
+      const updated = await updateTrackingNumber(orderId, body.trackingNumber);
+      if (actor) await writeAuditLog(actor, "order.tracking_updated", { orderId });
+      return ok(updated);
     }
 
     if (body.cancel === true && typeof body.reason === "string") {
-      return ok(await cancelOrder(orderId, body.reason, "admin"));
+      const updated = await cancelOrder(orderId, body.reason, actor?.username ?? "admin");
+      if (actor) await writeAuditLog(actor, "order.cancelled", { orderId });
+      return ok(updated);
     }
 
     if (
@@ -55,7 +69,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       "action" in (body.addNote as object)
     ) {
       const n = body.addNote as { text: string; action: string; by?: string };
-      return ok(await addAdminNote(orderId, { text: n.text, action: n.action, by: n.by ?? "admin" }));
+      const updated = await addAdminNote(orderId, { text: n.text, action: n.action, by: n.by ?? actor?.username ?? "admin" });
+      if (actor) await writeAuditLog(actor, "order.note_added", { orderId, action: n.action });
+      return ok(updated);
     }
 
     if (typeof body.status !== "string" || !isOrderStatus(body.status)) {
@@ -63,6 +79,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
 
     const updated = await updateOrderStatus(orderId, body.status);
+    if (actor) await writeAuditLog(actor, "order.status_updated", { orderId, status: body.status });
 
     if (body.status === "payment_review") {
       void sendEmail(slipResetEmail(updated.customer.name, updated.id));

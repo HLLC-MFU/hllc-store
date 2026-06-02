@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import type { CreateProductInput } from "@/lib/backend/types";
 import { badRequest, ok } from "@/lib/backend/http";
+import { readLimitedJson } from "@/lib/backend/request-utils";
 import * as productService from "./product-service";
 
 export async function listStoreProducts() {
@@ -21,7 +22,7 @@ export async function listAdminProducts() {
 
 export async function createProduct(request: NextRequest) {
   try {
-    const body = (await request.json()) as CreateProductInput;
+    const body = await readLimitedJson<CreateProductInput>(request);
     return ok(await productService.createProduct(body), { status: 201 });
   } catch (error) {
     return badRequest(error);
@@ -30,7 +31,7 @@ export async function createProduct(request: NextRequest) {
 
 export async function updateProduct(request: NextRequest, productId: string) {
   try {
-    const body = (await request.json()) as Partial<CreateProductInput>;
+    const body = await readLimitedJson<Partial<CreateProductInput>>(request);
     return ok(await productService.updateProduct(productId, body));
   } catch (error) {
     return badRequest(error);

@@ -11,6 +11,10 @@ export function badRequest(error: unknown) {
   );
 }
 
+export function unauthorized(message = "unauthorized") {
+  return NextResponse.json({ error: message }, { status: 401 });
+}
+
 export function notFound(message = "not found") {
   return NextResponse.json({ error: message }, { status: 404 });
 }

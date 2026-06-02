@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { badRequest, notFound, ok } from "@/lib/backend/http";
+import { readLimitedJson } from "@/lib/backend/request-utils";
 import {
   attachPaymentSlip,
   getOrder,
@@ -26,7 +27,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     const { orderId } = await context.params;
-    const body = (await request.json()) as PaymentSlipInput;
+    const body = await readLimitedJson<PaymentSlipInput>(request);
     const order = await attachPaymentSlip(orderId, body);
 
     return ok(order);

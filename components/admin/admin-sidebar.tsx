@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, Globe, LayoutDashboard, Package } from "lucide-react";
+import { ClipboardList, Globe, LayoutDashboard, Package, User } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 
 
@@ -10,9 +10,10 @@ type Props = {
   pendingCount: number;
   orderCount: number;
   productCount: number;
+  isSuperAdmin?: boolean;
 };
 
-export function AdminSidebar({ activeTab, setActiveTab, pendingCount, orderCount, productCount }: Props) {
+export function AdminSidebar({ activeTab, setActiveTab, pendingCount, orderCount, productCount, isSuperAdmin = false }: Props) {
   const { lang, setLang, t } = useLanguage();
 
   const navItems = [
@@ -37,6 +38,15 @@ export function AdminSidebar({ activeTab, setActiveTab, pendingCount, orderCount
       count: productCount,
       badge: null,
     },
+    ...(isSuperAdmin
+      ? [{
+          key: "superAdmin",
+          icon: User,
+          label: "SuperAdmin",
+          count: null,
+          badge: null,
+        }]
+      : []),
   ];
 
   return (

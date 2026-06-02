@@ -18,14 +18,30 @@ export function isPickupOrder(order: Order) {
   return /รับเอง|pickup|self pickup|D1/i.test(order.customer.address);
 }
 
+function readCookie(name: string) {
+  if (typeof document === "undefined") return "";
+
+  return document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(`${name}=`))
+    ?.split("=")[1] ?? "";
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<{ data?: T; error?: string }> {
   try {
+    const headers = new Headers(init?.headers);
+    headers.set("Content-Type", "application/json");
+
+    if (init?.method && !["GET", "HEAD", "OPTIONS"].includes(init.method.toUpperCase())) {
+      const csrfToken = readCookie("hllc_admin_csrf");
+      if (csrfToken) {
+        headers.set("x-admin-csrf", decodeURIComponent(csrfToken));
+      }
+    }
+
     const response = await fetch(path, {
       ...init,
-      headers: {
-        "Content-Type": "application/json",
-        ...init?.headers,
-      },
+      headers,
     });
     const payload = await response.json();
     if (!response.ok) {
