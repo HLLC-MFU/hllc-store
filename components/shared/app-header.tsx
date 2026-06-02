@@ -8,15 +8,15 @@ type AppHeaderProps = {
 
 export function AppHeader({ rightSlot }: AppHeaderProps) {
   return (
-    <div className="sticky top-0 z-40 border-b border-gray-100 bg-white">
-      <div className="flex min-h-20 items-center justify-between gap-3 px-4">
-        <div className="min-w-0 flex-1">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/HLLCLOGO.png" alt="HLLC" className="h-16 w-auto max-w-32 object-contain" />
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
+    <div className="bg-white border-b border-gray-100 sticky top-0 z-40">
+      <div className="relative">
+        <div className="absolute top-1/2 -translate-y-1/2 right-4 flex items-center gap-2 z-10">
           {rightSlot}
           <LanguageChip />
+        </div>
+        <div className="flex justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/HLLCLOGO.png" alt="HLLC" className="h-24 w-auto object-contain" />
         </div>
       </div>
     </div>
