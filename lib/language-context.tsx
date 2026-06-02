@@ -118,8 +118,8 @@ const DICTIONARY: TranslationDict = {
   "admin.orders.all": { th: "คำสั่งซื้อทั้งหมด", en: "All Orders" },
   "admin.orders.search_placeholder": { th: "ค้นหาด้วยชื่อ, เบอร์โทร หรือออเดอร์ไอดี...", en: "Search by customer name, phone, or order ID..." },
   "admin.orders.filter_all": { th: "ทั้งหมด", en: "All" },
-  "admin.orders.filter_delivery": { th: "🚚 จัดส่ง", en: "Shipping" },
-  "admin.orders.filter_pickup": { th: "🏪 รับเอง", en: "Pickup" },
+  "admin.orders.filter_delivery": { th: "จัดส่ง", en: "Delivery" },
+  "admin.orders.filter_pickup": { th: "รับเอง", en: "Pickup" },
   "admin.orders.empty": { th: "ไม่มีคำสั่งซื้อ", en: "No orders found" },
 
   // Admin Slip Review Card
@@ -131,9 +131,9 @@ const DICTIONARY: TranslationDict = {
   "admin.status.pending_payment": { th: "รอชำระเงิน", en: "Pending Payment" },
   "admin.status.payment_review": { th: "รอตรวจสลิป", en: "Payment Review" },
   "admin.status.paid": { th: "ชำระเงินแล้ว", en: "Paid" },
-  "admin.status.packing": { th: "กำลังแพ็กของ", en: "Packing" },
+  "admin.status.packing": { th: "เตรียมจัดส่ง", en: "Preparing" },
   "admin.status.shipped": { th: "จัดส่งแล้ว", en: "Shipped" },
-  "admin.status.completed": { th: "เสร็จสิ้น", en: "Completed" },
+  "admin.status.completed": { th: "ส่งสำเร็จ", en: "Delivered" },
   "admin.status.cancelled": { th: "ยกเลิกแล้ว", en: "Cancelled" },
 
   "admin.order.shipping_label": { th: "ใบจ่าหน้าพัสดุ", en: "Shipping Label" },
@@ -150,9 +150,9 @@ const DICTIONARY: TranslationDict = {
 
   // Admin Modals
   "admin.modal.approve_title": { th: "ยืนยันการอนุมัติ?", en: "Confirm Approval?" },
-  "admin.modal.reject_title": { th: "ยืนยันการปฏิเสธ?", en: "Confirm Rejection?" },
+  "admin.modal.reject_title": { th: "สลิปไม่ผ่าน?", en: "Reject Slip?" },
   "admin.modal.approve_desc": { th: "สลิปจะถูกอนุมัติ และสถานะออเดอร์จะเปลี่ยนเป็น 'ชำระแล้ว'", en: "Slip will be approved and order status will change to 'Paid'" },
-  "admin.modal.reject_desc": { th: "สลิปจะถูกปฏิเสธ และระบบจะรอสลิปใหม่จากลูกค้า", en: "Slip will be rejected and system will wait for a new slip from customer" },
+  "admin.modal.reject_desc": { th: "ระบบจะแจ้งลูกค้าว่าสลิปไม่ผ่าน และให้ส่งหลักฐานการโอนใหม่", en: "Customer will be notified that the slip was rejected and asked to resubmit" },
   "admin.modal.cancel": { th: "ยกเลิก", en: "Cancel" },
   "admin.modal.confirm": { th: "ยืนยัน", en: "Confirm" },
   "admin.modal.status_title": { th: "ยืนยันการเปลี่ยนสถานะ?", en: "Confirm Status Transition?" },
@@ -179,8 +179,8 @@ const DICTIONARY: TranslationDict = {
   "admin.products.edit.units": { th: "ชิ้น", en: "units" },
 
   // Admin Toast Notifications
-  "admin.toast.slip_approved": { th: "✓ อนุมัติสลิปโอนเงินแล้ว", en: "✓ Slip approved successfully" },
-  "admin.toast.slip_rejected": { th: "✗ ปฏิเสธสลิปโอนเงินแล้ว", en: "✗ Slip rejected successfully" },
+  "admin.toast.slip_approved": { th: "อนุมัติสลิปโอนเงินแล้ว", en: "Slip approved successfully" },
+  "admin.toast.slip_rejected": { th: "สลิปไม่ผ่าน — แจ้งลูกค้าส่งใหม่", en: "Slip rejected — please resubmit" },
   "admin.toast.product_added": { th: "เพิ่มสินค้าเข้าระบบสำเร็จ", en: "Product added successfully" },
   "admin.toast.product_updated": { th: "อัปเดตข้อมูลสินค้าแล้ว", en: "Product updated successfully" },
   "admin.toast.product_deleted": { th: "ลบสินค้าออกจากระบบแล้ว", en: "Product deleted successfully" },

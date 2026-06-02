@@ -68,6 +68,9 @@ export type Order = {
   total: number;
   status: OrderStatus;
   slip: PaymentSlip;
+  trackingNumber?: string;
+  cancellationReason?: string;
+  adminNotes?: { text: string; by: string; at: string; action: string }[];
   createdAt: string;
   updatedAt: string;
 };

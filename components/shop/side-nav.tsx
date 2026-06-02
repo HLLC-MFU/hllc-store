@@ -22,9 +22,8 @@ export function SideNav() {
       {/* Brand */}
       <div className="px-6 py-6 border-b border-gray-100">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 bg-red-500 rounded-xl flex items-center justify-center shrink-0">
-            <Store className="w-5 h-5 text-white" />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/HLLCLOGO.png" alt="HLLC" className="h-9 w-auto object-contain shrink-0" />
           <div>
             <p className="font-black text-gray-900 text-base leading-tight">HLLC</p>
             <p className="text-[10px] text-gray-400 font-medium">{t("nav.store")}</p>
@@ -51,7 +50,7 @@ export function SideNav() {
               <div className="relative">
                 <Icon className="w-5 h-5" />
                 {showBadge && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-white text-red-500 text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none border border-red-100">
+                  <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 bg-white text-red-500 text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none border border-red-100">
                     {count > 9 ? "9+" : count}
                   </span>
                 )}
