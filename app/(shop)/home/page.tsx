@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Image as ImageIcon, Truck } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import { LanguageChip } from "@/components/shared/language-chip";
 
 type ProductOption = {
   label: string;
@@ -89,7 +90,7 @@ export default function HomePage() {
   const [products, setProducts] = useState<DisplayProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const { lang, setLang, t } = useLanguage();
+  const { lang, t } = useLanguage();
 
   useEffect(() => {
     let alive = true;
@@ -137,22 +138,6 @@ export default function HomePage() {
     return products;
   }, [products]);
 
-  const languageSwitch = (
-    <div className="flex h-11 items-center gap-1.5">
-      {(["th", "en"] as const).map((nextLang) => (
-        <button
-          key={nextLang}
-          onClick={() => setLang(nextLang)}
-          className={`shop-press rounded-lg px-2.5 py-1 text-xs font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#85241F]/30 ${lang === nextLang
-            ? "bg-[#85241F] text-white shadow-sm"
-            : "text-gray-400 hover:text-gray-700"
-            }`}
-        >
-          {nextLang.toUpperCase()}
-        </button>
-      ))}
-    </div>
-  );
 
 
   const trackingEntry = (
@@ -216,7 +201,7 @@ export default function HomePage() {
   return (
     <>
       <div className="shop-page lg:hidden flex flex-col bg-white min-h-screen relative">
-        <div className="absolute right-5 top-6 z-30">{languageSwitch}</div>
+        <div className="absolute right-5 top-6 z-30"><LanguageChip /></div>
         <div className="pt-4 pb-4">
           <div className="flex justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -257,7 +242,7 @@ export default function HomePage() {
               <h3 className="text-sm font-bold text-gray-600">
                 {t("shop.all_products")}
               </h3>
-              {languageSwitch}
+              <LanguageChip />
             </div>
           </div>
           <div className="px-8 xl:px-10 py-6 flex-1">

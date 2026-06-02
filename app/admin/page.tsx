@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   ClipboardList,
   FileCheck2,
-  Globe,
   LayoutDashboard,
   Package,
   PackagePlus,
@@ -15,6 +14,7 @@ import {
   Truck,
   XCircle,
 } from "lucide-react";
+import { LanguageChip } from "@/components/shared/language-chip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,7 +45,7 @@ export default function AdminPage() {
   const [confirm, setConfirm] = React.useState<{ orderId: string; approved: boolean; note?: string } | null>(null);
   const [statusConfirm, setStatusConfirm] = React.useState<{ orderId: string; status: OrderStatus } | null>(null);
   const [lightbox, setLightbox] = React.useState<string | null>(null);
-  const { lang, setLang, t } = useLanguage();
+  const { lang, t } = useLanguage();
 
   const [loading, setLoading] = React.useState(false);
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
@@ -293,28 +293,8 @@ export default function AdminPage() {
         <div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-4xl p-8 shadow-2xl flex flex-col gap-6 relative z-10 animate-in fade-in zoom-in-95 duration-500">
 
           {/* Floating Language Switcher */}
-          <div className="absolute top-6 right-6 flex items-center gap-1 bg-white/5 border border-white/10 p-1 rounded-xl shadow-inner">
-            <Globe className="w-3.5 h-3.5 text-white/50 ml-1.5 shrink-0" />
-            <button
-              onClick={() => setLang("th")}
-              className={`px-2 py-0.5 rounded-lg text-[9px] font-black transition-all cursor-pointer ${
-                lang === "th"
-                  ? "bg-[#85241F] text-white shadow-md shadow-[#85241F]/30"
-                  : "text-white/40 hover:text-white/80"
-              }`}
-            >
-              TH
-            </button>
-            <button
-              onClick={() => setLang("en")}
-              className={`px-2 py-0.5 rounded-lg text-[9px] font-black transition-all cursor-pointer ${
-                lang === "en"
-                  ? "bg-[#85241F] text-white shadow-md shadow-[#85241F]/30"
-                  : "text-white/40 hover:text-white/80"
-              }`}
-            >
-              EN
-            </button>
+          <div className="absolute top-4 right-4">
+            <LanguageChip />
           </div>
 
           <div className="flex flex-col items-center text-center mt-4">

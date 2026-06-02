@@ -1,7 +1,8 @@
 "use client";
 
-import { ClipboardList, Globe, LayoutDashboard, Package } from "lucide-react";
+import { ClipboardList, LayoutDashboard, Package } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import { LanguageChip } from "@/components/shared/language-chip";
 
 
 type Props = {
@@ -13,7 +14,7 @@ type Props = {
 };
 
 export function AdminSidebar({ activeTab, setActiveTab, pendingCount, orderCount, productCount }: Props) {
-  const { lang, setLang, t } = useLanguage();
+  const { t } = useLanguage();
 
   const navItems = [
     {
@@ -85,20 +86,7 @@ export function AdminSidebar({ activeTab, setActiveTab, pendingCount, orderCount
 
       {/* Language + Footer */}
       <div className="px-4 py-4 border-t border-gray-100 flex flex-col gap-3">
-        <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl self-start">
-          <Globe className="w-3.5 h-3.5 text-gray-400 ml-1 shrink-0" />
-          {(["th", "en"] as const).map((l) => (
-            <button
-              key={l}
-              onClick={() => setLang(l)}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
-                lang === l ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-700"
-              }`}
-            >
-              {l.toUpperCase()}
-            </button>
-          ))}
-        </div>
+        <LanguageChip />
 
         <div className="flex items-center gap-2.5 px-1">
           <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
