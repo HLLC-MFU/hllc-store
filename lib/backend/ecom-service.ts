@@ -41,6 +41,54 @@ function now() {
   return new Date().toISOString();
 }
 
+function normalizeOptions(value: unknown) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "string") {
+          const [label = "", imageUrl = ""] = item.split("|").map((part) => part.trim());
+          return label ? { label, imageUrl } : null;
+        }
+
+        if (item && typeof item === "object") {
+          const option = item as { label?: unknown; name?: unknown; value?: unknown; imageUrl?: unknown; image?: unknown };
+          const label =
+            typeof option.label === "string"
+              ? option.label.trim()
+              : typeof option.name === "string"
+                ? option.name.trim()
+                : typeof option.value === "string"
+                  ? option.value.trim()
+                  : "";
+          const imageUrl =
+            typeof option.imageUrl === "string"
+              ? option.imageUrl.trim()
+              : typeof option.image === "string"
+                ? option.image.trim()
+                : "";
+
+          return label ? { label, imageUrl } : null;
+        }
+
+        return null;
+      })
+      .filter((item): item is { label: string; imageUrl: string } => Boolean(item));
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(/\r?\n|,/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((item) => {
+        const [label = "", imageUrl = ""] = item.split("|").map((part) => part.trim());
+        return { label, imageUrl };
+      });
+  }
+
+  return [];
+}
+
 function createSlug(value: string) {
   return value
     .trim()
@@ -57,8 +105,8 @@ function toProduct(doc: Document): Product {
     description: doc.description,
     price: doc.price,
     stock: doc.stock,
-    discount: Number(doc.discount ?? 0),
     category: doc.category ?? "",
+    options: normalizeOptions(doc.options),
     imageUrl: doc.imageUrl,
     active: doc.active,
     createdAt: doc.createdAt,
@@ -139,8 +187,8 @@ export async function createProduct(input: CreateProductInput) {
       typeof input.description === "string" ? input.description.trim() : "",
     price: assertNumber(input.price, "price"),
     stock: assertNumber(input.stock, "stock"),
-    discount: Math.min(assertNumber(input.discount ?? 0, "discount"), 100),
     category: typeof input.category === "string" ? input.category.trim() : "",
+    options: normalizeOptions(input.options),
     imageUrl: typeof input.imageUrl === "string" ? input.imageUrl.trim() : "",
     active: input.active ?? true,
     createdAt: timestamp,
@@ -176,6 +224,8 @@ export async function createOrder(input: CreateOrderInput) {
   const requestedItems = input.items.map((item) => ({
     productId: assertText(item.productId, "items.productId"),
     quantity: Number(item.quantity),
+    selectedOption:
+      typeof item.selectedOption === "string" ? item.selectedOption.trim() : "",
   }));
 
   requestedItems.forEach((item) => {
@@ -224,6 +274,7 @@ export async function createOrder(input: CreateOrderInput) {
       imageUrl: "",
       status: "none",
     },
+    trackingNumber: "",
     createdAt: timestamp,
     updatedAt: timestamp,
   };
@@ -358,7 +409,11 @@ export async function reviewPaymentSlip(orderId: string, input: ReviewSlipInput)
   return toOrder(result);
 }
 
-export async function updateOrderStatus(orderId: string, status: OrderStatus) {
+export async function updateOrderStatus(
+  orderId: string,
+  status?: OrderStatus,
+  trackingNumber?: string,
+) {
   const db = await getDb();
   const timestamp = now();
   const updateFields: Document = { status, updatedAt: timestamp };
@@ -507,16 +562,12 @@ export async function updateProduct(productId: string, input: Partial<CreateProd
     updateData.stock = assertNumber(input.stock, "stock");
   }
 
-  if (input.discount !== undefined) {
-    const discount = assertNumber(input.discount, "discount");
-    if (discount > 100) {
-      throw new Error("discount must be between 0 and 100");
-    }
-    updateData.discount = discount;
-  }
-
   if (input.category !== undefined) {
     updateData.category = typeof input.category === "string" ? input.category.trim() : "";
+  }
+
+  if (input.options !== undefined) {
+    updateData.options = normalizeOptions(input.options);
   }
   
   if (input.imageUrl !== undefined) {

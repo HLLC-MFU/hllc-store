@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import {
   ArrowLeft,
+  Check,
   CheckCircle2,
   ClipboardList,
+  Copy,
   Image as ImageIcon,
   Minus,
   Plus,
@@ -44,7 +46,7 @@ function saveOrderLookup(orderId: string, phone: string) {
       JSON.stringify(Array.from(new Set([orderId, ...existing])).slice(0, 20)),
     );
     localStorage.setItem("shop-last-phone", phone);
-  } catch {}
+  } catch { }
 }
 
 export default function CartPage() {
@@ -58,7 +60,10 @@ export default function CartPage() {
   const [slipImage, setSlipImage] = useState("");
   const [removeTarget, setRemoveTarget] = useState<CartItem | null>(null);
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("delivery");
+  const [copiedAccount, setCopiedAccount] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const bankAccountName = "นันทเดช วงศ์ไชยา";
+  const bankAccountNumber = "6621540027";
 
   const confirmRemoveText =
     lang === "th" ? "ต้องการลบสินค้านี้ออกจากตะกร้าใช่ไหม?" : "Remove this item from cart?";
@@ -69,7 +74,7 @@ export default function CartPage() {
 
   function confirmRemove() {
     if (!removeTarget) return;
-    removeItem(removeTarget.productId);
+    removeItem(removeTarget.productId, removeTarget.selectedOption);
     setRemoveTarget(null);
   }
 
@@ -79,7 +84,7 @@ export default function CartPage() {
       return;
     }
 
-    updateQty(item.productId, item.quantity - 1);
+    updateQty(item.productId, item.quantity - 1, item.selectedOption);
   }
 
   function handleSlipFile(event: React.ChangeEvent<HTMLInputElement>) {
@@ -101,6 +106,16 @@ export default function CartPage() {
     setStep("payment");
   }
 
+  async function copyBankAccount() {
+    try {
+      await navigator.clipboard.writeText(bankAccountNumber);
+      setCopiedAccount(true);
+      window.setTimeout(() => setCopiedAccount(false), 1800);
+    } catch {
+      setMessage(lang === "th" ? "คัดลอกเลขบัญชีไม่สำเร็จ" : "Unable to copy account number.");
+    }
+  }
+
   function goInfo() {
     if (!slipImage) {
       setMessage(lang === "th" ? "กรุณาอัปโหลดสลิปก่อน" : "Please upload a payment slip first.");
@@ -111,11 +126,65 @@ export default function CartPage() {
     setStep("info");
   }
 
+  function checkoutValidationMessage({
+    name,
+    phone,
+    address,
+    district,
+    province,
+    postalCode,
+    pickupTime,
+  }: {
+    name: string;
+    phone: string;
+    address: string;
+    district: string;
+    province: string;
+    postalCode: string;
+    pickupTime: string;
+  }) {
+    const missing: string[] = [];
+    const invalid: string[] = [];
+
+    if (!name) missing.push(lang === "th" ? "ชื่อผู้รับ" : "recipient name");
+
+    if (!phone) {
+      missing.push(lang === "th" ? "เบอร์โทรศัพท์" : "phone number");
+    } else if (phone.length < 9) {
+      invalid.push(lang === "th" ? "เบอร์โทรศัพท์ต้องมีอย่างน้อย 9 หลัก" : "phone number must be at least 9 digits");
+    }
+
+    if (deliveryMode === "pickup") {
+      if (!pickupTime) missing.push(lang === "th" ? "เวลารับสินค้า" : "pickup time");
+    } else {
+      if (!address) missing.push(lang === "th" ? "ที่อยู่จัดส่ง" : "shipping address");
+      if (!district) missing.push(lang === "th" ? "เขต/อำเภอ" : "district");
+      if (!province) missing.push(lang === "th" ? "จังหวัด" : "province");
+
+      if (!postalCode) {
+        missing.push(lang === "th" ? "รหัสไปรษณีย์" : "postal code");
+      } else if (!/^\d{5}$/.test(postalCode)) {
+        invalid.push(lang === "th" ? "รหัสไปรษณีย์ต้องมี 5 หลัก" : "postal code must be 5 digits");
+      }
+    }
+
+    const messages: string[] = [];
+    if (missing.length) {
+      messages.push(
+        lang === "th"
+          ? `กรุณากรอก: ${missing.join(", ")}`
+          : `Please fill in: ${missing.join(", ")}`
+      );
+    }
+    messages.push(...invalid);
+
+    return messages.join(" • ");
+  }
+
   async function handleCheckout(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!items.length) return;
 
-    setLoading(true);
     setMessage("");
     setCreatedOrder(null);
 
@@ -127,16 +196,26 @@ export default function CartPage() {
     const province = String(formData.get("province") ?? "").trim();
     const postalCode = String(formData.get("postalCode") ?? "").trim();
     const pickupTime = String(formData.get("pickupTime") ?? "").trim();
+    const validationError = checkoutValidationMessage({
+      name,
+      phone,
+      address,
+      district,
+      province,
+      postalCode,
+      pickupTime,
+    });
+
+    if (validationError) {
+      setMessage(validationError);
+      return;
+    }
+
+    setLoading(true);
     const fullAddress =
       deliveryMode === "pickup"
         ? `รับเองที่ D1${pickupTime ? ` เวลา ${pickupTime}` : ""}`
         : [address, district, province, postalCode].filter(Boolean).join(" ");
-
-    if (!name || phone.length < 9 || (deliveryMode === "delivery" && !address) || (deliveryMode === "pickup" && !pickupTime)) {
-      setMessage(lang === "th" ? "กรุณากรอกข้อมูลให้ครบ" : "Please complete your information.");
-      setLoading(false);
-      return;
-    }
 
     try {
       const orderResponse = await fetch("/api/backend/orders", {
@@ -147,6 +226,7 @@ export default function CartPage() {
           items: items.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
+            selectedOption: item.selectedOption,
           })),
         }),
       });
@@ -197,7 +277,7 @@ export default function CartPage() {
       ) : null}
 
       {items.map((item) => (
-        <div key={item.productId} className="flex gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
+        <div key={`${item.productId}-${item.selectedOption ?? ""}`} className="flex gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
           <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-50">
             {item.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -208,6 +288,9 @@ export default function CartPage() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-black text-gray-900">{item.name}</p>
+            {item.selectedOption ? (
+              <p className="mt-0.5 text-[10px] font-bold text-gray-400">{item.selectedOption}</p>
+            ) : null}
             <p className="mt-1 text-xs font-semibold text-[#85241F]">{money(item.price)}</p>
             <div className="mt-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 rounded-xl border border-gray-200 px-2 py-1">
@@ -219,7 +302,7 @@ export default function CartPage() {
                 </button>
                 <span className="w-6 text-center text-sm font-black">{item.quantity}</span>
                 <button
-                  onClick={() => updateQty(item.productId, item.quantity + 1)}
+                  onClick={() => updateQty(item.productId, item.quantity + 1, item.selectedOption)}
                   disabled={item.stock !== undefined && item.quantity >= item.stock}
                   className="flex h-7 w-7 items-center justify-center text-gray-500 disabled:opacity-30"
                 >
@@ -319,9 +402,41 @@ export default function CartPage() {
               <p className="text-xs font-bold text-gray-500">{t("checkout.payment_amount")}</p>
               <p className="mt-1 text-2xl font-black text-[#85241F]">{money(total)}</p>
             </div>
-            <div className="mb-4 flex justify-center rounded-2xl border border-gray-100 bg-gray-50 p-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/images/qr-payment.png" alt="payment QR" className="max-h-56 object-contain" />
+            <div className="mb-4 rounded-2xl border border-[#1E63B6]/10 bg-[#1E63B6]/5 p-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm ring-1 ring-[#1E63B6]/10">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/images/image.png"
+                    alt="Krungthai"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-black uppercase text-[#1E63B6]">
+                    {lang === "th" ? "บัญชีรับชำระ" : "Payment account"}
+                  </p>
+                  <p className="mt-0.5 text-sm font-black text-gray-950">
+                    {lang === "th" ? "ธนาคารกรุงไทย" : "Krungthai Bank"}
+                  </p>
+                  <p className="mt-1 truncate text-xs font-bold text-gray-500">
+                    {bankAccountName}
+                  </p>
+                  <p className="mt-1 font-mono text-lg font-black tracking-wide text-[#85241F]">
+                    {bankAccountNumber}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={copyBankAccount}
+                  className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-[#1E63B6]/20 bg-white px-3 text-xs font-black text-[#1E63B6] shadow-sm transition-colors hover:bg-[#1E63B6]/5"
+                >
+                  {copiedAccount ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copiedAccount
+                    ? lang === "th" ? "คัดลอกแล้ว" : "Copied"
+                    : lang === "th" ? "คัดลอก" : "Copy"}
+                </button>
+              </div>
             </div>
             <div className="rounded-xl border border-dashed border-gray-200 p-3">
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleSlipFile} />
@@ -373,22 +488,20 @@ export default function CartPage() {
                 <button
                   type="button"
                   onClick={() => setDeliveryMode("delivery")}
-                  className={`h-10 rounded-lg text-sm font-black transition-colors ${
-                    deliveryMode === "delivery"
-                      ? "bg-white text-[#85241F] shadow-sm"
-                      : "text-gray-500"
-                  }`}
+                  className={`h-10 rounded-lg text-sm font-black transition-colors ${deliveryMode === "delivery"
+                    ? "bg-white text-[#85241F] shadow-sm"
+                    : "text-gray-500"
+                    }`}
                 >
                   {lang === "th" ? "จัดส่ง" : "Delivery"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setDeliveryMode("pickup")}
-                  className={`h-10 rounded-lg text-sm font-black transition-colors ${
-                    deliveryMode === "pickup"
-                      ? "bg-white text-[#85241F] shadow-sm"
-                      : "text-gray-500"
-                  }`}
+                  className={`h-10 rounded-lg text-sm font-black transition-colors ${deliveryMode === "pickup"
+                    ? "bg-white text-[#85241F] shadow-sm"
+                    : "text-gray-500"
+                    }`}
                 >
                   {lang === "th" ? "รับเอง" : "Pickup"}
                 </button>
