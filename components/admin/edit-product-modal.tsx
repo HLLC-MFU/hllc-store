@@ -27,7 +27,6 @@ export function EditProductModal({ product, onSave, onClose }: {
   }));
   const [imagePreviews, setImagePreviews] = React.useState<string[]>(() => {
     if (product.imageUrls && product.imageUrls.length > 0) return product.imageUrls;
-    if (product.imageUrl) return [product.imageUrl];
     return [];
   });
   const [imageError, setImageError] = React.useState(false);
@@ -69,7 +68,6 @@ export function EditProductModal({ product, onSave, onClose }: {
         th: form.description.th.trim(),
         en: form.description.en?.trim() || undefined,
       },
-      imageUrl: imagePreviews[0] ?? undefined,
       imageUrls: imagePreviews.length > 0 ? imagePreviews : undefined,
     });
     onClose();

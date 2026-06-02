@@ -169,8 +169,6 @@ export default function AdminPage() {
         price: Number(formData.get("price")) || 0,
         stock: Number(formData.get("stock")) || 0,
         discount: Number(formData.get("discount")) || undefined,
-        category: String(formData.get("category") ?? "").trim() || undefined,
-        imageUrl: String(formData.get("imageUrl") ?? "").trim() || undefined,
         imageUrls: (() => {
           try {
             return JSON.parse(String(formData.get("imageUrls") ?? "[]"));

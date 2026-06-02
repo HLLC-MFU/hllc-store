@@ -26,7 +26,6 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
 
   const [imagePreviews, setImagePreviews] = React.useState<string[]>(() => {
     if (product?.imageUrls && product.imageUrls.length > 0) return product.imageUrls;
-    if (product?.imageUrl) return [product.imageUrl];
     return [];
   });
   const [imageError, setImageError] = React.useState(false);
@@ -79,10 +78,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
           th: String(fd.get("description") ?? product.description?.th ?? "").trim(),
           en: String(fd.get("descriptionEn") ?? product.description?.en ?? "").trim() || undefined,
         },
-        category: String(fd.get("category") ?? product.category ?? "").trim() || undefined,
-        imageUrl: imagePreviews[0] ?? product.imageUrl,
         imageUrls: imagePreviews.length > 0 ? imagePreviews : undefined,
-        options: [],
       });
     } else {
       onSubmit(fd);
@@ -176,10 +172,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.stock")}</Label>
                 <Input name="stock" type="number" min="0" required defaultValue={product?.stock ?? ""} className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
-              <div className="col-span-2">
-                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">หมวดหมู่</Label>
-                <Input name="category" defaultValue={product?.category ?? ""} placeholder="เช่น เสื้อผ้า, รองเท้า" className="rounded-xl border-gray-200 text-xs h-10" />
-              </div>
+
               <div className="col-span-2">
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.description")}</Label>
                 <Textarea name="description" rows={2} defaultValue={product?.description?.th ?? ""} className="rounded-xl border-gray-200 text-xs resize-none" />

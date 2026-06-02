@@ -4,8 +4,6 @@ export type OrderStatus =
 
 export type SlipStatus = "none" | "pending" | "approved" | "rejected";
 
-export type ProductOption = { label: string; imageUrl?: string };
-
 export type LocalizedText = {
   th: string;
   en?: string;
@@ -15,9 +13,6 @@ export type Product = {
   id: string; name: LocalizedText; slug: string;
   description?: LocalizedText; price: number; stock: number;
   discount?: number; // percent 0-100
-  category?: string;
-  options?: ProductOption[];
-  imageUrl?: string;
   imageUrls?: string[];
   active: boolean;
 };

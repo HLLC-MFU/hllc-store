@@ -37,9 +37,9 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
       >
         {/* Image */}
         <div className="relative w-full aspect-video bg-gray-50 shrink-0">
-          {product.imageUrl ? (
+          {product.imageUrls && product.imageUrls[0] ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.imageUrl} alt={product.name.th} className="w-full h-full object-cover" />
+            <img src={product.imageUrls[0]} alt={product.name.th} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <ImageIcon className="w-12 h-12 text-gray-200" />
@@ -60,14 +60,8 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
 
         {/* Content */}
         <div className="overflow-y-auto flex-1 p-5 flex flex-col gap-4">
-          {/* Name + category */}
           <div>
             <h2 className="font-black text-gray-900 text-lg leading-tight">{product.name.th}</h2>
-            {product.category && (
-              <Badge variant="outline" className="mt-1.5 text-[10px] font-bold text-slate-500 bg-slate-50">
-                {product.category}
-              </Badge>
-            )}
           </div>
 
           {/* Price + stock */}
@@ -93,25 +87,7 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
             <p className="text-xs text-gray-500 leading-relaxed">{product.description.th}</p>
           )}
 
-          {/* Options */}
-          {product.options && product.options.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{t("admin.products.options")}</span>
-              <div className="flex flex-col gap-1.5">
-                {product.options.map((opt, idx) => (
-                  <div key={idx} className="flex items-center gap-2.5 bg-gray-50 rounded-xl px-3 py-2">
-                    {opt.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={opt.imageUrl} alt={opt.label} className="w-8 h-8 rounded-lg object-cover border border-gray-200 shrink-0" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 shrink-0" />
-                    )}
-                    <span className="text-xs font-bold text-gray-700">{opt.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+
 
           {/* Delete confirmation inline */}
           {confirmDelete ? (
