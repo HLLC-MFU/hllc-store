@@ -4,12 +4,17 @@ export type OrderStatus =
 
 export type SlipStatus = "none" | "pending" | "approved" | "rejected";
 
+export type ProductOption = { label: string; imageUrl?: string };
+
 export type Product = {
   id: string; name: string; slug: string;
   description?: string; price: number; stock: number;
   discount?: number; // percent 0-100
   category?: string;
-  imageUrl?: string; active: boolean;
+  options?: ProductOption[];
+  imageUrl?: string;
+  imageUrls?: string[];
+  active: boolean;
 };
 
 export type Order = {
@@ -18,7 +23,7 @@ export type Order = {
   items: { productId: string; name: string; price: number; quantity: number; subtotal: number }[];
   total: number;
   status: OrderStatus;
-  slip: { imageUrl?: string; amount?: number; status: SlipStatus; paidAt?: string };
+  slip: { imageUrl?: string; status: SlipStatus; paidAt?: string };
   trackingNumber?: string;
   cancellationReason?: string;
   adminNotes?: { text: string; by: string; at: string; action: string }[];

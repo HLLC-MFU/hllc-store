@@ -338,8 +338,6 @@ export async function attachPaymentSlip(orderId: string, input: PaymentSlipInput
   const slip = {
     imageUrl: assertText(input.imageUrl, "imageUrl"),
     paidAt: input.paidAt,
-    amount:
-      typeof input.amount === "number" ? assertNumber(input.amount, "amount") : 0,
     note: input.note,
     status: "pending",
   };
@@ -384,7 +382,7 @@ export async function reviewPaymentSlip(orderId: string, input: ReviewSlipInput)
         "slip.reviewedBy": assertText(input.reviewedBy, "reviewedBy"),
         "slip.reviewedAt": timestamp,
         "slip.reviewNote": input.note,
-        status: input.approved ? "packing" : "pending_payment",
+        status: input.approved ? "packing" : "cancelled",
         updatedAt: timestamp,
       },
     },

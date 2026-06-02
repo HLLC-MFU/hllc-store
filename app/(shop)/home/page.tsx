@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Image as ImageIcon, ShoppingCart, Truck } from "lucide-react";
-import { useCart } from "@/lib/cart";
+import { Image as ImageIcon, Truck } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 
 type ProductOption = {
@@ -90,7 +89,6 @@ export default function HomePage() {
   const [products, setProducts] = useState<DisplayProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const { count } = useCart();
   const { lang, setLang, t } = useLanguage();
 
   useEffect(() => {
@@ -156,26 +154,6 @@ export default function HomePage() {
     </div>
   );
 
-  const cartShortcut = (
-    <Link
-      href="/cart"
-      className="shop-press relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1F2937] text-white shadow-md shadow-slate-900/20 ring-1 ring-slate-900/10 hover:bg-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F4B63D]/60"
-      aria-label={t("nav.cart")}
-    >
-      <ShoppingCart className="h-5 w-5" />
-      {count > 0 ? (
-        <span className="absolute -right-1.5 -top-1.5 min-w-6 rounded-full bg-[#F4B63D] px-1.5 text-center text-[11px] font-black leading-6 text-[#3B1F05] ring-2 ring-white">
-          {count > 99 ? "99+" : count}
-        </span>
-      ) : null}
-    </Link>
-  );
-
-  const shopControls = (
-    <div className="flex shrink-0 items-center gap-3 rounded-2xl border border-gray-100 bg-white p-1.5 shadow-sm transition-all duration-200 hover:border-gray-200 hover:shadow-md">
-      {cartShortcut}
-    </div>
-  );
 
   const trackingEntry = (
     <Link
@@ -201,88 +179,37 @@ export default function HomePage() {
 
   const productGrid = (
     <section>
-      <div className="mb-4 flex items-end justify-between gap-3">
-        <h2 className="min-w-0 font-bold text-gray-900 text-base">
-          {t("shop.all_products")}
-          <span className="ml-2 text-xs font-normal text-gray-400">
-            ({filteredProducts.length} {t("shop.items_count")})
-          </span>
-        </h2>
-        {shopControls}
-      </div>
-
       {loading ? (
-        <div className="grid grid-cols-2 gap-x-5 gap-y-8 md:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, index) => (
-            <div key={index}>
-              <div className="aspect-square rounded-lg bg-gray-100 animate-pulse" />
-              <div className="mt-3 grid grid-cols-[1fr_56px] gap-2">
-                <div className="h-3 rounded bg-gray-100 animate-pulse" />
-                <div className="h-3 rounded bg-gray-100 animate-pulse" />
-                <div className="col-span-2 h-2 rounded bg-gray-100 animate-pulse" />
-              </div>
-            </div>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-3xl bg-gray-100 animate-pulse aspect-3/4" />
           ))}
         </div>
       ) : null}
+      {!loading && error ? <div className="text-center py-16"><p className="text-sm font-semibold text-[#85241F]">{error}</p></div> : null}
+      {!loading && !error && filteredProducts.length === 0 ? <div className="text-center py-16"><p className="text-sm text-gray-400">{t("shop.no_category")}</p></div> : null}
 
-      {!loading && error ? (
-        <div className="text-center py-16">
-          <p className="text-sm font-semibold text-[#85241F]">{error}</p>
-        </div>
-      ) : null}
-
-      {!loading && !error && filteredProducts.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-sm text-gray-400">
-            {t("shop.no_category")}
-          </p>
-        </div>
-      ) : null}
-
-      {!loading && !error && filteredProducts.length > 0 ? (
-        <div className="grid grid-cols-2 gap-x-5 gap-y-8 md:grid-cols-3 xl:grid-cols-4">
-          {filteredProducts.map((product) => (
-            <Link
-              key={product.id}
-              href={`/products/${product.id}`}
-              className="shop-card group min-w-0 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#85241F]/25"
-            >
-              <div className="relative aspect-square overflow-hidden rounded-xl bg-[#f7f7f7] p-3 shadow-sm ring-1 ring-gray-100 transition-all duration-200 group-hover:bg-white group-hover:shadow-md group-hover:ring-gray-200">
-                {product.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="shop-product-image h-full w-full object-contain"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-300">
-                    <ImageIcon className="w-10 h-10" />
-                  </div>
-                )}
-                {product.stock < 1 ? (
-                  <span className="absolute bottom-2 right-2 rounded-lg bg-gray-900/80 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                    {t("shop.out_of_stock")}
-                  </span>
-                ) : null}
+      {!loading && !error && filteredProducts.length > 0 && (
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+          {filteredProducts.map((p) => (
+            <Link key={p.id} href={`/products/${p.id}`}
+              className="group rounded-3xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.13)] transition-all duration-300 overflow-hidden active:scale-[0.98]">
+              {/* Image — full width, no frame */}
+              <div className="relative aspect-square bg-[#f5f5f5] overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}{p.imageUrl
+                  ? <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                  : <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-12 h-12 text-gray-200" /></div>}
+                {p.stock < 1 && <span className="absolute bottom-2 left-2 rounded-xl bg-gray-900/75 px-2 py-0.5 text-[10px] font-bold text-white">{t("shop.out_of_stock")}</span>}
               </div>
-
-              <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1">
-                <p className="min-w-0 truncate text-sm font-black text-gray-900">
-                  {product.name}
-                </p>
-                <p className="text-sm font-black text-gray-900">
-                  {money(product.price)}
-                </p>
-                <p className="col-span-2 min-w-0 truncate text-[10px] font-semibold text-gray-400">
-                  {product.description || product.category}
-                </p>
+              {/* Info */}
+              <div className="px-4 py-3.5 flex flex-col gap-0.5">
+                <p className="truncate text-sm font-black text-gray-900">{p.name}</p>
+                <p className="mt-2 text-base font-black text-[#85241F]">{money(p.price)}</p>
               </div>
             </Link>
           ))}
         </div>
-      ) : null}
+      )}
     </section>
   );
 
@@ -290,8 +217,8 @@ export default function HomePage() {
     <>
       <div className="shop-page lg:hidden flex flex-col bg-white min-h-screen relative">
         <div className="absolute right-5 top-6 z-30">{languageSwitch}</div>
-        <div className="pt-14 pb-4">
-          <div className="flex justify-center mb-6">
+        <div className="pt-4 pb-4">
+          <div className="flex justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/images/HLLCLOGO.png"

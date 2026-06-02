@@ -19,6 +19,7 @@ export type Product = {
   category?: string;
   options?: ProductOption[];
   imageUrl?: string;
+  imageUrls?: string[];
   active: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -46,7 +47,6 @@ export type CustomerInput = {
 export type PaymentSlipInput = {
   imageUrl: string;
   paidAt?: string;
-  amount?: number;
   note?: string;
 };
 
@@ -62,7 +62,6 @@ export type OrderItem = {
 export type PaymentSlip = {
   imageUrl: string;
   paidAt?: string;
-  amount?: number;
   note?: string;
   status: SlipStatus;
   reviewedBy?: string;
@@ -98,6 +97,7 @@ export type CreateProductInput = {
   category?: string;
   options?: ProductOptionInput[] | string;
   imageUrl?: string;
+  imageUrls?: string[];
   active?: boolean;
 };
 

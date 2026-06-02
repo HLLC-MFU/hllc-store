@@ -1,13 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { PackagePlus, Pencil, Upload, XCircle } from "lucide-react";
+import { PackagePlus, Pencil, Plus, Trash2, Upload, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useLanguage } from "@/lib/language-context";
 import type { Product } from "./types";
+
+type OptionItem = { label: string; imageUrl: string };
 
 export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlledOpen, onClose, product }: {
   onSubmit: (fd: FormData) => void;
@@ -23,14 +25,22 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
   const isControlled = controlledOpen !== undefined;
   const isOpen = isControlled ? controlledOpen : open;
   const handleClose = () => { setOpen(false); onClose?.(); };
-  const [imagePreviews, setImagePreviews] = React.useState<string[]>(() =>
-    product?.imageUrl ? [product.imageUrl] : []
+
+  const [imagePreviews, setImagePreviews] = React.useState<string[]>(() => {
+    if (product?.imageUrls && product.imageUrls.length > 0) return product.imageUrls;
+    if (product?.imageUrl) return [product.imageUrl];
+    return [];
+  });
+  const [imageError, setImageError] = React.useState(false);
+  const [options, setOptions] = React.useState<OptionItem[]>(() =>
+    product?.options?.map((o) => ({ label: o.label, imageUrl: o.imageUrl ?? "" })) ?? []
   );
+  const [editingOptionIdx, setEditingOptionIdx] = React.useState<number | null>(null);
+
   const fileRef = React.useRef<HTMLInputElement>(null);
+  const optionFileRef = React.useRef<HTMLInputElement>(null);
   const formRef = React.useRef<HTMLFormElement>(null);
   const { lang } = useLanguage();
-
-  // lang is used implicitly via t — keep reference
   void lang;
 
   const MAX_IMAGES = 5;
@@ -52,7 +62,34 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
     setImagePreviews((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  const [imageError, setImageError] = React.useState(false);
+  function handleOptionFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || editingOptionIdx === null) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string;
+      setOptions((prev) => prev.map((o, i) => i === editingOptionIdx ? { ...o, imageUrl: result } : o));
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }
+
+  function addOption() {
+    setOptions((prev) => [...prev, { label: "", imageUrl: "" }]);
+  }
+
+  function removeOption(idx: number) {
+    setOptions((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function updateOptionLabel(idx: number, label: string) {
+    setOptions((prev) => prev.map((o, i) => i === idx ? { ...o, label } : o));
+  }
+
+  function openOptionFilePicker(idx: number) {
+    setEditingOptionIdx(idx);
+    optionFileRef.current?.click();
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -64,6 +101,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
     const fd = new FormData(e.currentTarget);
     if (imagePreviews[0]) fd.set("imageUrl", imagePreviews[0]);
     if (imagePreviews.length > 1) fd.set("imageUrls", JSON.stringify(imagePreviews));
+    if (options.length > 0) fd.set("options", JSON.stringify(options));
 
     if (isEditMode && onUpdate && product) {
       onUpdate({
@@ -72,7 +110,10 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
         price: Number(fd.get("price")) || product.price,
         stock: Number(fd.get("stock")) ?? product.stock,
         description: String(fd.get("description") ?? product.description ?? "").trim() || undefined,
+        category: String(fd.get("category") ?? product.category ?? "").trim() || undefined,
         imageUrl: imagePreviews[0] ?? product.imageUrl,
+        imageUrls: imagePreviews.length > 0 ? imagePreviews : undefined,
+        options: options.length > 0 ? options : [],
       });
     } else {
       onSubmit(fd);
@@ -80,10 +121,10 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
 
     formRef.current?.reset();
     setImagePreviews([]);
+    setOptions([]);
     handleClose();
   }
 
-  // notify is available for potential future use
   void notify;
 
   if (!isOpen) return null;
@@ -109,7 +150,8 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
         {/* Form */}
         <div className="overflow-y-auto flex-1 px-5 py-4">
           <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-3.5">
-            {/* Image upload — multiple */}
+
+            {/* Product images */}
             <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleFiles} className="hidden" />
             <div className="flex flex-col gap-2">
               {imagePreviews.length > 0 && (
@@ -148,6 +190,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
               )}
             </div>
 
+            {/* Basic fields */}
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.name")}</Label>
@@ -162,9 +205,61 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                 <Input name="stock" type="number" min="0" required defaultValue={product?.stock ?? ""} className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
               <div className="col-span-2">
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">หมวดหมู่</Label>
+                <Input name="category" defaultValue={product?.category ?? ""} placeholder="เช่น เสื้อผ้า, รองเท้า" className="rounded-xl border-gray-200 text-xs h-10" />
+              </div>
+              <div className="col-span-2">
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.description")}</Label>
                 <Textarea name="description" rows={2} defaultValue={product?.description ?? ""} className="rounded-xl border-gray-200 text-xs resize-none" />
               </div>
+            </div>
+
+            {/* Options */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Options</Label>
+
+              {/* Hidden file input for option images */}
+              <input ref={optionFileRef} type="file" accept="image/*" onChange={handleOptionFile} className="hidden" />
+
+              {options.map((opt, idx) => (
+                <div key={idx} className="flex items-center gap-2 bg-gray-50 rounded-2xl px-3 py-2 border border-gray-100">
+                  <Input
+                    value={opt.label}
+                    onChange={(e) => updateOptionLabel(idx, e.target.value)}
+                    placeholder="ชื่อตัวเลือก เช่น สีดำ / S"
+                    className="flex-1 border-none bg-transparent text-xs h-8 shadow-none focus-visible:ring-0 p-0"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => openOptionFilePicker(idx)}
+                    className="flex items-center gap-1 shrink-0 bg-white border border-gray-200 rounded-xl px-2 py-1.5 cursor-pointer hover:bg-gray-50 transition-colors"
+                  >
+                    {opt.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={opt.imageUrl} alt="" className="w-6 h-6 rounded-lg object-cover" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5 text-gray-400" />
+                    )}
+                    <span className="text-[10px] text-gray-500 font-bold">เปลี่ยนรูป</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeOption(idx)}
+                    className="w-7 h-7 flex items-center justify-center rounded-xl hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors cursor-pointer shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={addOption}
+                className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-2xl border-2 border-dashed border-gray-200 text-xs font-bold text-gray-400 hover:border-[#85241F]/30 hover:text-[#85241F] transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                เพิ่มตัวเลือกสินค้า
+              </button>
             </div>
 
             <Button type="submit" className="bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-11 w-full text-xs font-bold shadow-md shadow-[#85241F]/10 cursor-pointer transition-all active:scale-98">

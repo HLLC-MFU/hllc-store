@@ -30,49 +30,6 @@ import ProductCard from "@/components/admin/product-card";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AppHeader } from "@/components/shared/app-header";
 
-/* ─── Mock Data ───────────────────────────────────────────────────────────── */
-
-const MOCK_ORDERS: Order[] = [
-  {
-    id: "demo-001",
-    customer: { name: "Best Rakdee", phone: "081-234-5678", address: "123 ถ.สุขุมวิท แขวงคลองเตย กรุงเทพมหานคร 10110" },
-    items: [{ productId: "mock-1", name: "เสื้อกันฝน Classic", price: 290, quantity: 2, subtotal: 580 }],
-    total: 580,
-    status: "payment_review",
-    slip: { imageUrl: "https://picsum.photos/seed/slip1/400/600", amount: 580, status: "pending" },
-    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-  },
-  {
-    id: "demo-002",
-    customer: { name: "Smaet Jaidee", phone: "089-876-5432", address: "456 ถ.เพชรบุรี แขวงมักกะสัน กรุงเทพมหานคร 10400" },
-    items: [
-      { productId: "mock-2", name: "ร่มพับ Ultra Light", price: 180, quantity: 1, subtotal: 180 },
-      { productId: "mock-4", name: "ร่มกอล์ฟ XL", price: 380, quantity: 1, subtotal: 380 },
-    ],
-    total: 560,
-    status: "paid",
-    slip: { imageUrl: "https://picsum.photos/seed/slip2/400/600", amount: 560, status: "approved" },
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-  },
-  {
-    id: "demo-003",
-    customer: { name: "Aut Meesuk", phone: "062-111-9999", address: "รับเองที่ D1 — เวลา 14:00 น." },
-    items: [{ productId: "mock-3", name: "ชุดกันฝน Pro Set", price: 550, quantity: 1, subtotal: 550 }],
-    total: 550,
-    status: "payment_review",
-    slip: { imageUrl: "https://picsum.photos/seed/slip3/400/600", amount: 550, status: "pending" },
-    createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
-  },
-  {
-    id: "demo-004",
-    customer: { name: "Best Sadsai", phone: "095-555-0001", address: "789 ถ.ลาดพร้าว แขวงจตุจักร กรุงเทพมหานคร 10900" },
-    items: [{ productId: "mock-7", name: "รองเท้ากันน้ำ", price: 590, quantity: 1, subtotal: 590 }],
-    total: 590,
-    status: "packing",
-    slip: { imageUrl: "https://picsum.photos/seed/slip4/400/600", amount: 590, status: "approved" },
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-  },
-];
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = React.useState("dashboard");
@@ -111,11 +68,8 @@ export default function AdminPage() {
       api<Product[]>("/api/backend/admin/products"),
     ]);
 
-    // Use Mock Data as an intelligent local fallback in case database collections are entirely empty during setup
     if (ordersRes.data) {
-      setOrders(ordersRes.data.length > 0 ? ordersRes.data : MOCK_ORDERS);
-    } else {
-      setOrders(MOCK_ORDERS);
+      setOrders(ordersRes.data);
     }
 
     if (productsRes.data) {
@@ -125,9 +79,9 @@ export default function AdminPage() {
   }, []);
 
   React.useEffect(() => {
-    if (isLoggedIn) {
-      loadData();
-    }
+    if (!isLoggedIn) return;
+    const run = async () => { await loadData(); };
+    void run();
   }, [isLoggedIn, loadData]);
 
   const pendingSlips = orders.filter((o) => o.slip.status === "pending");

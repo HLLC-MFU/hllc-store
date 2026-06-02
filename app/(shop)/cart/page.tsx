@@ -11,6 +11,7 @@ import {
   Image as ImageIcon,
   Minus,
   Plus,
+  ShoppingCart,
   Trash2,
   Upload,
   X,
@@ -20,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCart, type CartItem } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
+import { PageHeader } from "@/components/shop/page-header";
 
 type Step = "cart" | "payment" | "info";
 type DeliveryMode = "delivery" | "pickup";
@@ -242,7 +244,7 @@ export default function CartPage() {
       const slipResponse = await fetch(`/api/backend/orders/${orderPayload.data.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: slipImage, amount: total }),
+        body: JSON.stringify({ imageUrl: slipImage }),
       });
       const slipPayload = (await slipResponse.json()) as {
         data?: Order;
@@ -269,10 +271,24 @@ export default function CartPage() {
   const itemList = (
     <section className="space-y-3">
       {!items.length ? (
-        <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-5 py-12 text-center">
-          <p className="text-sm font-bold text-gray-500">
-            {lang === "th" ? "ยังไม่มีสินค้าในตะกร้า" : "Your cart is empty."}
-          </p>
+        <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+          <div className="w-20 h-20 rounded-3xl bg-gray-100 flex items-center justify-center">
+            <ShoppingCart className="w-9 h-9 text-gray-400" />
+          </div>
+          <div>
+            <p className="text-lg font-black text-gray-900">
+              {lang === "th" ? "รถเข็นว่างเปล่าเลย!" : "Your cart is empty!"}
+            </p>
+            <p className="mt-1 text-sm text-gray-400 font-medium">
+              {lang === "th" ? "ไปเลือกสินค้าที่ถูกใจก่อนนะ" : "Go pick something you like"}
+            </p>
+          </div>
+          <Link
+            href="/home"
+            className="mt-2 bg-[#85241F] hover:bg-[#B72D2A] text-white font-black text-sm px-6 py-3 rounded-2xl transition-all active:scale-95 shadow-md shadow-[#85241F]/20"
+          >
+            {lang === "th" ? "ไปเลือกสินค้า" : "Start shopping"}
+          </Link>
         </div>
       ) : null}
 
@@ -325,21 +341,13 @@ export default function CartPage() {
   return (
     <main className="min-h-screen bg-white px-5 py-6 pb-24 lg:px-10">
       <div className="mx-auto max-w-5xl">
-        <header className="mb-6 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase text-gray-400">{t("nav.cart")}</p>
-            <h1 className="text-2xl font-black text-gray-900">
-              {step === "payment"
-                ? lang === "th" ? "ชำระเงิน" : "Payment"
-                : step === "info"
-                  ? lang === "th" ? "ข้อมูลจัดส่ง" : "Delivery info"
-                  : lang === "th" ? "ตะกร้าสินค้า" : "Shopping cart"}
-            </h1>
-          </div>
-          <Button asChild variant="outline" className="rounded-xl">
-            <Link href="/home">{lang === "th" ? "เลือกสินค้า" : "Shop"}</Link>
-          </Button>
-        </header>
+        <PageHeader
+          title={step === "payment"
+            ? lang === "th" ? "ชำระเงิน" : "Payment"
+            : step === "info"
+              ? lang === "th" ? "ข้อมูลจัดส่ง" : "Delivery info"
+              : lang === "th" ? "รถเข็น" : "My cart"}
+        />
 
         {createdOrder ? (
           <section className="mb-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-emerald-800">
@@ -365,27 +373,28 @@ export default function CartPage() {
         {step === "cart" ? (
           <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
             {itemList}
-            <aside className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-              <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3">
-                <span className="text-sm font-black text-gray-900">
-                  {lang === "th" ? "สรุปคำสั่งซื้อ" : "Order summary"}
-                </span>
-                <span className="text-xs font-bold text-gray-400">
-                  {count} {t("shop.items_count")}
-                </span>
-              </div>
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm font-semibold text-gray-500">{t("checkout.total")}</span>
-                <span className="text-xl font-black text-[#85241F]">{money(total)}</span>
-              </div>
-              <Button
-                disabled={!items.length}
-                onClick={goPayment}
-                className="h-12 w-full rounded-xl bg-[#85241F] text-sm font-black hover:bg-[#B72D2A]"
-              >
-                {lang === "th" ? "ชำระเงิน" : "Pay now"}
-              </Button>
-            </aside>
+            {items.length > 0 && (
+              <aside className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3">
+                  <span className="text-sm font-black text-gray-900">
+                    {lang === "th" ? "สรุปคำสั่งซื้อ" : "Order summary"}
+                  </span>
+                  <span className="text-xs font-bold text-gray-400">
+                    {count} {t("shop.items_count")}
+                  </span>
+                </div>
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-500">{t("checkout.total")}</span>
+                  <span className="text-xl font-black text-[#85241F]">{money(total)}</span>
+                </div>
+                <Button
+                  onClick={goPayment}
+                  className="h-12 w-full rounded-xl bg-[#85241F] text-sm font-black hover:bg-[#B72D2A]"
+                >
+                  {lang === "th" ? "ชำระเงิน" : "Pay now"}
+                </Button>
+              </aside>
+            )}
           </div>
         ) : null}
 
