@@ -17,7 +17,7 @@ type AdminStatsProps = {
   orders: Order[];
   pendingSlips: Order[];
   setActiveTab: (tab: string) => void;
-  t: (key: string) => string;
+  t: (key: string, replacements?: Record<string, string | number>) => string;
 };
 
 export function AdminStats({ orders, pendingSlips, setActiveTab, t }: AdminStatsProps) {
@@ -32,7 +32,7 @@ export function AdminStats({ orders, pendingSlips, setActiveTab, t }: AdminStats
 
   return (
     <div className="flex flex-col gap-6">
-      <h2 className="font-black text-gray-900 text-lg">หน้าหลัก</h2>
+      <h2 className="font-black text-gray-900 text-lg">{t("admin.tab.dashboard")}</h2>
 
       {/* Stats — revenue ใหญ่สุด + 3 card เล็กข้างล่าง */}
       <div className="flex flex-col gap-3">
@@ -41,9 +41,9 @@ export function AdminStats({ orders, pendingSlips, setActiveTab, t }: AdminStats
           <CardContent className="p-6 flex flex-col gap-4">
             <div className="flex items-start justify-between">
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">ยอดขายรวม</span>
+                <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">{t("admin.stats.revenue")}</span>
                 <span className="text-4xl font-black text-gray-900 tracking-tight">{money(statsRevenue)}</span>
-                <span className="text-xs text-gray-400 mt-0.5">ยอดขายสะสม</span>
+                <span className="text-xs text-gray-400 mt-0.5">{t("admin.stats.revenue_desc")}</span>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center border border-emerald-100 shrink-0">
                 <TrendingUp className="w-6 h-6" />
@@ -59,7 +59,7 @@ export function AdminStats({ orders, pendingSlips, setActiveTab, t }: AdminStats
               <div className="w-9 h-9 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center border border-slate-100">
                 <ClipboardList className="w-4 h-4" />
               </div>
-              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">คำสั่งซื้อทั้งหมด</span>
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{t("admin.stats.total_orders")}</span>
               <span className="text-2xl font-black text-gray-900">{statsTotal}</span>
             </CardContent>
           </Card>
@@ -70,7 +70,7 @@ export function AdminStats({ orders, pendingSlips, setActiveTab, t }: AdminStats
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${statsPending > 0 ? "bg-rose-50 text-rose-500 border-rose-100" : "bg-gray-50 text-gray-400 border-gray-100"}`}>
                 <FileCheck2 className="w-4 h-4" />
               </div>
-              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">รอตรวจสลิป</span>
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{t("admin.stats.pending")}</span>
               <span className={`text-2xl font-black ${statsPending > 0 ? "text-rose-500" : "text-gray-900"}`}>{statsPending}</span>
             </CardContent>
           </Card>
@@ -80,7 +80,7 @@ export function AdminStats({ orders, pendingSlips, setActiveTab, t }: AdminStats
               <div className="w-9 h-9 rounded-xl bg-yellow-50 text-yellow-600 flex items-center justify-center border border-yellow-100">
                 <Package className="w-4 h-4" />
               </div>
-              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">เตรียมจัดส่ง</span>
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{t("admin.stats.preparing")}</span>
               <span className="text-2xl font-black text-gray-900">{statsPacking}</span>
             </CardContent>
           </Card>
@@ -90,7 +90,7 @@ export function AdminStats({ orders, pendingSlips, setActiveTab, t }: AdminStats
               <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-500 flex items-center justify-center border border-sky-100">
                 <Truck className="w-4 h-4" />
               </div>
-              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">จัดส่งแล้ว</span>
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{t("admin.stats.shipped")}</span>
               <span className="text-2xl font-black text-gray-900">{statsShipped}</span>
             </CardContent>
           </Card>
@@ -102,7 +102,7 @@ export function AdminStats({ orders, pendingSlips, setActiveTab, t }: AdminStats
         <div>
           <h3 className="font-bold text-gray-900 text-sm mb-3 flex items-center gap-2">
             <FileCheck2 className="w-4 h-4 text-rose-500" />
-            รอตรวจสลิป
+            {t("admin.stats.pending")}
             <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">{pendingSlips.length}</span>
           </h3>
           <div className="flex flex-col gap-2">
@@ -129,7 +129,7 @@ export function AdminStats({ orders, pendingSlips, setActiveTab, t }: AdminStats
                 onClick={() => setActiveTab("orders")}
                 className="text-xs text-[#85241F] font-bold text-center py-2 hover:underline cursor-pointer"
               >
-                ดูทั้งหมด {pendingSlips.length} รายการ →
+                {t("admin.stats.view_all", { count: pendingSlips.length })}
               </button>
             )}
           </div>

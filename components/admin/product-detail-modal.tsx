@@ -4,6 +4,7 @@ import * as React from "react";
 import { Image as ImageIcon, Package, Pencil, Trash2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/lib/language-context";
 import type { Product } from "./types";
 import { money } from "./utils";
 
@@ -13,6 +14,7 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
   onDelete: (id: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   const [confirmDelete, setConfirmDelete] = React.useState(false);
 
   const discountedPrice = product.discount
@@ -94,7 +96,7 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
           {/* Options */}
           {product.options && product.options.length > 0 && (
             <div className="flex flex-col gap-2">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">ตัวเลือก</span>
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{t("admin.products.options")}</span>
               <div className="flex flex-col gap-1.5">
                 {product.options.map((opt, idx) => (
                   <div key={idx} className="flex items-center gap-2.5 bg-gray-50 rounded-xl px-3 py-2">
@@ -114,21 +116,21 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
           {/* Delete confirmation inline */}
           {confirmDelete ? (
             <div className="bg-red-50 border border-red-100 rounded-2xl p-4 flex flex-col gap-3">
-              <p className="text-sm font-bold text-red-700 text-center">ลบสินค้านี้ใช่ไหม?</p>
-              <p className="text-xs text-red-500 text-center">การลบไม่สามารถย้อนกลับได้</p>
+              <p className="text-sm font-bold text-red-700 text-center">{t("admin.products.edit.delete_modal_title")}</p>
+              <p className="text-xs text-red-500 text-center">{t("admin.products.edit.delete_modal_desc")}</p>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   onClick={() => setConfirmDelete(false)}
                   className="flex-1 rounded-xl h-9 text-xs font-bold cursor-pointer border-red-200 text-red-600 hover:bg-red-50"
                 >
-                  ยกเลิก
+                  {t("admin.products.edit.delete_modal_cancel")}
                 </Button>
                 <Button
                   onClick={handleDelete}
                   className="flex-1 rounded-xl h-9 text-xs font-bold bg-red-500 hover:bg-red-600 text-white cursor-pointer shadow-md shadow-red-500/20"
                 >
-                  ลบเลย
+                  {t("admin.products.edit.delete_modal_confirm")}
                 </Button>
               </div>
             </div>

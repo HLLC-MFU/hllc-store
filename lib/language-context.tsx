@@ -181,6 +181,26 @@ const DICTIONARY: TranslationDict = {
   "admin.toast.product_added": { th: "เพิ่มสินค้าเข้าระบบสำเร็จ", en: "Product added successfully" },
   "admin.toast.product_updated": { th: "อัปเดตข้อมูลสินค้าแล้ว", en: "Product updated successfully" },
   "admin.toast.product_deleted": { th: "ลบสินค้าออกจากระบบแล้ว", en: "Product deleted successfully" },
+
+  // Dashboard & Statistics
+  "admin.tab.dashboard": { th: "หน้าหลัก", en: "Dashboard" },
+  "admin.stats.revenue_desc": { th: "ยอดขายสะสม", en: "Accumulated sales" },
+  "admin.stats.total_orders": { th: "คำสั่งซื้อทั้งหมด", en: "Total Orders" },
+  "admin.stats.preparing": { th: "เตรียมจัดส่ง", en: "Preparing" },
+  "admin.stats.shipped": { th: "จัดส่งแล้ว", en: "Shipped" },
+  "admin.stats.view_all": { th: "ดูทั้งหมด {count} รายการ →", en: "View all {count} items →" },
+  "admin.orders.shipping_type": { th: "ประเภทการจัดส่ง", en: "Shipping Type" },
+  "admin.orders.shipping_all": { th: "ทั้งหมด", en: "All" },
+  "admin.orders.shipping_delivery": { th: "จัดส่ง", en: "Delivery" },
+  "admin.orders.shipping_pickup": { th: "รับเอง", en: "Pickup" },
+  "admin.orders.status_label": { th: "สถานะ", en: "Status" },
+
+  // Options & Delete Product Modal
+  "admin.products.options": { th: "ตัวเลือก", en: "Options" },
+  "admin.products.edit.delete_modal_title": { th: "ลบสินค้านี้ใช่ไหม?", en: "Delete this product?" },
+  "admin.products.edit.delete_modal_desc": { th: "การลบไม่สามารถย้อนกลับได้", en: "This action cannot be undone." },
+  "admin.products.edit.delete_modal_confirm": { th: "ลบเลย", en: "Delete" },
+  "admin.products.edit.delete_modal_cancel": { th: "ยกเลิก", en: "Cancel" },
 };
 
 interface LanguageContextType {
@@ -229,8 +249,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   return (
     <LanguageContext.Provider value={{ lang, setLang, t }}>
-      {/* Provide an easy SSR fallback by just displaying children once mounting/hydration completes safely */}
-      {children}
+      {/* Provide an easy SSR fallback by just displaying children once mounting/hydration completes safely
+          Wrap with key={lang} to force re-render children cleanly on change, avoiding stale React click event states */}
+      <div key={lang}>{children}</div>
     </LanguageContext.Provider>
   );
 }

@@ -266,7 +266,7 @@ export default function AdminPage() {
                 className="h-11 rounded-2xl font-bold text-xs gap-1.5 transition-all cursor-pointer border-2 border-gray-200 text-gray-900 bg-white data-[state=active]:border-[#85241F] data-[state=active]:text-[#85241F] data-[state=active]:shadow-sm"
               >
                 <LayoutDashboard className="w-4 h-4" />
-                หน้าหลัก
+                {t("admin.tab.dashboard")}
               </TabsTrigger>
               <TabsTrigger
                 value="orders"

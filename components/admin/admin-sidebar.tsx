@@ -20,7 +20,7 @@ export function AdminSidebar({ activeTab, setActiveTab, pendingCount, orderCount
     {
       key: "dashboard",
       icon: LayoutDashboard,
-      label: "หน้าหลัก",
+      label: t("admin.tab.dashboard"),
       count: null,
       badge: null,
     },

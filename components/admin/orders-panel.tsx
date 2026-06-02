@@ -64,12 +64,12 @@ export function OrdersPanel({
         {/* Shipping toggle */}
         <Card className="rounded-2xl shadow-xs">
           <CardContent className="p-4 flex flex-col gap-2">
-            <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">ประเภทการจัดส่ง</span>
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">{t("admin.orders.shipping_type")}</span>
             <div className="flex bg-slate-100 p-1 rounded-xl">
               {([
-                { key: "all",      label: "ทั้งหมด", active: "bg-slate-800 text-white shadow-sm", dot: "bg-slate-400" },
-                { key: "delivery", label: "จัดส่ง",   active: "bg-blue-500 text-white shadow-sm",  dot: "bg-blue-400" },
-                { key: "pickup",   label: "รับเอง",   active: "bg-amber-500 text-white shadow-sm", dot: "bg-amber-400" },
+                { key: "all",      label: t("admin.orders.shipping_all"), active: "bg-slate-800 text-white shadow-sm", dot: "bg-slate-400" },
+                { key: "delivery", label: t("admin.orders.shipping_delivery"),   active: "bg-blue-500 text-white shadow-sm",  dot: "bg-blue-400" },
+                { key: "pickup",   label: t("admin.orders.shipping_pickup"),   active: "bg-amber-500 text-white shadow-sm", dot: "bg-amber-400" },
               ] as const).map((opt) => {
                 const isActive = shippingFilter === opt.key;
                 return (
@@ -90,7 +90,7 @@ export function OrdersPanel({
         {/* Status filter — desktop only vertical list */}
         <Card className="hidden lg:block rounded-2xl shadow-xs">
           <CardContent className="p-4 flex flex-col gap-2">
-            <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">สถานะ</span>
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">{t("admin.orders.status_label")}</span>
             <div className="flex flex-col gap-1.5">
               {(["all", ...ORDER_STATUSES] as const).map((s) => {
                 const count = s === "all" ? orders.length : orders.filter((o) => o.status === s).length;
