@@ -208,7 +208,7 @@ export default function AdminPage() {
       return;
     }
 
-    notify(`���ҧ�����: ${res.data?.username ?? username}`);
+    notify(`Created: ${res.data?.username ?? username}`);
     await loadSuperAdminData();
   }
 
@@ -469,10 +469,10 @@ export default function AdminPage() {
               disabled={loginLoading}
               className="w-full bg-linear-to-r from-[#85241F] to-[#b8332b] hover:opacity-95 text-white font-black py-3.5 px-4 rounded-2xl text-xs shadow-lg shadow-[#85241F]/20 active:scale-98 transition-all cursor-pointer mt-2"
             >
-              {loginLoading ? "กำลังเข้าสู่ระบบ..." : t("admin.login.button")}
+              {loginLoading ? "Loading..." : t("admin.login.button")}
             </Button>
             <a href="/admin/register" className="text-center text-[10px] font-bold text-white/50 hover:text-white">
-              ตั้งรหัสผ่านสำหรับบัญชีที่ถูกสร้างไว้
+              Set password for created admin account
             </a>
           </form>
 
@@ -590,7 +590,7 @@ export default function AdminPage() {
               onClick={handleLogout}
               className="h-8 rounded-full border border-gray-200 bg-white px-2.5 text-[10px] font-black text-gray-600 shadow-sm"
             >
-              ออก
+              Logout
             </button>
           }
         />
@@ -600,7 +600,7 @@ export default function AdminPage() {
         <div className="max-w-240 mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
         <div className="hidden lg:flex items-center justify-end gap-3">
           <span className="text-xs font-bold text-gray-500">
-            {currentUser?.username} · {currentUser?.role}
+            {currentUser?.username} / {currentUser?.role}
           </span>
           <Button variant="outline" onClick={handleLogout} className="h-9 rounded-xl text-xs font-bold">
             Logout
@@ -640,15 +640,15 @@ export default function AdminPage() {
               <div className="flex flex-col gap-3">
                 {/* Revenue — full width */}
                 <Card className="border-emerald-100 rounded-2xl shadow-sm transition-all">
-                  <CardContent className="p-5 sm:p-6 flex flex-col gap-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+                  <CardContent className="p-6 flex flex-col gap-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex flex-col gap-0.5">
                         <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">ยอดขายรวม</span>
-                        <span className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.9rem,8vw,2.25rem)] font-black leading-tight tracking-normal text-gray-900 sm:text-4xl">{money(statsRevenue)}</span>
+                        <span className="text-4xl font-black text-gray-900 tracking-tight">{money(statsRevenue)}</span>
                         <span className="text-xs text-gray-400 mt-0.5">ยอดขายสะสม</span>
                       </div>
-                      <div className="h-11 w-11 shrink-0 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center border border-emerald-100 sm:h-12 sm:w-12">
-                        <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
+                      <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center border border-emerald-100 shrink-0">
+                        <TrendingUp className="w-6 h-6" />
                       </div>
                     </div>
 
@@ -897,9 +897,9 @@ export default function AdminPage() {
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
                 <Card className="rounded-2xl border-gray-100 shadow-xs">
                   <CardContent className="p-4">
-                    <h2 className="text-sm font-black text-gray-900">สร้างบัญชี Admin</h2>
+                    <h2 className="text-sm font-black text-gray-900">Create Admin Account</h2>
                     <p className="mt-1 text-xs font-semibold text-gray-400">
-                      SuperAdmin สร้างได้เฉพาะ username/role ผู้ใช้ต้องไปตั้งรหัสเองที่หน้า Register
+                      SuperAdmin creates username and role only. The admin sets their own password on Register.
                     </p>
                     <form
                       className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,260px)_auto]"
@@ -925,12 +925,9 @@ export default function AdminPage() {
                         </label>
                       </div>
                       <Button disabled={loading} className="h-11 rounded-xl bg-[#85241F] font-black hover:bg-[#B72D2A]">
-                        สร้าง
+                        Create
                       </Button>
                     </form>
-                    <a href="/admin/register" className="hidden">
-                      ไปหน้า Register สำหรับตั้งรหัสผ่าน
-                    </a>
                   </CardContent>
                 </Card>
 
@@ -962,7 +959,7 @@ export default function AdminPage() {
                           <div className="flex items-start justify-between gap-2">
                             <div>
                               <p className="text-xs font-black text-gray-900">{log.action}</p>
-                              <p className="text-[10px] font-bold text-gray-400">{log.actorUsername} · {log.actorRole}</p>
+                              <p className="text-[10px] font-bold text-gray-400">{log.actorUsername} / {log.actorRole}</p>
                             </div>
                             <span className="shrink-0 text-[10px] font-bold text-gray-400">
                               {new Date(log.createdAt).toLocaleString("th-TH")}
