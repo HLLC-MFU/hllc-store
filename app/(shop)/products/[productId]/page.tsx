@@ -26,9 +26,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
     description: product.description,
     price: product.price,
     stock: product.stock,
-    category: product.category,
-    options: product.options,
-    imageUrl: product.imageUrl,
     imageUrls: product.imageUrls,
   };
 

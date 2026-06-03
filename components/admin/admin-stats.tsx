@@ -97,44 +97,6 @@ export function AdminStats({ orders, pendingSlips, setActiveTab, t }: AdminStats
         </div>
       </div>
 
-      {/* Pending slips — ต้องดูแลด่วน */}
-      {pendingSlips.length > 0 && (
-        <div>
-          <h3 className="font-bold text-gray-900 text-sm mb-3 flex items-center gap-2">
-            <FileCheck2 className="w-4 h-4 text-rose-500" />
-            {t("admin.stats.pending")}
-            <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">{pendingSlips.length}</span>
-          </h3>
-          <div className="flex flex-col gap-2">
-            {pendingSlips.slice(0, 5).map((order) => (
-              <Card
-                key={order.id}
-                className="rounded-2xl shadow-xs cursor-pointer hover:shadow-md transition-all"
-                onClick={() => setActiveTab("orders")}
-              >
-                <CardContent className="p-4 flex items-center gap-3">
-                  <FileCheck2 className="w-4 h-4 text-rose-500 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-900 truncate">{order.customer.name}</p>
-                    <p className="text-xs text-gray-400 truncate">
-                      {order.items.map((i) => `${i.name} ×${i.quantity}`).join(", ")}
-                    </p>
-                  </div>
-                  <span className="font-black text-sm text-gray-900 shrink-0">{money(order.total)}</span>
-                </CardContent>
-              </Card>
-            ))}
-            {pendingSlips.length > 5 && (
-              <button
-                onClick={() => setActiveTab("orders")}
-                className="text-xs text-[#85241F] font-bold text-center py-2 hover:underline cursor-pointer"
-              >
-                {t("admin.stats.view_all", { count: pendingSlips.length })}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

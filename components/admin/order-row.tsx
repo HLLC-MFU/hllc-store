@@ -75,7 +75,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
             </Badge>
           </div>
           <p className="text-xs text-gray-400 mt-1 font-medium truncate">
-            {order.items.map((i) => `${i.name} ×${i.quantity}`).join(", ")}
+            {order.items.map((i) => `${i.name[lang] || i.name.th} ×${i.quantity}`).join(", ")}
           </p>
         </div>
 
@@ -174,7 +174,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">รายการสินค้า</span>
                 {order.items.map((item, i) => (
                   <div key={i} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-800 font-semibold truncate">{item.name} <span className="text-gray-400 font-medium">×{item.quantity}</span></span>
+                    <span className="text-sm text-gray-800 font-semibold truncate">{item.name[lang] || item.name.th} <span className="text-gray-400 font-medium">×{item.quantity}</span></span>
                     <span className="text-sm font-black text-gray-900 shrink-0 ml-3">{money(item.subtotal)}</span>
                   </div>
                 ))}
@@ -299,6 +299,11 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       <span>{t(`admin.status.${timelineSteps[currentIdx - 1]}`)}</span>
                     </Button>
                   </div>
+                </div>
+              ) : order.status === "cancelled" ? (
+                <div className="bg-red-50/50 border border-red-100 rounded-xl p-3.5 flex items-center gap-2.5 text-red-700 text-xs font-bold">
+                  <X className="w-4 h-4 text-red-500 shrink-0" />
+                  <span>{lang === "th" ? "คำสั่งซื้อถูกยกเลิกแล้ว" : "Order has been cancelled"}</span>
                 </div>
               ) : order.status === "completed" ? (
                 <div className="flex flex-col gap-2">

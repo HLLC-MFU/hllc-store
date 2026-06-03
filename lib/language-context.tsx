@@ -128,7 +128,7 @@ const DICTIONARY: TranslationDict = {
 
   // Admin Order Row & Stepper
   "admin.status.pending_payment": { th: "รอชำระเงิน", en: "Pending Payment" },
-  "admin.status.payment_review": { th: "รอตรวจสลิป", en: "Payment Review" },
+  "admin.status.payment_review": { th: "รอยืนยันชำระ", en: "Confirming payment" },
   "admin.status.paid": { th: "ชำระเงินแล้ว", en: "Paid" },
   "admin.status.packing": { th: "เตรียมจัดส่ง", en: "Preparing" },
   "admin.status.shipped": { th: "จัดส่งแล้ว", en: "Shipped" },

@@ -23,7 +23,7 @@ type Order = {
   };
   items: {
     productId: string;
-    name: string;
+    name: string | { th: string; en?: string };
     price: number;
     quantity: number;
     subtotal: number;

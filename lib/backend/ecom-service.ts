@@ -168,7 +168,9 @@ function toOrder(doc: Document): Order {
     const product = products.find((p) => p._id.equals(item.productId));
     return {
       productId: item.productId.toString(),
-      name: product?.name ?? "สินค้าถูกลบ",
+      name: product?.name && typeof product.name === "object"
+        ? product.name as import("./types").LocalizedText
+        : { th: typeof product?.name === "string" ? product.name : "สินค้าถูกลบ" },
       price: product?.price ?? 0,
       quantity: item.quantity,
       subtotal: (product?.price ?? 0) * item.quantity,

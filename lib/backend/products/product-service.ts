@@ -151,7 +151,7 @@ export function toProduct(doc: Document): Product {
     stock: Number(doc.stock ?? 0),
     category: doc.category ?? "",
     options: normalizeOptions(doc.options),
-    imageUrl: doc.imageUrl ?? imageUrls[0] ?? "",
+    imageUrl: doc.imageUrl || imageUrls[0] || "",
     imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
     active: doc.active ?? true,
     createdAt: doc.createdAt,

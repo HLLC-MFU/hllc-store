@@ -29,7 +29,7 @@ type Order = {
   };
   items: {
     productId: string;
-    name: string;
+    name: string | { th: string; en?: string };
     price: number;
     quantity: number;
     subtotal: number;
@@ -202,7 +202,7 @@ function ProfileContent() {
                   {order.items.map((item) => (
                     <div key={`${order.id}-${item.productId}`} className="flex items-center justify-between gap-3 text-xs">
                       <span className="min-w-0 truncate font-semibold text-gray-700">
-                        {item.name} x {item.quantity}
+                        {typeof item.name === "object" ? (item.name[lang] || item.name.th) : item.name} x {item.quantity}
                       </span>
                       <span className="font-bold text-gray-500">{money(item.subtotal)}</span>
                     </div>
