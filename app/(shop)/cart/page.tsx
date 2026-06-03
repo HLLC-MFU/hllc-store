@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import Image from "next/image";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Check,
@@ -22,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCart, type CartItem } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
 import { PageHeader } from "@/components/shop/page-header";
-
+import { TimeSelect } from "./components/TimeSelect";
 type Step = "cart" | "payment" | "info" | "success";
 type DeliveryMode = "delivery" | "pickup";
 
@@ -30,6 +31,11 @@ type Order = {
   id: string;
   total: number;
   status: string;
+  customer?: {
+    name: string;
+    phone: string;
+    address: string;
+  };
 };
 
 const currencyFormatter = new Intl.NumberFormat("th-TH", {
@@ -53,7 +59,14 @@ function saveOrderLookup(orderId: string, phone: string) {
   } catch { }
 }
 
-function SwipeableCartItem({
+const bankAccountName = "นันทเดช วงศ์ไชยา";
+const bankAccountNumber = "6621540027";
+
+function itemKey(item: CartItem) {
+  return `${item.productId}-${item.selectedOption ?? ""}`;
+}
+
+const SwipeableCartItem = memo(function SwipeableCartItem({
   item,
   lang,
   selected,
@@ -65,10 +78,10 @@ function SwipeableCartItem({
   item: CartItem;
   lang: "th" | "en";
   selected: boolean;
-  onSelect: () => void;
-  onDecrease: () => void;
-  onIncrease: () => void;
-  onRemove: () => void;
+  onSelect: (item: CartItem) => void;
+  onDecrease: (item: CartItem) => void;
+  onIncrease: (item: CartItem) => void;
+  onRemove: (item: CartItem) => void;
 }) {
   const [swipeX, setSwipeXState] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -109,7 +122,12 @@ function SwipeableCartItem({
     <div className="relative overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
       {/* Delete button revealed on swipe */}
       <div className="absolute inset-y-0 right-0 w-20 bg-[#85241F] flex items-center justify-center">
-        <button type="button" onClick={onRemove} className="text-white p-3">
+        <button
+          type="button"
+          onClick={() => onRemove(item)}
+          className="text-white p-3 h-full w-full flex items-center justify-center cursor-pointer"
+          aria-label={lang === "th" ? "ลบสินค้าออกจากตะกร้า" : "Remove item from cart"}
+        >
           <Trash2 className="h-5 w-5" />
         </button>
       </div>
@@ -131,19 +149,32 @@ function SwipeableCartItem({
         {/* Checkbox */}
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); onSelect(); }}
-          className={`h-6 w-6 shrink-0 rounded-lg border-2 flex items-center justify-center transition-colors ${
-            selected ? "bg-[#85241F] border-[#85241F]" : "border-gray-300 bg-white"
-          }`}
+          onClick={(e) => { e.stopPropagation(); onSelect(item); }}
+          className="h-11 w-11 -m-2.5 shrink-0 flex items-center justify-center cursor-pointer rounded-full active:bg-gray-100/50"
+          aria-label={lang === "th" ? "เลือกสินค้านี้" : "Select this item"}
+          aria-checked={selected}
+          role="checkbox"
         >
-          {selected && <Check className="h-3.5 w-3.5 text-white" />}
+          <div
+            className={`h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-colors ${
+              selected ? "bg-[#85241F] border-[#85241F]" : "border-gray-300 bg-white"
+            }`}
+          >
+            {selected && <Check className="h-3.5 w-3.5 text-white" />}
+          </div>
         </button>
 
         {/* Image */}
-        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center">
+        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center relative">
           {item.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.imageUrl} alt={item.name[lang] || item.name.th} className="h-full w-full object-cover" />
+            <Image
+              src={item.imageUrl}
+              alt={item.name[lang] || item.name.th}
+              width={80}
+              height={80}
+              unoptimized
+              className="h-full w-full object-cover"
+            />
           ) : (
             <ImageIcon className="h-7 w-7 text-gray-300" />
           )}
@@ -151,7 +182,7 @@ function SwipeableCartItem({
 
         {/* Details */}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-black text-gray-900">
+          <p className="line-clamp-2 break-words text-sm font-black text-gray-900 leading-snug">
             {item.name[lang] || item.name.th}
           </p>
           {item.selectedOption && (
@@ -163,58 +194,64 @@ function SwipeableCartItem({
           <div className="mt-2 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
-              onClick={onDecrease}
-              className="h-7 w-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50"
+              onClick={() => onDecrease(item)}
+              className="h-10 w-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 cursor-pointer"
+              aria-label={lang === "th" ? "ลดจำนวน" : "Decrease quantity"}
             >
-              <Minus className="h-3.5 w-3.5" />
+              <Minus className="h-4 w-4" />
             </button>
-            <span className="w-5 text-center text-sm font-black text-gray-900">{item.quantity}</span>
+            <span className="w-6 text-center text-sm font-black text-gray-900">{item.quantity}</span>
             <button
               type="button"
-              onClick={onIncrease}
+              onClick={() => onIncrease(item)}
               disabled={item.stock !== undefined && item.quantity >= item.stock}
-              className="h-7 w-7 rounded-full bg-[#85241F] flex items-center justify-center text-white disabled:opacity-30"
+              className="h-10 w-10 rounded-full bg-[#85241F] flex items-center justify-center text-white disabled:opacity-30 cursor-pointer"
+              aria-label={lang === "th" ? "เพิ่มจำนวน" : "Increase quantity"}
             >
-              <Plus className="h-3.5 w-3.5" />
+              <Plus className="h-4 w-4" />
             </button>
           </div>
         </div>
       </div>
     </div>
   );
-}
+});
 
 export default function CartPage() {
   const { items, updateQty, removeItem, clearCart } = useCart();
   const { lang, t } = useLanguage();
 
-  function itemKey(item: CartItem) {
-    return `${item.productId}-${item.selectedOption ?? ""}`;
-  }
-
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const allSelected = items.length > 0 && items.every(i => selectedIds.has(itemKey(i)));
-  const selectedItems = items.filter(i => selectedIds.has(itemKey(i)));
-  const selectedTotal = selectedItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const selectedCount = selectedItems.reduce((sum, i) => sum + i.quantity, 0);
 
-  function toggleSelectAll() {
+  const allSelected = useMemo(() => {
+    return items.length > 0 && items.every(i => selectedIds.has(itemKey(i)));
+  }, [items, selectedIds]);
+
+  const { selectedItems, selectedTotal, selectedCount } = useMemo(() => {
+    const selected = items.filter(i => selectedIds.has(itemKey(i)));
+    const total = selected.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    const count = selected.reduce((sum, i) => sum + i.quantity, 0);
+    return { selectedItems: selected, selectedTotal: total, selectedCount: count };
+  }, [items, selectedIds]);
+
+  const toggleSelectAll = useCallback(() => {
     setSelectedIds(allSelected ? new Set() : new Set(items.map(itemKey)));
-  }
+  }, [allSelected, items]);
 
-  function toggleSelect(item: CartItem) {
+  const toggleSelect = useCallback((item: CartItem) => {
     const key = itemKey(item);
     setSelectedIds(prev => {
       const next = new Set(prev);
       next.has(key) ? next.delete(key) : next.add(key);
       return next;
     });
-  }
+  }, []);
 
   const [step, setStep] = useState<Step>("cart");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
+  const [receiptItems, setReceiptItems] = useState<CartItem[]>([]);
   const [slipPreview, setSlipPreview] = useState("");
   const [slipImage, setSlipImage] = useState("");
   const [removeTarget, setRemoveTarget] = useState<CartItem | null>(null);
@@ -223,32 +260,35 @@ export default function CartPage() {
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("delivery");
   const [copiedAccount, setCopiedAccount] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const bankAccountName = "นันทเดช วงศ์ไชยา";
-  const bankAccountNumber = "6621540027";
 
-  const confirmRemoveText =
-    lang === "th" ? "ต้องการลบสินค้านี้ออกจากตะกร้าใช่ไหม?" : "Remove this item from cart?";
+  const confirmRemoveText = useMemo(() => {
+    return lang === "th" ? "ต้องการลบสินค้านี้ออกจากตะกร้าใช่ไหม?" : "Remove this item from cart?";
+  }, [lang]);
 
-  function requestRemove(item: CartItem) {
-    setRemoveTarget(item);
-  }
-
-  function confirmRemove() {
+  const confirmRemove = useCallback(() => {
     if (!removeTarget) return;
     removeItem(removeTarget.productId, removeTarget.selectedOption);
     setRemoveTarget(null);
-  }
+  }, [removeTarget, removeItem]);
 
-  function decreaseQty(item: CartItem) {
+  const decreaseQty = useCallback((item: CartItem) => {
     if (item.quantity <= 1) {
-      requestRemove(item);
+      setRemoveTarget(item);
       return;
     }
 
     updateQty(item.productId, item.quantity - 1, item.selectedOption);
-  }
+  }, [updateQty]);
 
-  function handleSlipFile(event: React.ChangeEvent<HTMLInputElement>) {
+  const handleIncrease = useCallback((item: CartItem) => {
+    updateQty(item.productId, item.quantity + 1, item.selectedOption);
+  }, [updateQty]);
+
+  const handleRemove = useCallback((item: CartItem) => {
+    removeItem(item.productId, item.selectedOption);
+  }, [removeItem]);
+
+  const handleSlipFile = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -259,18 +299,18 @@ export default function CartPage() {
       setSlipImage(result);
     };
     reader.readAsDataURL(file);
-  }
+  }, []);
 
-  function goPayment() {
+  const goPayment = useCallback(() => {
     if (!selectedItems.length) {
       setMessage(lang === "th" ? "กรุณาเลือกสินค้าก่อน" : "Please select items first.");
       return;
     }
     setMessage("");
     setStep("payment");
-  }
+  }, [selectedItems.length, lang]);
 
-  async function copyBankAccount() {
+  const copyBankAccount = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(bankAccountNumber);
       setCopiedAccount(true);
@@ -278,9 +318,9 @@ export default function CartPage() {
     } catch {
       setMessage(lang === "th" ? "คัดลอกเลขบัญชีไม่สำเร็จ" : "Unable to copy account number.");
     }
-  }
+  }, [lang]);
 
-  function goInfo() {
+  const goInfo = useCallback(() => {
     if (!slipImage) {
       setMessage(lang === "th" ? "กรุณาอัปโหลดสลิปก่อน" : "Please upload a payment slip first.");
       return;
@@ -288,9 +328,9 @@ export default function CartPage() {
 
     setMessage("");
     setStep("info");
-  }
+  }, [slipImage, lang]);
 
-  function checkoutValidationMessage({
+  const checkoutValidationMessage = useCallback(({
     name,
     phone,
     address,
@@ -306,7 +346,7 @@ export default function CartPage() {
     province: string;
     postalCode: string;
     pickupTime: string;
-  }) {
+  }) => {
     const missing: string[] = [];
     const invalid: string[] = [];
 
@@ -343,10 +383,11 @@ export default function CartPage() {
     messages.push(...invalid);
 
     return messages.join(" • ");
-  }
+  }, [deliveryMode, lang]);
 
-  function handleCheckout(event: React.FormEvent<HTMLFormElement>) {
+  const handleCheckout = useCallback((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (loading) return;
     if (!items.length) return;
 
     setMessage("");
@@ -370,9 +411,10 @@ export default function CartPage() {
 
     pendingFormRef.current = formData;
     setShowConfirmModal(true);
-  }
+  }, [loading, items.length, checkoutValidationMessage]);
 
-  async function submitOrder() {
+  const submitOrder = useCallback(async () => {
+    if (loading) return;
     const formData = pendingFormRef.current;
     if (!formData || !selectedItems.length) return;
 
@@ -423,6 +465,7 @@ export default function CartPage() {
         throw new Error(slipPayload.error ?? "Order created, but slip upload failed");
       }
 
+      setReceiptItems(selectedItems);
       setCreatedOrder(slipPayload.data ?? orderPayload.data);
       saveOrderLookup(orderPayload.data.id, phone);
       clearCart();
@@ -435,7 +478,7 @@ export default function CartPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [loading, selectedItems, deliveryMode, slipImage, clearCart]);
 
   const itemList = (
     <section className="space-y-3">
@@ -464,7 +507,14 @@ export default function CartPage() {
       {/* Select all header */}
       {items.length > 0 && (
         <div className="flex items-center justify-between mb-3">
-          <button type="button" onClick={toggleSelectAll} className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleSelectAll}
+            className="flex items-center gap-2 h-10 px-2 -mx-2 rounded-xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer select-none"
+            aria-label={lang === "th" ? "เลือกรายการทั้งหมด" : "Select all items"}
+            aria-checked={allSelected}
+            role="checkbox"
+          >
             <div className={`h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-colors ${allSelected ? "bg-[#85241F] border-[#85241F]" : "border-gray-300 bg-white"}`}>
               {allSelected && <Check className="h-3.5 w-3.5 text-white" />}
             </div>
@@ -485,10 +535,10 @@ export default function CartPage() {
             item={item}
             lang={lang}
             selected={selectedIds.has(itemKey(item))}
-            onSelect={() => toggleSelect(item)}
-            onDecrease={() => decreaseQty(item)}
-            onIncrease={() => updateQty(item.productId, item.quantity + 1, item.selectedOption)}
-            onRemove={() => removeItem(item.productId, item.selectedOption)}
+            onSelect={toggleSelect}
+            onDecrease={decreaseQty}
+            onIncrease={handleIncrease}
+            onRemove={handleRemove}
           />
         ))}
       </div>
@@ -499,19 +549,69 @@ export default function CartPage() {
     <main className="min-h-screen bg-white px-5 py-6 pb-24 lg:px-10">
       <div className="mx-auto max-w-5xl">
         {step !== "success" && (
-          <PageHeader
-            title={step === "payment"
-              ? lang === "th" ? "ชำระเงิน" : "Payment"
-              : step === "info"
-                ? lang === "th" ? "ข้อมูลจัดส่ง" : "Delivery info"
-                : lang === "th" ? "รถเข็น" : "My cart"}
-          />
+          <>
+            <PageHeader
+              title={step === "payment"
+                ? lang === "th" ? "ชำระเงิน" : "Payment"
+                : step === "info"
+                  ? lang === "th" ? "ข้อมูลจัดส่ง" : "Delivery info"
+                  : lang === "th" ? "รถเข็น" : "My cart"}
+            />
+            
+            {/* Step Indicator */}
+            <div className="mb-8 flex items-center justify-between max-w-xs mx-auto relative px-6 select-none">
+              {/* Line Container */}
+              <div className="absolute top-3.5 left-[38px] right-[38px] h-0.5 -translate-y-1/2 z-0">
+                <div className="w-full h-full bg-gray-100 relative rounded-full overflow-hidden">
+                  <div 
+                    className="absolute inset-y-0 left-0 bg-[#85241F] transition-all duration-300 rounded-full"
+                    style={{
+                      width: step === "cart" ? "0%" : step === "payment" ? "50%" : "100%"
+                    }}
+                  />
+                </div>
+              </div>
+              {[
+                { id: "cart", th: "รถเข็น", en: "Cart", num: 1 },
+                { id: "payment", th: "ชำระเงิน", en: "Payment", num: 2 },
+                { id: "info", th: "จัดส่ง", en: "Delivery", num: 3 },
+              ].map((s, idx) => {
+                const isActive = step === s.id;
+                const isCompleted = 
+                  (step === "payment" && idx < 1) || 
+                  (step === "info" && idx < 2);
+                
+                return (
+                  <div key={s.id} className="relative z-10 flex flex-col items-center">
+                    <div 
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-300 ${
+                        isActive 
+                          ? "bg-[#85241F] text-white ring-4 ring-[#85241F]/15 scale-110" 
+                          : isCompleted 
+                            ? "bg-emerald-600 text-white" 
+                            : "bg-white border-2 border-gray-200 text-gray-400"
+                      }`}
+                    >
+                      {isCompleted ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : s.num}
+                    </div>
+                    <span 
+                      className={`mt-1.5 text-[10px] font-bold transition-colors duration-300 ${
+                        isActive ? "text-[#85241F]" : "text-gray-400"
+                      }`}
+                    >
+                      {lang === "th" ? s.th : s.en}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
 
         {step === "success" && createdOrder ? (
           <div className="flex min-h-[80vh] flex-col items-center justify-center py-10 text-center">
             <div className="w-full max-w-sm">
-              <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-100">
+              <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-100 success-pop">
                 <CheckCircle2 className="h-14 w-14 text-emerald-600" />
               </div>
               <h1 className="text-2xl font-black text-gray-900">
@@ -520,21 +620,111 @@ export default function CartPage() {
               <p className="mt-2 text-sm font-semibold text-gray-500">
                 {lang === "th" ? "เราได้รับคำสั่งซื้อของคุณแล้ว" : "We have received your order"}
               </p>
-              <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-5 text-left">
-                <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600">
-                  ORDER ID
-                </p>
-                <p className="mt-1 font-mono text-xl font-black text-gray-900">
-                  #{createdOrder.id.slice(-8).toUpperCase()}
-                </p>
-                <div className="mt-3 flex items-center justify-between border-t border-emerald-100 pt-3">
-                  <span className="text-sm font-semibold text-gray-500">
-                    {lang === "th" ? "ยอดรวม" : "Total"}
-                  </span>
-                  <span className="text-lg font-black text-emerald-700">
-                    {money(createdOrder.total)}
-                  </span>
+              
+              {/* Receipt Wrapper */}
+              <div className="receipt-wrapper receipt-animate relative mx-auto mt-8 mb-6 p-6 w-full max-w-[340px] text-left font-mono text-xs text-neutral-800">
+                <div className="receipt-edge-top" />
+                
+                {/* Header */}
+                <div className="text-center space-y-1">
+                  <h2 className="text-sm font-bold tracking-wider text-neutral-900 uppercase">HLLC STORE</h2>
                 </div>
+
+                <div className="my-3 text-center text-neutral-400">
+                  *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+                </div>
+
+                <div className="text-center font-bold text-neutral-900 tracking-wide uppercase">
+                  {lang === "th" ? "ใบเสร็จรับเงิน / RECEIPT" : "CASH RECEIPT"}
+                </div>
+
+                <div className="my-3 text-center text-neutral-400">
+                  *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+                </div>
+
+                {/* Items Table */}
+                <div className="space-y-2">
+                  <div className="flex justify-between font-bold text-neutral-900">
+                    <span>{lang === "th" ? "รายการ" : "Description"}</span>
+                    <span>{lang === "th" ? "ราคา" : "Price"}</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {receiptItems.map((item, idx) => (
+                      <div key={idx} className="space-y-0.5">
+                        <div className="flex justify-between items-start gap-4">
+                          <span className="break-words line-clamp-2">
+                            {item.name[lang] || item.name.th}
+                          </span>
+                          <span className="shrink-0 font-bold">
+                            {money(item.price * item.quantity)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-[10px] text-neutral-500 pl-2">
+                          <span>
+                            {item.quantity} x {money(item.price)}
+                            {item.selectedOption ? ` (${item.selectedOption})` : ""}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="my-4 text-center text-neutral-400">
+                  *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+                </div>
+
+                {/* Subtotals & Total */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-neutral-600">
+                    <span>{lang === "th" ? "ยอดรวม" : "Subtotal"}</span>
+                    <span>{money(createdOrder.total)}</span>
+                  </div>
+                  <div className="flex justify-between text-neutral-600">
+                    <span>{lang === "th" ? "วิธีชำระเงิน" : "Payment"}</span>
+                    <span className="font-bold">{lang === "th" ? "โอนเงิน (สลิป)" : "Bank Transfer"}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-sm text-neutral-900 pt-1.5 border-t border-dashed border-neutral-300">
+                    <span>{lang === "th" ? "ยอดชำระสุทธิ" : "Total"}</span>
+                    <span>{money(createdOrder.total)}</span>
+                  </div>
+                </div>
+
+                <div className="my-4 text-center text-neutral-400">
+                  *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+                </div>
+
+                {/* Footer Info */}
+                <div className="space-y-1 text-[10px] text-neutral-500">
+                  <div className="flex justify-between">
+                    <span>{lang === "th" ? "เลขพัสดุ:" : "Tracking No.:"}</span>
+                    <span className="font-bold text-neutral-700">{createdOrder.customer?.phone || "-"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{lang === "th" ? "วันที่:" : "Date:"}</span>
+                    <span>{new Date().toLocaleString(lang === "th" ? "th-TH" : "en-US", { dateStyle: "short", timeStyle: "short" })}</span>
+                  </div>
+                </div>
+
+                <div className="my-4 text-center text-neutral-400">
+                  *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+                </div>
+
+                {/* Barcode */}
+                <div className="text-center space-y-3">
+                  {/* Barcode component */}
+                  <div className="flex justify-center items-center h-8 w-full gap-[1px] opacity-75 mix-blend-multiply my-1 select-none">
+                    {[2, 1, 3, 1, 2, 4, 1, 2, 1, 3, 2, 1, 4, 1, 2, 1, 3, 1, 2, 4, 1, 2, 1, 3, 2].map((w, i) => (
+                      <div key={i} className="bg-neutral-800 h-full" style={{ width: `${w}px` }} />
+                    ))}
+                  </div>
+                  
+                  <p className="text-[9px] text-neutral-400 tracking-widest font-mono">
+                    *{createdOrder.customer?.phone}*
+                  </p>
+                </div>
+
+                <div className="receipt-edge-bottom" />
               </div>
               <Button
                 asChild
@@ -604,14 +794,19 @@ export default function CartPage() {
               <p className="text-xs font-bold text-gray-500">{t("checkout.payment_amount")}</p>
               <p className="mt-1 text-2xl font-black text-[#85241F]">{money(selectedTotal)}</p>
             </div>
-            <div className="mb-4 rounded-2xl border border-[#1E63B6]/10 bg-[#1E63B6]/5 p-3">
+            <div className={`mb-4 rounded-2xl border p-3 transition-all duration-300 ${
+              copiedAccount 
+                ? "border-emerald-500 bg-emerald-50/70 shadow-sm shadow-emerald-500/5 ring-1 ring-emerald-500/10" 
+                : "border-[#1E63B6]/10 bg-[#1E63B6]/5"
+            }`}>
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm ring-1 ring-[#1E63B6]/10">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-[#1E63B6]/10 relative">
+                  <Image
                     src="/images/image.png"
                     alt="Krungthai"
-                    className="h-full w-full object-contain"
+                    width={48}
+                    height={48}
+                    className="h-full w-full object-cover scale-110 transition-transform"
                   />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -644,8 +839,14 @@ export default function CartPage() {
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleSlipFile} />
               {slipPreview ? (
                 <div className="relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={slipPreview} alt="payment slip" className="max-h-56 w-full rounded-lg object-contain" />
+                  <Image
+                    src={slipPreview}
+                    alt="payment slip"
+                    width={400}
+                    height={224}
+                    unoptimized
+                    className="max-h-56 w-full rounded-lg object-contain"
+                  />
                   <button
                     onClick={() => {
                       setSlipPreview("");
@@ -727,7 +928,7 @@ export default function CartPage() {
                   <p className="mt-1 text-xs font-semibold text-gray-500">
                     {lang === "th" ? "กรุณาระบุเวลาที่สะดวกมารับสินค้า" : "Please enter your preferred pickup time."}
                   </p>
-                  <Input name="pickupTime" placeholder={lang === "th" ? "เวลาที่จะมารับ" : "Pickup time"} className="mt-3 h-11 rounded-xl bg-white" />
+                  <TimeSelect name="pickupTime" />
                 </div>
               )}
               <div className="rounded-xl bg-gray-50 p-3 text-xs font-bold text-gray-500">
@@ -771,7 +972,8 @@ export default function CartPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setShowConfirmModal(false)}
+                disabled={loading}
+                onClick={() => !loading && setShowConfirmModal(false)}
                 className="h-11 rounded-xl font-black"
               >
                 {lang === "th" ? "ยกเลิก" : "Cancel"}
