@@ -1,12 +1,13 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2, ClipboardList, RefreshCw, Search, Truck } from "lucide-react";
+import { RefreshCw, Search, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/lib/language-context";
+import { PageHeader } from "@/components/shop/page-header";
+import { LogisticsProgress } from "@/components/shop/logistics-progress";
 
 type OrderStatus =
   | "pending_payment"
@@ -28,7 +29,7 @@ type Order = {
   };
   items: {
     productId: string;
-    name: string;
+    name: string | { th: string; en?: string };
     price: number;
     quantity: number;
     subtotal: number;
@@ -37,7 +38,6 @@ type Order = {
   status: OrderStatus;
   slip: {
     imageUrl?: string;
-    amount?: number;
     status: SlipStatus;
   };
   trackingNumber?: string;
@@ -45,96 +45,22 @@ type Order = {
   updatedAt: string;
 };
 
-const LOGISTICS_STEPS = [
-  { th: "รอตรวจสลิป", en: "Reviewing slip" },
-  { th: "จัดส่งแล้ว", en: "Shipped" },
-  { th: "สำเร็จ", en: "Complete" },
-];
+const currencyFormatter = new Intl.NumberFormat("th-TH", {
+  style: "currency",
+  currency: "THB",
+  maximumFractionDigits: 0,
+});
 
 function money(value: number) {
-  return new Intl.NumberFormat("th-TH", {
-    style: "currency",
-    currency: "THB",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function statusClass(status: OrderStatus) {
-  if (status === "cancelled") return "border-red-200 bg-red-50 text-red-700";
-  if (status === "completed") return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  if (["paid", "packing", "shipped"].includes(status)) {
-    return "border-blue-200 bg-blue-50 text-blue-700";
-  }
-  return "border-amber-200 bg-amber-50 text-amber-700";
-}
-
-function logisticsIndex(status: OrderStatus) {
-  if (status === "completed") return 2;
-  if (["paid", "packing", "shipped"].includes(status)) return 1;
-  return 0;
+  return currencyFormatter.format(value);
 }
 
 function canShowTrackingNumber(order: Order) {
   return ["shipped", "completed"].includes(order.status) && Boolean(order.trackingNumber?.trim());
 }
 
-function LogisticsProgress({ order, lang }: { order: Order; lang: "th" | "en" }) {
-  const activeIndex = logisticsIndex(order.status);
-  const cancelled = order.status === "cancelled";
-  const complete = order.status === "completed";
 
-  if (cancelled) {
-    return (
-      <div className="my-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
-        {lang === "th" ? "คำสั่งซื้อนี้ถูกยกเลิก" : "This order has been cancelled."}
-      </div>
-    );
-  }
-
-  return (
-    <div className="my-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-      <p className="text-xs font-black text-slate-800">
-        {lang === "th" ? "การจัดส่ง (LOGISTICS)" : "LOGISTICS"}
-      </p>
-      <div className="mt-5 px-2">
-        <div className="relative flex items-start justify-between">
-          <div className="absolute left-4 right-4 top-3 h-0.5 bg-gray-200" />
-          <div
-            className="absolute left-4 top-3 h-0.5 bg-[#96231F] transition-all duration-500"
-            style={{ width: activeIndex === 0 ? "0%" : activeIndex === 1 ? "50%" : "calc(100% - 2rem)" }}
-          />
-          {LOGISTICS_STEPS.map((step, index) => {
-            const active = index <= activeIndex;
-
-            return (
-              <div key={step.en} className="relative z-10 flex w-20 flex-col items-center">
-                <span
-                  className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black text-white ${active ? "bg-[#96231F]" : "bg-gray-300"
-                    }`}
-                >
-                  {index + 1}
-                </span>
-                <span className={`mt-2 text-center text-[9px] font-black ${active ? "text-slate-800" : "text-gray-400"}`}>
-                  {lang === "th" ? step.th : step.en}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      {complete ? (
-        <div className="mt-5 border-t border-gray-100 pt-3">
-          <p className="flex items-center gap-2 text-sm font-black text-emerald-600">
-            <CheckCircle2 className="h-4 w-4" />
-            {lang === "th" ? "คำสั่งซื้อเสร็จสิ้นแล้ว" : "Order completed"}
-          </p>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-export default function ProfilePage() {
+function ProfileContent() {
   const { lang, t } = useLanguage();
   const searchParams = useSearchParams();
   const customerPhone = searchParams.get("customerPhone") ?? "";
@@ -199,17 +125,7 @@ export default function ProfilePage() {
   return (
     <main className="min-h-screen bg-white px-5 py-6 pb-24 lg:px-10">
       <div className="mx-auto max-w-4xl">
-        <header className="mb-6 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase text-gray-400">{t("nav.profile")}</p>
-            <h1 className="text-2xl font-black text-gray-900">
-              {lang === "th" ? "ติดตามคำสั่งซื้อ" : "Order tracking"}
-            </h1>
-          </div>
-          <Button asChild variant="outline" className="rounded-xl">
-            <Link href="/home">{lang === "th" ? "กลับหน้าร้าน" : "Back to shop"}</Link>
-          </Button>
-        </header>
+        <PageHeader title={lang === "th" ? "ติดตามคำสั่งซื้อ" : "Order tracking"} />
 
         <section className="mb-5 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
           <form
@@ -250,53 +166,28 @@ export default function ProfilePage() {
         <section className="space-y-4">
           {orders.map((order) => (
             <article key={order.id} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-              <div className="flex flex-col gap-3 border-b border-gray-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="text-xs font-bold text-gray-400">
-                    #{order.id.slice(-8).toUpperCase()}
-                  </p>
-                  <h2 className="mt-1 text-base font-black text-gray-900">
-                    {order.customer.name}
-                  </h2>
-                  <p className="mt-1 text-xs font-semibold text-gray-500">
-                    {new Date(order.createdAt).toLocaleString(lang === "th" ? "th-TH" : "en-US")}
-                  </p>
-                </div>
-                <span className={`w-fit rounded-full border px-3 py-1 text-xs font-black ${statusClass(order.status)}`}>
-                  {t(`admin.status.${order.status}`)}
-                </span>
+              <div className="border-b border-gray-100 pb-4">
+                <h2 className="text-base font-black text-gray-900">{order.customer.name}</h2>
+                <p className="mt-1 text-xs font-semibold text-gray-500">
+                  {new Date(order.createdAt).toLocaleString(lang === "th" ? "th-TH" : "en-US")}
+                </p>
               </div>
 
               <LogisticsProgress order={order} lang={lang} />
 
-              <div className="mb-3 rounded-xl border border-gray-100 bg-gray-50 p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-gray-400">
-                      {lang === "th" ? "สถานะคำสั่งซื้อ" : "Order status"}
-                    </p>
-                    <p className="mt-1 text-sm font-black text-gray-900">
-                      {t(`admin.status.${order.status}`)}
-                    </p>
-                  </div>
-                  <span className={`w-fit rounded-full border px-3 py-1 text-xs font-black ${statusClass(order.status)}`}>
-                    {t(`admin.status.${order.status}`)}
-                  </span>
-                </div>
-                {canShowTrackingNumber(order) ? (
-                  <div className="mt-3 flex flex-col gap-2 rounded-xl border border-emerald-100 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-2 text-emerald-700">
-                      <Truck className="h-4 w-4 shrink-0" />
-                      <span className="text-xs font-black">
-                        {lang === "th" ? "เลขพัสดุ" : "Tracking number"}
-                      </span>
-                    </div>
-                    <span className="font-mono text-sm font-black tracking-wide text-gray-900">
-                      {order.trackingNumber}
+              {canShowTrackingNumber(order) && (
+                <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border border-emerald-100 bg-emerald-50 p-3">
+                  <div className="flex items-center gap-2 text-emerald-700">
+                    <Truck className="h-4 w-4 shrink-0" />
+                    <span className="text-xs font-black">
+                      {lang === "th" ? "เลขพัสดุ" : "Tracking number"}
                     </span>
                   </div>
-                ) : null}
-              </div>
+                  <span className="font-mono text-sm font-black tracking-wide text-gray-900">
+                    {order.trackingNumber}
+                  </span>
+                </div>
+              )}
 
               <div className="rounded-xl bg-gray-50 p-3">
                 <div className="mb-2 flex items-center justify-between">
@@ -311,7 +202,7 @@ export default function ProfilePage() {
                   {order.items.map((item) => (
                     <div key={`${order.id}-${item.productId}`} className="flex items-center justify-between gap-3 text-xs">
                       <span className="min-w-0 truncate font-semibold text-gray-700">
-                        {item.name} x {item.quantity}
+                        {typeof item.name === "object" ? (item.name[lang] || item.name.th) : item.name} x {item.quantity}
                       </span>
                       <span className="font-bold text-gray-500">{money(item.subtotal)}</span>
                     </div>
@@ -319,16 +210,18 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-gray-500">
-                <ClipboardList className="h-4 w-4" />
-                <span>
-                  {lang === "th" ? "สถานะสลิป" : "Slip"}: {order.slip.status}
-                </span>
-              </div>
             </article>
           ))}
         </section>
       </div>
     </main>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center p-5 text-sm font-semibold text-gray-400">Loading...</div>}>
+      <ProfileContent />
+    </Suspense>
   );
 }

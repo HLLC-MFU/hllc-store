@@ -1,360 +1,243 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type CSSProperties, type MouseEvent, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Image as ImageIcon, ShoppingCart, X } from "lucide-react";
+import { useState, useRef, useCallback } from "react";
+import { ShoppingCart } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
+import { PageHeader } from "@/components/shop/page-header";
 
-export type ProductDetailOption = {
-  label: string;
-  imageUrl?: string;
+export type LocalizedText = {
+  th: string;
+  en?: string;
 };
 
 export type ProductDetailProduct = {
   id: string;
-  name: string;
-  description?: string;
+  name: LocalizedText;
+  description?: LocalizedText;
   price: number;
   stock: number;
-  category?: string;
-  options?: ProductDetailOption[];
-  imageUrl?: string;
+  imageUrls?: string[];
+  shipping?: number;
 };
+
+const currencyFormatter = new Intl.NumberFormat("th-TH", {
+  style: "currency",
+  currency: "THB",
+  maximumFractionDigits: 0,
+});
 
 function money(value: number) {
-  return new Intl.NumberFormat("th-TH", {
-    style: "currency",
-    currency: "THB",
-    maximumFractionDigits: 0,
-  }).format(value);
+  return currencyFormatter.format(value);
 }
 
-type CartParticle = {
-  id: number;
-  x: number;
-  y: number;
-  size: number;
-  color: string;
-  liftX: number;
-  liftY: number;
-  midX: number;
-  midY: number;
-  endX: number;
-  endY: number;
-};
-
 export function ProductDetailView({ product }: { product: ProductDetailProduct }) {
-  const [imagePreview, setImagePreview] = useState<{ src: string; alt: string } | null>(null);
-  const [cartParticles, setCartParticles] = useState<CartParticle[]>([]);
-  const cartShortcutRef = useRef<HTMLAnchorElement>(null);
   const router = useRouter();
-  const { addItem, count } = useCart();
-  const { lang, setLang, t } = useLanguage();
-  const options = product.options?.length ? product.options : [{ label: "", imageUrl: product.imageUrl ?? "" }];
+  const { addItem } = useCart();
+  const { lang } = useLanguage();
 
-  useEffect(() => {
-    if (!imagePreview) return;
+  const images = product.imageUrls ?? [];
 
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setImagePreview(null);
-      }
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const [expanded, setExpanded] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout>>(null);
+
+  const outOfStock = product.stock < 1;
+
+  const triggerToast = useCallback(() => {
+    setShowToast(true);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setShowToast(false), 2000);
+  }, []);
+
+  function handleAddToCart() {
+    for (let i = 0; i < quantity; i++) {
+      addItem({
+        productId: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        stock: product.stock,
+        imageUrl: images[0] ?? "",
+        selectedOption: "",
+      });
     }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [imagePreview]);
-
-  function launchCartParticles(event: MouseEvent<HTMLButtonElement>) {
-    const sourceRect = event.currentTarget.getBoundingClientRect();
-    const targetRect = cartShortcutRef.current?.getBoundingClientRect();
-
-    if (!targetRect || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    const startX = sourceRect.left + sourceRect.width / 2;
-    const startY = sourceRect.top + sourceRect.height / 2;
-    const endX = targetRect.left + targetRect.width / 2 - startX;
-    const endY = targetRect.top + targetRect.height / 2 - startY;
-    const colors = ["#D9001B", "#F4B63D", "#85241F", "#FFFFFF"];
-
-    const nextParticles = Array.from({ length: 7 }, (_, index) => {
-      const liftX = (index - 3) * 6;
-      const liftY = -18 - (index % 3) * 5;
-      const wobble = (index % 2 === 0 ? 1 : -1) * (14 + index * 2);
-
-      return {
-        id: Date.now() + index,
-        x: startX + (index - 3) * 2,
-        y: startY + (index % 2 === 0 ? -2 : 2),
-        size: index === 3 ? 10 : 7,
-        color: colors[index % colors.length],
-        liftX,
-        liftY,
-        midX: endX * 0.54 + wobble,
-        midY: endY * 0.46 - 42 - index * 3,
-        endX,
-        endY,
-      };
-    });
-
-    setCartParticles((current) => [...current, ...nextParticles]);
-    window.setTimeout(() => {
-      setCartParticles((current) =>
-        current.filter((particle) => !nextParticles.some((next) => next.id === particle.id)),
-      );
-    }, 900);
+    triggerToast();
   }
 
-  function addProductToCart(variantOption?: string, goToCart = false, event?: MouseEvent<HTMLButtonElement>) {
-    const selectedVariant = product.options?.find((option) => option.label === variantOption);
-    if (!goToCart && event) {
-      launchCartParticles(event);
-    }
-
-    addItem({
-      productId: product.id,
-      name: product.name,
-      description: product.description ?? "",
-      price: product.price,
-      stock: product.stock,
-      imageUrl: selectedVariant?.imageUrl || product.imageUrl,
-      selectedOption: variantOption ?? "",
-    });
-
-    if (goToCart) {
-      setImagePreview(null);
-      router.push("/cart");
-    }
+  function handleBuyNow() {
+    handleAddToCart();
+    router.push("/cart");
   }
 
-  function openImagePreview(src: string, alt: string) {
-    if (!src) return;
-    setImagePreview({ src, alt });
-  }
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const index = Math.round(container.scrollLeft / container.clientWidth);
+    if (index !== currentIndex && index >= 0 && index < images.length) {
+      setCurrentIndex(index);
+    }
+  };
 
-  const languageSwitch = (
-    <div className="flex h-11 items-center gap-1.5">
-      {(["th", "en"] as const).map((nextLang) => (
-        <button
-          key={nextLang}
-          onClick={() => setLang(nextLang)}
-          className={`shop-press rounded-lg px-2.5 py-1 text-xs font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#85241F]/30 ${
-            lang === nextLang
-              ? "bg-[#85241F] text-white shadow-sm"
-              : "text-gray-400 hover:text-gray-700"
-          }`}
-        >
-          {nextLang.toUpperCase()}
-        </button>
-      ))}
-    </div>
-  );
-
-  const cartShortcut = (
-    <Link
-      ref={cartShortcutRef}
-      href="/cart"
-      className="shop-press relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1F2937] text-white shadow-md shadow-slate-900/20 ring-1 ring-slate-900/10 hover:bg-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F4B63D]/60"
-      aria-label={t("nav.cart")}
-    >
-      <ShoppingCart className="h-5 w-5" />
-      {count > 0 ? (
-        <span className="absolute -right-1.5 -top-1.5 min-w-6 rounded-full bg-[#F4B63D] px-1.5 text-center text-[11px] font-black leading-6 text-[#3B1F05] ring-2 ring-white">
-          {count > 99 ? "99+" : count}
-        </span>
-      ) : null}
-    </Link>
-  );
+  const descriptionText = product.description
+    ? product.description[lang] || product.description.th
+    : "";
 
   return (
-    <main className="shop-page min-h-screen bg-white">
-      <header className="sticky top-0 z-40 border-b border-gray-100 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 items-center gap-3">
-            <Link
-              href="/home"
-              className="shop-press hidden h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-200 sm:flex"
-              aria-label={lang === "th" ? "กลับหน้าสินค้า" : "Back to products"}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase text-gray-400">
-                {lang === "th" ? "เลือกซื้อ" : "Choose item"}
-              </p>
-              <h1 className="truncate text-sm font-black text-gray-950 sm:text-base">
-                {product.name}
-              </h1>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {cartShortcut}
-            {languageSwitch}
-            <Link
-              href="/home"
-              className="shop-press flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-200"
-              aria-label={lang === "th" ? "ปิด" : "Close"}
-            >
-              <X className="h-4 w-4" />
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-5 flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-black text-gray-950">
-              {product.options?.length
-                ? lang === "th" ? "เลือกประเภทสินค้า" : "Select product type"
-                : lang === "th" ? "รายละเอียดสินค้า" : "Product detail"}
-            </h2>
-            {product.description ? (
-              <p className="mt-1 text-xs font-semibold text-gray-400">{product.description}</p>
-            ) : null}
-          </div>
-          <span className="text-xs font-semibold text-gray-400">
-            ({options.length} {t("shop.items_count")})
+    <div className="min-h-screen bg-white px-5 py-6 pb-24 flex flex-col">
+      {/* Toast */}
+      <div className={`fixed inset-0 z-50 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${showToast ? "opacity-100" : "opacity-0"}`}>
+        <div className="flex items-center gap-3 bg-gray-900/90 text-white px-6 py-4 rounded-2xl shadow-xl">
+          <ShoppingCart className="h-5 w-5 text-green-400 shrink-0" />
+          <span className="text-sm font-semibold">
+            {lang === "th" ? `เพิ่มลงตะกร้าแล้ว ${quantity} ชิ้น` : `Added ${quantity} item${quantity > 1 ? "s" : ""} to cart`}
           </span>
         </div>
+      </div>
+      <PageHeader title={lang === "th" ? "รายละเอียดสินค้า" : "Product Details"} backHref="/home" />
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {options.map((option, index) => {
-            const optionImageUrl = option.imageUrl || product.imageUrl || "";
-            const optionLabel = option.label || product.category || product.description || "";
+      {/* Image Card */}
+      <div className="rounded-2xl bg-gray-100 overflow-hidden">
+        {images.length > 0 ? (
+          <div className="relative aspect-square">
+            <div
+              ref={scrollContainerRef}
+              onScroll={handleScroll}
+              className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none"
+            >
+              {images.map((src, i) => (
+                <div
+                  key={i}
+                  className="w-full h-full shrink-0 snap-center flex items-center justify-center"
+                >
+                  <img
+                    src={src}
+                    alt={`${product.name[lang] || product.name.th} ${i + 1}`}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              ))}
+            </div>
+            {images.length > 1 && (
+              <div className="absolute bottom-3 right-3 bg-black/40 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+                {currentIndex + 1}/{images.length}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="aspect-square bg-gray-100" />
+        )}
+      </div>
 
-            return (
-              <article
-                key={`${option.label}-${index}`}
-                className="shop-card min-w-0 overflow-hidden rounded-2xl bg-white ring-1 ring-gray-100 transition-all hover:shadow-md hover:ring-[#85241F]/30"
-              >
-                <div className="block w-full text-left">
-                  <button
-                    type="button"
-                    onClick={() => openImagePreview(optionImageUrl, `${product.name} ${option.label}`.trim())}
-                    className="relative block aspect-square w-full cursor-zoom-in overflow-hidden bg-[#f7f7f7] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#85241F]/25"
-                    aria-label={lang === "th" ? "ดูรูปสินค้า" : "View product image"}
-                  >
-                    {optionImageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={optionImageUrl}
-                        alt={`${product.name} ${option.label}`.trim()}
-                        className="shop-product-image h-full w-full object-contain p-3"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-gray-300">
-                        <ImageIcon className="h-10 w-10" />
-                      </div>
-                    )}
-                    {product.stock < 1 ? (
-                      <span className="absolute bottom-2 right-2 rounded-lg bg-gray-900/80 px-1.5 py-0.5 text-[10px] font-black text-white shadow-sm">
-                        {t("shop.out_of_stock")}
-                      </span>
-                    ) : null}
-                  </button>
-                  <div className="px-2.5 py-2">
-                    <p className="line-clamp-2 min-h-9 text-xs font-black leading-snug text-gray-950">
-                      {product.name}
-                    </p>
-                    {optionLabel ? (
-                      <p className="mt-1 truncate text-[11px] font-semibold text-gray-500">
-                        {optionLabel}
-                      </p>
-                    ) : null}
-                    <p className="mt-1 text-sm font-black text-gray-950">
-                      {money(product.price)}
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-[minmax(0,1fr)_38px] gap-2 px-2.5 pb-2.5">
-                  <button
-                    type="button"
-                    onClick={() => addProductToCart(option.label, true)}
-                    disabled={product.stock < 1}
-                    className={`shop-press h-9 min-w-0 rounded-lg text-xs font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9001B]/30 ${
-                      product.stock < 1
-                        ? "bg-gray-100 text-gray-400"
-                        : "bg-[#D9001B] text-white hover:bg-[#B72D2A]"
-                    }`}
-                  >
-                    {lang === "th" ? "ซื้อสินค้า" : "Buy"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => addProductToCart(option.label, false, event)}
-                    disabled={product.stock < 1}
-                    className={`shop-press flex h-9 w-[38px] items-center justify-center rounded-full border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#85241F]/25 ${
-                      product.stock < 1
-                        ? "border-gray-200 bg-gray-50 text-gray-400"
-                        : "border-[#85241F] bg-white text-[#85241F] hover:bg-[#85241F]/6"
-                    }`}
-                    aria-label={lang === "th" ? "เพิ่มไปยังรถเข็น" : "Add to cart"}
-                  >
-                    <ShoppingCart className="h-4 w-4" />
-                  </button>
-                </div>
-              </article>
-            );
-          })}
+      {/* Info section */}
+      <div className="flex-1 pt-4 flex flex-col gap-3">
+
+        {/* Card: Name + Price */}
+        <div className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100 flex items-center justify-between gap-3">
+          <h1 className="flex-1 min-w-0 text-base font-bold text-gray-900 leading-snug">
+            {product.name[lang] || product.name.th}
+          </h1>
+          <p className="shrink-0 text-lg font-black text-[#85241F]">
+            {money(product.price)}
+          </p>
         </div>
-      </section>
 
-      {imagePreview ? (
-        <div
-          className="shop-modal-backdrop fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-4"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setImagePreview(null)}
-        >
-          <div
-            className="shop-modal-panel relative w-full max-w-3xl"
-            onClick={(event) => event.stopPropagation()}
-          >
+        {/* Card: Quantity */}
+        <div className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100 flex items-center justify-between">
+          <span className="text-sm font-semibold text-gray-700">
+            {lang === "th" ? "จำนวน" : "Quantity"}
+          </span>
+          <div className="flex items-center gap-5">
             <button
               type="button"
-              onClick={() => setImagePreview(null)}
-              className="shop-press absolute right-2 top-2 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-gray-600 shadow-lg hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-              aria-label={lang === "th" ? "ปิดรูป" : "Close image"}
+              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+              className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors text-lg leading-none"
             >
-              <X className="h-4 w-4" />
+              −
             </button>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={imagePreview.src}
-              alt={imagePreview.alt}
-              className="max-h-[84vh] w-full rounded-2xl bg-white object-contain p-2 shadow-2xl"
-            />
+            <span className="w-4 text-center text-base font-bold text-gray-900">
+              {quantity}
+            </span>
+            <button
+              type="button"
+              onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
+              className="w-8 h-8 rounded-full bg-[#85241F] flex items-center justify-center text-white hover:bg-[#6b1c18] transition-colors text-lg leading-none"
+            >
+              +
+            </button>
           </div>
         </div>
-      ) : null}
-      <div className="pointer-events-none fixed inset-0 z-[90] overflow-hidden">
-        {cartParticles.map((particle) => {
-          const particleStyle = {
-            left: particle.x,
-            top: particle.y,
-            width: particle.size,
-            height: particle.size,
-            backgroundColor: particle.color,
-            "--cart-fly-lift-x": `${particle.liftX}px`,
-            "--cart-fly-lift-y": `${particle.liftY}px`,
-            "--cart-fly-mid-x": `${particle.midX}px`,
-            "--cart-fly-mid-y": `${particle.midY}px`,
-            "--cart-fly-end-x": `${particle.endX}px`,
-            "--cart-fly-end-y": `${particle.endY}px`,
-          } as CSSProperties & Record<string, string | number>;
 
-          return (
-            <span
-              key={particle.id}
-              className="shop-cart-particle absolute -ml-1 -mt-1 rounded-full border border-white/70"
-              style={particleStyle}
-            />
-          );
-        })}
+        {/* Card: Description */}
+        {descriptionText && (
+          <div className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100">
+            <p className="text-sm font-bold text-gray-900 mb-2">
+              {lang === "th" ? "รายละเอียด" : "Description"}
+            </p>
+            <p className="text-sm leading-relaxed text-gray-500">
+              {expanded ? descriptionText : descriptionText.slice(0, 120)}
+              {!expanded && descriptionText.length > 120 && (
+                <>
+                  {"... "}
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(true)}
+                    className="text-[#85241F] font-semibold hover:underline"
+                  >
+                    {lang === "th" ? "อ่านเพิ่มเติม" : "Learn More"}
+                  </button>
+                </>
+              )}
+            </p>
+          </div>
+        )}
+
       </div>
-    </main>
+
+      {/* Bottom action bar */}
+      <div className="fixed inset-x-0 bottom-0 z-20 bg-white border-t border-gray-100 px-4 py-3">
+        {outOfStock ? (
+          <div className="w-full py-3.5 rounded-2xl bg-gray-100 text-center text-sm font-bold text-gray-400">
+            {lang === "th" ? "สินค้าหมด" : "Out of Stock"}
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            {/* Total price */}
+            <div className="flex flex-col justify-center shrink-0">
+              <span className="text-xs text-gray-400 font-medium">
+                {lang === "th" ? "ราคารวม" : "Total"}
+              </span>
+              <span className="text-base font-black text-[#85241F] leading-tight">
+                {money(product.price * quantity)}
+              </span>
+            </div>
+
+            {/* Divider */}
+            <div className="w-px h-8 bg-gray-200 shrink-0" />
+
+            {/* Add to cart */}
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className="flex items-center justify-center w-11 h-11 rounded-2xl bg-[#fce8e7] text-[#85241F] active:scale-95 transition-transform shrink-0"
+            >
+              <ShoppingCart className="h-5 w-5" />
+            </button>
+
+            {/* Buy now */}
+            <button
+              type="button"
+              onClick={handleBuyNow}
+              className="flex-1 flex items-center justify-center rounded-2xl bg-[#85241F] h-11 text-sm font-bold text-white active:scale-95 transition-transform"
+            >
+              {lang === "th" ? "ซื้อเลย" : "Buy Now"}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

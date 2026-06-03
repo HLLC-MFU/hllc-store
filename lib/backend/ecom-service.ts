@@ -4,10 +4,12 @@ import type {
   CreateOrderInput,
   CreateProductInput,
   Order,
+  OrderItem,
   OrderStatus,
   PaymentSlipInput,
   Product,
   ReviewSlipInput,
+  LocalizedText,
 } from "./types";
 
 function assertText(value: unknown, field: string) {
@@ -16,6 +18,22 @@ function assertText(value: unknown, field: string) {
   }
 
   return value.trim();
+}
+
+function assertImageValue(value: unknown, field: string) {
+  const imageUrl = assertText(value, field);
+
+  if (imageUrl.startsWith("data:")) {
+    if (!/^data:image\/(png|jpe?g|webp|gif);base64,/i.test(imageUrl)) {
+      throw new Error(`${field} must be a PNG, JPG, WEBP, or GIF image`);
+    }
+
+    if (imageUrl.length > 3_000_000) {
+      throw new Error(`${field} is too large`);
+    }
+  }
+
+  return imageUrl;
 }
 
 function assertNumber(value: unknown, field: string) {
@@ -97,16 +115,47 @@ function createSlug(value: string) {
 }
 
 function toProduct(doc: Document): Product {
+  const imageUrls: string[] = Array.isArray(doc.imageUrls)
+    ? doc.imageUrls.filter((u: unknown) => typeof u === "string" && u)
+    : [];
+
+  let nameObj: LocalizedText = { th: "" };
+  if (doc.name && typeof doc.name === "object") {
+    nameObj = {
+      th: doc.name.th || "",
+      en: doc.name.en || undefined,
+    };
+  } else {
+    nameObj = {
+      th: typeof doc.name === "string" ? doc.name : "",
+      en: typeof doc.nameEn === "string" ? doc.nameEn : undefined,
+    };
+  }
+
+  let descObj: LocalizedText = { th: "" };
+  if (doc.description && typeof doc.description === "object") {
+    descObj = {
+      th: doc.description.th || "",
+      en: doc.description.en || undefined,
+    };
+  } else {
+    descObj = {
+      th: typeof doc.description === "string" ? doc.description : "",
+      en: typeof doc.descriptionEn === "string" ? doc.descriptionEn : undefined,
+    };
+  }
+
   return {
     id: doc._id.toString(),
-    name: doc.name,
+    name: nameObj,
     slug: doc.slug,
-    description: doc.description,
+    description: descObj,
     price: doc.price,
     stock: doc.stock,
     category: doc.category ?? "",
     options: normalizeOptions(doc.options),
-    imageUrl: doc.imageUrl,
+    imageUrl: doc.imageUrl ?? imageUrls[0] ?? "",
+    imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
     active: doc.active,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
@@ -114,19 +163,45 @@ function toProduct(doc: Document): Product {
 }
 
 function toOrder(doc: Document): Order {
+  const products: Document[] = doc._products ?? [];
+  const items: OrderItem[] = (doc.items as Document[]).map((item) => {
+    const product = products.find((p) => p._id.equals(item.productId));
+    return {
+      productId: item.productId.toString(),
+      name: product?.name && typeof product.name === "object"
+        ? product.name as import("./types").LocalizedText
+        : { th: typeof product?.name === "string" ? product.name : "สินค้าถูกลบ" },
+      price: product?.price ?? 0,
+      quantity: item.quantity,
+      subtotal: (product?.price ?? 0) * item.quantity,
+    };
+  });
+
   return {
     id: doc._id.toString(),
     customer: doc.customer,
-    items: doc.items,
+    items,
     total: doc.total,
     status: doc.status,
     slip: doc.slip,
-    trackingNumber:
-      typeof doc.trackingNumber === "string" ? doc.trackingNumber : "",
+    trackingNumber: doc.trackingNumber,
+    cancellationReason: doc.cancellationReason,
+    adminNotes: doc.adminNotes ?? [],
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
 }
+
+const ORDERS_LOOKUP_PIPELINE: Document[] = [
+  {
+    $lookup: {
+      from: "products",
+      localField: "items.productId",
+      foreignField: "_id",
+      as: "_products",
+    },
+  },
+];
 
 export async function listProducts() {
   const db = await getDb();
@@ -153,18 +228,24 @@ export async function listAdminProducts() {
 export async function createProduct(input: CreateProductInput) {
   const db = await getDb();
   const timestamp = now();
-  const name = assertText(input.name, "name");
-  const slug = createSlug(input.slug || name);
+  const nameTh = assertText(input.name.th, "name.th");
+  const slug = createSlug(input.slug || nameTh);
   const product = {
-    name,
+    name: {
+      th: nameTh,
+      en: typeof input.name.en === "string" ? input.name.en.trim() : "",
+    },
     slug,
-    description:
-      typeof input.description === "string" ? input.description.trim() : "",
+    description: {
+      th: typeof input.description?.th === "string" ? input.description.th.trim() : "",
+      en: typeof input.description?.en === "string" ? input.description.en.trim() : "",
+    },
     price: assertNumber(input.price, "price"),
     stock: assertNumber(input.stock, "stock"),
     category: typeof input.category === "string" ? input.category.trim() : "",
     options: normalizeOptions(input.options),
     imageUrl: typeof input.imageUrl === "string" ? input.imageUrl.trim() : "",
+    imageUrls: Array.isArray(input.imageUrls) ? input.imageUrls.filter((u) => typeof u === "string" && u) : [],
     active: input.active ?? true,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -217,7 +298,7 @@ export async function createOrder(input: CreateOrderInput) {
     })
     .toArray();
 
-  const items = requestedItems.map((item) => {
+  const storedItems = requestedItems.map((item) => {
     const product = products.find((candidate) =>
       candidate._id.equals(item.productId),
     );
@@ -231,20 +312,19 @@ export async function createOrder(input: CreateOrderInput) {
     }
 
     return {
-      productId: product._id.toString(),
-      name: item.selectedOption ? `${product.name} (${item.selectedOption})` : product.name,
-      price: product.price,
+      productId: product._id,
       quantity: item.quantity,
-      subtotal: product.price * item.quantity,
-      selectedOption: item.selectedOption,
+      _price: product.price,
     };
   });
+
+  const total = storedItems.reduce((sum, item) => sum + item._price * item.quantity, 0);
 
   const timestamp = now();
   const order = {
     customer,
-    items,
-    total: items.reduce((sum, item) => sum + item.subtotal, 0),
+    items: storedItems.map(({ productId, quantity }) => ({ productId, quantity })),
+    total,
     status: "pending_payment" satisfies OrderStatus,
     slip: {
       imageUrl: "",
@@ -256,17 +336,6 @@ export async function createOrder(input: CreateOrderInput) {
   };
 
   const result = await db.collection("orders").insertOne(order);
-
-  await Promise.all(
-    requestedItems.map((item) =>
-      db
-        .collection("products")
-        .updateOne(
-          { _id: assertObjectId(item.productId) },
-          { $inc: { stock: -item.quantity }, $set: { updatedAt: timestamp } },
-        ),
-    ),
-  );
 
   return toOrder({ _id: result.insertedId, ...order });
 }
@@ -288,8 +357,11 @@ export async function listOrders(filters?: {
 
   const orders = await db
     .collection("orders")
-    .find(query)
-    .sort({ createdAt: -1 })
+    .aggregate([
+      { $match: query },
+      { $sort: { createdAt: -1 } },
+      ...ORDERS_LOOKUP_PIPELINE,
+    ])
     .toArray();
 
   return orders.map(toOrder);
@@ -305,21 +377,23 @@ export async function countPendingOrders() {
 
 export async function getOrder(orderId: string) {
   const db = await getDb();
-  const order = await db
+  const results = await db
     .collection("orders")
-    .findOne({ _id: assertObjectId(orderId) });
+    .aggregate([
+      { $match: { _id: assertObjectId(orderId) } },
+      ...ORDERS_LOOKUP_PIPELINE,
+    ])
+    .toArray();
 
-  return order ? toOrder(order) : null;
+  return results[0] ? toOrder(results[0]) : null;
 }
 
 export async function attachPaymentSlip(orderId: string, input: PaymentSlipInput) {
   const db = await getDb();
   const timestamp = now();
   const slip = {
-    imageUrl: assertText(input.imageUrl, "imageUrl"),
+    imageUrl: assertImageValue(input.imageUrl, "imageUrl"),
     paidAt: input.paidAt,
-    amount:
-      typeof input.amount === "number" ? assertNumber(input.amount, "amount") : 0,
     note: input.note,
     status: "pending",
   };
@@ -364,7 +438,7 @@ export async function reviewPaymentSlip(orderId: string, input: ReviewSlipInput)
         "slip.reviewedBy": assertText(input.reviewedBy, "reviewedBy"),
         "slip.reviewedAt": timestamp,
         "slip.reviewNote": input.note,
-        status: input.approved ? "packing" : "pending_payment",
+        status: input.approved ? "packing" : "cancelled",
         updatedAt: timestamp,
       },
     },
@@ -373,6 +447,17 @@ export async function reviewPaymentSlip(orderId: string, input: ReviewSlipInput)
 
   if (!result) {
     throw new Error("order not found");
+  }
+
+  if (input.approved) {
+    await Promise.all(
+      order.items.map((item) =>
+        db.collection("products").updateOne(
+          { _id: assertObjectId(item.productId) },
+          { $inc: { stock: -item.quantity }, $set: { updatedAt: timestamp } },
+        ),
+      ),
+    );
   }
 
   return toOrder(result);
@@ -384,19 +469,106 @@ export async function updateOrderStatus(
   trackingNumber?: string,
 ) {
   const db = await getDb();
-  const updateData: Document = { updatedAt: now() };
+  const timestamp = now();
+  const updateFields: Document = { status, updatedAt: timestamp };
 
-  if (status) {
-    updateData.status = status;
+  if (status === "payment_review") {
+    updateFields["slip.status"] = "pending";
   }
 
-  if (trackingNumber !== undefined) {
-    updateData.trackingNumber = trackingNumber.trim();
+  const updateOp: Document = { $set: updateFields };
+  if (status === "payment_review") {
+    updateOp["$unset"] = { "slip.reviewedBy": "", "slip.reviewedAt": "", "slip.reviewNote": "" };
   }
 
   const result = await db.collection("orders").findOneAndUpdate(
     { _id: assertObjectId(orderId) },
-    { $set: updateData },
+    updateOp,
+    { returnDocument: "after" },
+  );
+
+  if (!result) {
+    throw new Error("order not found");
+  }
+
+  return toOrder(result);
+}
+
+export async function updateTrackingNumber(orderId: string, trackingNumber: string) {
+  const db = await getDb();
+  const result = await db.collection("orders").findOneAndUpdate(
+    { _id: assertObjectId(orderId) },
+    { $set: { trackingNumber: trackingNumber.trim(), updatedAt: now() } },
+    { returnDocument: "after" },
+  );
+
+  if (!result) {
+    throw new Error("order not found");
+  }
+
+  return toOrder(result);
+}
+
+export async function cancelOrder(orderId: string, reason: string, cancelledBy: string) {
+  const db = await getDb();
+  const order = await getOrder(orderId);
+
+  if (!order) {
+    throw new Error("order not found");
+  }
+
+  const timestamp = now();
+  const result = await db.collection("orders").findOneAndUpdate(
+    { _id: assertObjectId(orderId) },
+    {
+      $set: {
+        status: "cancelled" satisfies OrderStatus,
+        cancellationReason: assertText(reason, "reason"),
+        cancelledBy: assertText(cancelledBy, "cancelledBy"),
+        cancelledAt: timestamp,
+        updatedAt: timestamp,
+      },
+    },
+    { returnDocument: "after" },
+  );
+
+  if (!result) {
+    throw new Error("order not found");
+  }
+
+  // คืน stock เฉพาะ order ที่อนุมัติสลิปแล้ว (stock เคยถูกลดไป)
+  if (order.slip.status === "approved") {
+    await Promise.all(
+      order.items.map((item) =>
+        db.collection("products").updateOne(
+          { _id: assertObjectId(item.productId) },
+          { $inc: { stock: item.quantity }, $set: { updatedAt: timestamp } },
+        ),
+      ),
+    );
+  }
+
+  return toOrder(result);
+}
+
+export async function addAdminNote(
+  orderId: string,
+  note: { text: string; by: string; action: string },
+) {
+  const db = await getDb();
+  const entry = {
+    text: assertText(note.text, "text"),
+    by: assertText(note.by, "by"),
+    action: assertText(note.action, "action"),
+    at: now(),
+  };
+
+  const result = await db.collection("orders").findOneAndUpdate(
+    { _id: assertObjectId(orderId) },
+    {
+      $push: { adminNotes: entry } as Document,
+      $set: { updatedAt: entry.at },
+    },
     { returnDocument: "after" },
   );
 
@@ -426,14 +598,24 @@ export async function updateProduct(productId: string, input: Partial<CreateProd
   const updateData: any = {};
   
   if (input.name !== undefined) {
-    updateData.name = assertText(input.name, "name");
-    updateData.slug = createSlug(input.slug || input.name);
+    if (input.name.th !== undefined) {
+      updateData["name.th"] = assertText(input.name.th, "name.th");
+      updateData.slug = createSlug(input.slug || input.name.th);
+    }
+    if (input.name.en !== undefined) {
+      updateData["name.en"] = typeof input.name.en === "string" ? input.name.en.trim() : "";
+    }
   } else if (input.slug !== undefined) {
     updateData.slug = createSlug(input.slug);
   }
   
   if (input.description !== undefined) {
-    updateData.description = typeof input.description === "string" ? input.description.trim() : "";
+    if (input.description.th !== undefined) {
+      updateData["description.th"] = typeof input.description.th === "string" ? input.description.th.trim() : "";
+    }
+    if (input.description.en !== undefined) {
+      updateData["description.en"] = typeof input.description.en === "string" ? input.description.en.trim() : "";
+    }
   }
   
   if (input.price !== undefined) {
@@ -454,6 +636,12 @@ export async function updateProduct(productId: string, input: Partial<CreateProd
   
   if (input.imageUrl !== undefined) {
     updateData.imageUrl = typeof input.imageUrl === "string" ? input.imageUrl.trim() : "";
+  }
+
+  if (input.imageUrls !== undefined) {
+    updateData.imageUrls = Array.isArray(input.imageUrls)
+      ? input.imageUrls.filter((u) => typeof u === "string" && u)
+      : [];
   }
   
   if (input.active !== undefined) {

@@ -11,6 +11,7 @@ import {
   Image as ImageIcon,
   Minus,
   Plus,
+  ShoppingCart,
   Trash2,
   Upload,
   X,
@@ -20,8 +21,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCart, type CartItem } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
+import { PageHeader } from "@/components/shop/page-header";
 
-type Step = "cart" | "payment" | "info";
+type Step = "cart" | "payment" | "info" | "success";
 type DeliveryMode = "delivery" | "pickup";
 
 type Order = {
@@ -30,12 +32,14 @@ type Order = {
   status: string;
 };
 
+const currencyFormatter = new Intl.NumberFormat("th-TH", {
+  style: "currency",
+  currency: "THB",
+  maximumFractionDigits: 0,
+});
+
 function money(value: number) {
-  return new Intl.NumberFormat("th-TH", {
-    style: "currency",
-    currency: "THB",
-    maximumFractionDigits: 0,
-  }).format(value);
+  return currencyFormatter.format(value);
 }
 
 function saveOrderLookup(orderId: string, phone: string) {
@@ -49,9 +53,164 @@ function saveOrderLookup(orderId: string, phone: string) {
   } catch { }
 }
 
+function SwipeableCartItem({
+  item,
+  lang,
+  selected,
+  onSelect,
+  onDecrease,
+  onIncrease,
+  onRemove,
+}: {
+  item: CartItem;
+  lang: "th" | "en";
+  selected: boolean;
+  onSelect: () => void;
+  onDecrease: () => void;
+  onIncrease: () => void;
+  onRemove: () => void;
+}) {
+  const [swipeX, setSwipeXState] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const swipeXRef = useRef(0);
+  const startX = useRef(0);
+  const baseX = useRef(0);
+  const dragging = useRef(false);
+  const MAX = 80;
+  const SNAP = 40;
+
+  function setSwipeX(x: number) {
+    swipeXRef.current = x;
+    setSwipeXState(x);
+  }
+
+  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    dragging.current = true;
+    setIsDragging(true);
+    startX.current = e.clientX;
+    baseX.current = swipeXRef.current;
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!dragging.current) return;
+    const delta = e.clientX - startX.current;
+    setSwipeX(Math.max(-MAX, Math.min(0, baseX.current + delta)));
+  }
+
+  function onPointerUp() {
+    if (!dragging.current) return;
+    dragging.current = false;
+    setIsDragging(false);
+    setSwipeX(swipeXRef.current < -SNAP ? -MAX : 0);
+  }
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
+      {/* Delete button revealed on swipe */}
+      <div className="absolute inset-y-0 right-0 w-20 bg-[#85241F] flex items-center justify-center">
+        <button type="button" onClick={onRemove} className="text-white p-3">
+          <Trash2 className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Sliding card */}
+      <div
+        style={{
+          transform: `translateX(${swipeX}px)`,
+          transition: isDragging ? "none" : "transform 0.2s ease",
+          touchAction: "pan-y",
+        }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onClick={() => { if (swipeXRef.current <= -MAX + 4) setSwipeX(0); }}
+        className="relative z-10 flex items-center gap-3 bg-white p-3 select-none"
+      >
+        {/* Checkbox */}
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onSelect(); }}
+          className={`h-6 w-6 shrink-0 rounded-lg border-2 flex items-center justify-center transition-colors ${
+            selected ? "bg-[#85241F] border-[#85241F]" : "border-gray-300 bg-white"
+          }`}
+        >
+          {selected && <Check className="h-3.5 w-3.5 text-white" />}
+        </button>
+
+        {/* Image */}
+        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center">
+          {item.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={item.imageUrl} alt={item.name[lang] || item.name.th} className="h-full w-full object-cover" />
+          ) : (
+            <ImageIcon className="h-7 w-7 text-gray-300" />
+          )}
+        </div>
+
+        {/* Details */}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-black text-gray-900">
+            {item.name[lang] || item.name.th}
+          </p>
+          {item.selectedOption && (
+            <p className="mt-0.5 text-[10px] font-bold text-gray-400">{item.selectedOption}</p>
+          )}
+          <p className="mt-1 text-sm font-black text-[#85241F]">{money(item.price)}</p>
+
+          {/* Qty controls */}
+          <div className="mt-2 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={onDecrease}
+              className="h-7 w-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50"
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+            <span className="w-5 text-center text-sm font-black text-gray-900">{item.quantity}</span>
+            <button
+              type="button"
+              onClick={onIncrease}
+              disabled={item.stock !== undefined && item.quantity >= item.stock}
+              className="h-7 w-7 rounded-full bg-[#85241F] flex items-center justify-center text-white disabled:opacity-30"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CartPage() {
-  const { items, total, count, updateQty, removeItem, clearCart } = useCart();
+  const { items, updateQty, removeItem, clearCart } = useCart();
   const { lang, t } = useLanguage();
+
+  function itemKey(item: CartItem) {
+    return `${item.productId}-${item.selectedOption ?? ""}`;
+  }
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const allSelected = items.length > 0 && items.every(i => selectedIds.has(itemKey(i)));
+  const selectedItems = items.filter(i => selectedIds.has(itemKey(i)));
+  const selectedTotal = selectedItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const selectedCount = selectedItems.reduce((sum, i) => sum + i.quantity, 0);
+
+  function toggleSelectAll() {
+    setSelectedIds(allSelected ? new Set() : new Set(items.map(itemKey)));
+  }
+
+  function toggleSelect(item: CartItem) {
+    const key = itemKey(item);
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }
+
   const [step, setStep] = useState<Step>("cart");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -59,6 +218,8 @@ export default function CartPage() {
   const [slipPreview, setSlipPreview] = useState("");
   const [slipImage, setSlipImage] = useState("");
   const [removeTarget, setRemoveTarget] = useState<CartItem | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const pendingFormRef = useRef<FormData | null>(null);
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("delivery");
   const [copiedAccount, setCopiedAccount] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -101,7 +262,10 @@ export default function CartPage() {
   }
 
   function goPayment() {
-    if (!items.length) return;
+    if (!selectedItems.length) {
+      setMessage(lang === "th" ? "กรุณาเลือกสินค้าก่อน" : "Please select items first.");
+      return;
+    }
     setMessage("");
     setStep("payment");
   }
@@ -181,13 +345,11 @@ export default function CartPage() {
     return messages.join(" • ");
   }
 
-  async function handleCheckout(event: React.FormEvent<HTMLFormElement>) {
+  function handleCheckout(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!items.length) return;
 
     setMessage("");
-    setCreatedOrder(null);
-
     const formData = new FormData(event.currentTarget);
     const name = String(formData.get("name") ?? "").trim();
     const phone = String(formData.get("phone") ?? "").replace(/\D/g, "");
@@ -196,14 +358,9 @@ export default function CartPage() {
     const province = String(formData.get("province") ?? "").trim();
     const postalCode = String(formData.get("postalCode") ?? "").trim();
     const pickupTime = String(formData.get("pickupTime") ?? "").trim();
+
     const validationError = checkoutValidationMessage({
-      name,
-      phone,
-      address,
-      district,
-      province,
-      postalCode,
-      pickupTime,
+      name, phone, address, district, province, postalCode, pickupTime,
     });
 
     if (validationError) {
@@ -211,7 +368,26 @@ export default function CartPage() {
       return;
     }
 
+    pendingFormRef.current = formData;
+    setShowConfirmModal(true);
+  }
+
+  async function submitOrder() {
+    const formData = pendingFormRef.current;
+    if (!formData || !selectedItems.length) return;
+
+    setShowConfirmModal(false);
     setLoading(true);
+    setCreatedOrder(null);
+
+    const name = String(formData.get("name") ?? "").trim();
+    const phone = String(formData.get("phone") ?? "").replace(/\D/g, "");
+    const address = String(formData.get("address") ?? "").trim();
+    const district = String(formData.get("district") ?? "").trim();
+    const province = String(formData.get("province") ?? "").trim();
+    const postalCode = String(formData.get("postalCode") ?? "").trim();
+    const pickupTime = String(formData.get("pickupTime") ?? "").trim();
+
     const fullAddress =
       deliveryMode === "pickup"
         ? `รับเองที่ D1${pickupTime ? ` เวลา ${pickupTime}` : ""}`
@@ -223,17 +399,14 @@ export default function CartPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customer: { name, phone, address: fullAddress },
-          items: items.map((item) => ({
+          items: selectedItems.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
             selectedOption: item.selectedOption,
           })),
         }),
       });
-      const orderPayload = (await orderResponse.json()) as {
-        data?: Order;
-        error?: string;
-      };
+      const orderPayload = (await orderResponse.json()) as { data?: Order; error?: string };
 
       if (!orderResponse.ok || !orderPayload.data) {
         throw new Error(orderPayload.error ?? "Unable to create order");
@@ -242,12 +415,9 @@ export default function CartPage() {
       const slipResponse = await fetch(`/api/backend/orders/${orderPayload.data.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: slipImage, amount: total }),
+        body: JSON.stringify({ imageUrl: slipImage }),
       });
-      const slipPayload = (await slipResponse.json()) as {
-        data?: Order;
-        error?: string;
-      };
+      const slipPayload = (await slipResponse.json()) as { data?: Order; error?: string };
 
       if (!slipResponse.ok) {
         throw new Error(slipPayload.error ?? "Order created, but slip upload failed");
@@ -259,6 +429,7 @@ export default function CartPage() {
       setSlipPreview("");
       setSlipImage("");
       setMessage("");
+      setStep("success");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Checkout failed");
     } finally {
@@ -269,94 +440,124 @@ export default function CartPage() {
   const itemList = (
     <section className="space-y-3">
       {!items.length ? (
-        <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-5 py-12 text-center">
-          <p className="text-sm font-bold text-gray-500">
-            {lang === "th" ? "ยังไม่มีสินค้าในตะกร้า" : "Your cart is empty."}
-          </p>
+        <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+          <div className="w-20 h-20 rounded-3xl bg-gray-100 flex items-center justify-center">
+            <ShoppingCart className="w-9 h-9 text-gray-400" />
+          </div>
+          <div>
+            <p className="text-lg font-black text-gray-900">
+              {lang === "th" ? "รถเข็นว่างเปล่าเลย!" : "Your cart is empty!"}
+            </p>
+            <p className="mt-1 text-sm text-gray-400 font-medium">
+              {lang === "th" ? "ไปเลือกสินค้าที่ถูกใจก่อนนะ" : "Go pick something you like"}
+            </p>
+          </div>
+          <Link
+            href="/home"
+            className="mt-2 bg-[#85241F] hover:bg-[#B72D2A] text-white font-black text-sm px-6 py-3 rounded-2xl transition-all active:scale-95 shadow-md shadow-[#85241F]/20"
+          >
+            {lang === "th" ? "ไปเลือกสินค้า" : "Start shopping"}
+          </Link>
         </div>
       ) : null}
 
-      {items.map((item) => (
-        <div key={`${item.productId}-${item.selectedOption ?? ""}`} className="flex gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-50">
-            {item.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
-            ) : (
-              <ImageIcon className="h-7 w-7 text-gray-300" />
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-black text-gray-900">{item.name}</p>
-            {item.selectedOption ? (
-              <p className="mt-0.5 text-[10px] font-bold text-gray-400">{item.selectedOption}</p>
-            ) : null}
-            <p className="mt-1 text-xs font-semibold text-[#85241F]">{money(item.price)}</p>
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 rounded-xl border border-gray-200 px-2 py-1">
-                <button
-                  onClick={() => decreaseQty(item)}
-                  className="flex h-7 w-7 items-center justify-center text-gray-500"
-                >
-                  <Minus className="h-4 w-4" />
-                </button>
-                <span className="w-6 text-center text-sm font-black">{item.quantity}</span>
-                <button
-                  onClick={() => updateQty(item.productId, item.quantity + 1, item.selectedOption)}
-                  disabled={item.stock !== undefined && item.quantity >= item.stock}
-                  className="flex h-7 w-7 items-center justify-center text-gray-500 disabled:opacity-30"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-              <button
-                onClick={() => requestRemove(item)}
-                className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-500"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+      {/* Select all header */}
+      {items.length > 0 && (
+        <div className="flex items-center justify-between mb-3">
+          <button type="button" onClick={toggleSelectAll} className="flex items-center gap-2">
+            <div className={`h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-colors ${allSelected ? "bg-[#85241F] border-[#85241F]" : "border-gray-300 bg-white"}`}>
+              {allSelected && <Check className="h-3.5 w-3.5 text-white" />}
             </div>
-          </div>
+            <span className="text-sm font-bold text-gray-700">
+              {lang === "th" ? "เลือกทั้งหมด" : "Select all"}
+            </span>
+          </button>
+          <span className="text-sm text-gray-400">
+            {items.length} {lang === "th" ? "รายการ" : `item${items.length > 1 ? "s" : ""}`}
+          </span>
         </div>
-      ))}
+      )}
+
+      <div className="space-y-3">
+        {items.map((item) => (
+          <SwipeableCartItem
+            key={itemKey(item)}
+            item={item}
+            lang={lang}
+            selected={selectedIds.has(itemKey(item))}
+            onSelect={() => toggleSelect(item)}
+            onDecrease={() => decreaseQty(item)}
+            onIncrease={() => updateQty(item.productId, item.quantity + 1, item.selectedOption)}
+            onRemove={() => removeItem(item.productId, item.selectedOption)}
+          />
+        ))}
+      </div>
     </section>
   );
 
   return (
     <main className="min-h-screen bg-white px-5 py-6 pb-24 lg:px-10">
       <div className="mx-auto max-w-5xl">
-        <header className="mb-6 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase text-gray-400">{t("nav.cart")}</p>
-            <h1 className="text-2xl font-black text-gray-900">
-              {step === "payment"
-                ? lang === "th" ? "ชำระเงิน" : "Payment"
-                : step === "info"
-                  ? lang === "th" ? "ข้อมูลจัดส่ง" : "Delivery info"
-                  : lang === "th" ? "ตะกร้าสินค้า" : "Shopping cart"}
-            </h1>
-          </div>
-          <Button asChild variant="outline" className="rounded-xl">
-            <Link href="/home">{lang === "th" ? "เลือกสินค้า" : "Shop"}</Link>
-          </Button>
-        </header>
+        {step !== "success" && (
+          <PageHeader
+            title={step === "payment"
+              ? lang === "th" ? "ชำระเงิน" : "Payment"
+              : step === "info"
+                ? lang === "th" ? "ข้อมูลจัดส่ง" : "Delivery info"
+                : lang === "th" ? "รถเข็น" : "My cart"}
+          />
+        )}
 
-        {createdOrder ? (
-          <section className="mb-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-emerald-800">
-            <CheckCircle2 className="mb-2 h-6 w-6" />
-            <p className="text-sm font-black">
-              {lang === "th" ? "คำสั่งซื้อสำเร็จ" : "Order successful"}
-            </p>
-            <p className="mt-1 text-xs font-semibold">
-              ORDER ID: #{createdOrder.id.slice(-8).toUpperCase()} · {money(createdOrder.total)}
-            </p>
-            <Button asChild className="mt-3 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700">
-              <Link href="/profile">{lang === "th" ? "ดูสถานะคำสั่งซื้อ" : "Track order"}</Link>
-            </Button>
-          </section>
+        {step === "success" && createdOrder ? (
+          <div className="flex min-h-[80vh] flex-col items-center justify-center py-10 text-center">
+            <div className="w-full max-w-sm">
+              <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-100">
+                <CheckCircle2 className="h-14 w-14 text-emerald-600" />
+              </div>
+              <h1 className="text-2xl font-black text-gray-900">
+                {lang === "th" ? "คำสั่งซื้อสำเร็จ!" : "Order placed!"}
+              </h1>
+              <p className="mt-2 text-sm font-semibold text-gray-500">
+                {lang === "th" ? "เราได้รับคำสั่งซื้อของคุณแล้ว" : "We have received your order"}
+              </p>
+              <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-5 text-left">
+                <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600">
+                  ORDER ID
+                </p>
+                <p className="mt-1 font-mono text-xl font-black text-gray-900">
+                  #{createdOrder.id.slice(-8).toUpperCase()}
+                </p>
+                <div className="mt-3 flex items-center justify-between border-t border-emerald-100 pt-3">
+                  <span className="text-sm font-semibold text-gray-500">
+                    {lang === "th" ? "ยอดรวม" : "Total"}
+                  </span>
+                  <span className="text-lg font-black text-emerald-700">
+                    {money(createdOrder.total)}
+                  </span>
+                </div>
+              </div>
+              <Button
+                asChild
+                className="mt-6 h-13 w-full rounded-2xl bg-emerald-600 text-sm font-black hover:bg-emerald-700"
+              >
+                <Link href="/profile">
+                  {lang === "th" ? "ดูสถานะคำสั่งซื้อ" : "Track my order"}
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="mt-3 h-12 w-full rounded-2xl text-sm font-black"
+              >
+                <Link href="/home">
+                  {lang === "th" ? "กลับหน้าแรก" : "Back to home"}
+                </Link>
+              </Button>
+            </div>
+          </div>
         ) : null}
 
-        {message ? (
+        {step !== "success" && message ? (
           <div className="mb-5 rounded-xl border border-[#85241F]/20 bg-[#85241F]/5 px-4 py-3 text-sm font-semibold text-[#85241F]">
             {message}
           </div>
@@ -365,27 +566,28 @@ export default function CartPage() {
         {step === "cart" ? (
           <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
             {itemList}
-            <aside className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-              <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3">
-                <span className="text-sm font-black text-gray-900">
-                  {lang === "th" ? "สรุปคำสั่งซื้อ" : "Order summary"}
-                </span>
-                <span className="text-xs font-bold text-gray-400">
-                  {count} {t("shop.items_count")}
-                </span>
-              </div>
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm font-semibold text-gray-500">{t("checkout.total")}</span>
-                <span className="text-xl font-black text-[#85241F]">{money(total)}</span>
-              </div>
-              <Button
-                disabled={!items.length}
-                onClick={goPayment}
-                className="h-12 w-full rounded-xl bg-[#85241F] text-sm font-black hover:bg-[#B72D2A]"
-              >
-                {lang === "th" ? "ชำระเงิน" : "Pay now"}
-              </Button>
-            </aside>
+            {items.length > 0 && (
+              <aside className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3">
+                  <span className="text-sm font-black text-gray-900">
+                    {lang === "th" ? "สรุปคำสั่งซื้อ" : "Order summary"}
+                  </span>
+                  <span className="text-xs font-bold text-gray-400">
+                    {lang === "th" ? `เลือก ${selectedCount} ชิ้น` : `${selectedCount} selected`}
+                  </span>
+                </div>
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-500">{t("checkout.total")}</span>
+                  <span className="text-xl font-black text-[#85241F]">{money(selectedTotal)}</span>
+                </div>
+                <Button
+                  onClick={goPayment}
+                  className="h-12 w-full rounded-xl bg-[#85241F] text-sm font-black hover:bg-[#B72D2A]"
+                >
+                  {lang === "th" ? "ชำระเงิน" : "Pay now"}
+                </Button>
+              </aside>
+            )}
           </div>
         ) : null}
 
@@ -400,7 +602,7 @@ export default function CartPage() {
             </button>
             <div className="mb-4 rounded-2xl bg-[#85241F]/5 p-4 text-center">
               <p className="text-xs font-bold text-gray-500">{t("checkout.payment_amount")}</p>
-              <p className="mt-1 text-2xl font-black text-[#85241F]">{money(total)}</p>
+              <p className="mt-1 text-2xl font-black text-[#85241F]">{money(selectedTotal)}</p>
             </div>
             <div className="mb-4 rounded-2xl border border-[#1E63B6]/10 bg-[#1E63B6]/5 p-3">
               <div className="flex items-center gap-3">
@@ -530,8 +732,8 @@ export default function CartPage() {
               )}
               <div className="rounded-xl bg-gray-50 p-3 text-xs font-bold text-gray-500">
                 <div className="flex justify-between">
-                  <span>{count} {t("shop.items_count")}</span>
-                  <span className="text-[#85241F]">{money(total)}</span>
+                  <span>{selectedCount} {t("shop.items_count")}</span>
+                  <span className="text-[#85241F]">{money(selectedTotal)}</span>
                 </div>
               </div>
               <Button
@@ -547,6 +749,46 @@ export default function CartPage() {
         ) : null}
       </div>
 
+      {showConfirmModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <ClipboardList className="h-6 w-6" />
+            </div>
+            <h2 className="text-center text-base font-black text-gray-900">
+              {lang === "th" ? "ยืนยันคำสั่งซื้อ?" : "Confirm order?"}
+            </h2>
+            <p className="mt-2 text-center text-sm font-semibold text-gray-500">
+              {lang === "th" ? "กดยืนยันเพื่อส่งคำสั่งซื้อของคุณ" : "Press confirm to place your order"}
+            </p>
+            <div className="mt-3 rounded-2xl bg-gray-50 p-3 text-center">
+              <p className="text-xs font-bold text-gray-500">
+                {selectedCount} {t("shop.items_count")}
+              </p>
+              <p className="mt-0.5 text-xl font-black text-[#85241F]">{money(selectedTotal)}</p>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowConfirmModal(false)}
+                className="h-11 rounded-xl font-black"
+              >
+                {lang === "th" ? "ยกเลิก" : "Cancel"}
+              </Button>
+              <Button
+                type="button"
+                onClick={submitOrder}
+                disabled={loading}
+                className="h-11 rounded-xl bg-emerald-600 font-black hover:bg-emerald-700"
+              >
+                {loading ? "..." : lang === "th" ? "ยืนยัน" : "Confirm"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {removeTarget ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
           <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
@@ -561,7 +803,7 @@ export default function CartPage() {
             </p>
             <div className="mt-4 rounded-2xl bg-gray-50 p-3">
               <p className="truncate text-sm font-black text-gray-900">
-                {removeTarget.name}
+                {removeTarget.name[lang] || removeTarget.name.th}
               </p>
               <p className="mt-1 text-xs font-bold text-[#85241F]">
                 {money(removeTarget.price)} x {removeTarget.quantity}

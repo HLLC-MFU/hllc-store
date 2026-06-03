@@ -2,10 +2,15 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
+export type LocalizedText = {
+  th: string;
+  en?: string;
+};
+
 export type CartItem = {
   productId: string;
-  name: string;
-  description?: string;
+  name: LocalizedText;
+  description?: LocalizedText;
   price: number;
   stock?: number;
   imageUrl?: string;

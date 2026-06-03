@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ShoppingCart, User, Store, Globe } from "lucide-react";
+import { Home, ShoppingCart, User } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
+import { LanguageChip } from "@/components/shared/language-chip";
 
 const tabs = [
   { href: "/home", icon: Home, labelKey: "nav.home" },
@@ -15,16 +16,15 @@ const tabs = [
 export function SideNav() {
   const pathname = usePathname();
   const { count } = useCart();
-  const { lang, setLang, t } = useLanguage();
+  const { t } = useLanguage();
 
   return (
     <aside className="hidden md:flex fixed left-0 top-0 h-full w-56 lg:w-64 bg-white border-r border-gray-100 flex-col z-40 shadow-sm">
       {/* Brand */}
       <div className="px-6 py-6 border-b border-gray-100">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 bg-red-500 rounded-xl flex items-center justify-center shrink-0">
-            <Store className="w-5 h-5 text-white" />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/HLLCLOGO.png" alt="HLLC" className="h-9 w-auto object-contain shrink-0" />
           <div>
             <p className="font-black text-gray-900 text-base leading-tight">HLLC</p>
             <p className="text-[10px] text-gray-400 font-medium">{t("nav.store")}</p>
@@ -51,7 +51,7 @@ export function SideNav() {
               <div className="relative">
                 <Icon className="w-5 h-5" />
                 {showBadge && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-white text-red-500 text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none border border-red-100">
+                  <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 bg-white text-red-500 text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none border border-red-100">
                     {count > 9 ? "9+" : count}
                   </span>
                 )}
@@ -69,35 +69,7 @@ export function SideNav() {
 
       {/* Language Selector + Footer */}
       <div className="px-4 py-4 border-t border-gray-100 flex flex-col gap-3">
-        {/* Language switcher inside sidebar */}
-        <div className="flex items-center justify-between bg-gray-50 p-1 rounded-xl border border-gray-100">
-          <div className="flex items-center gap-1.5 text-gray-400 text-xs font-semibold pl-2">
-            <Globe className="w-3.5 h-3.5 text-gray-400" />
-            <span>EN/TH</span>
-          </div>
-          <div className="flex gap-0.5">
-            <button
-              onClick={() => setLang("th")}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all ${
-                lang === "th"
-                  ? "bg-white text-red-600 shadow-sm border border-gray-200/50"
-                  : "text-gray-400 hover:text-gray-700"
-              }`}
-            >
-              TH
-            </button>
-            <button
-              onClick={() => setLang("en")}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all ${
-                lang === "en"
-                  ? "bg-white text-red-600 shadow-sm border border-gray-200/50"
-                  : "text-gray-400 hover:text-gray-700"
-              }`}
-            >
-              EN
-            </button>
-          </div>
-        </div>
+        <LanguageChip />
 
         <div className="flex items-center gap-3 px-2">
           <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center shrink-0">

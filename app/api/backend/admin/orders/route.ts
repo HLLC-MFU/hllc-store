@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { requireAdmin } from "@/lib/backend/admin-auth";
 import { badRequest, ok } from "@/lib/backend/http";
 import {
   isOrderStatus,
@@ -6,6 +7,9 @@ import {
 } from "@/lib/backend/ecom-service";
 
 export async function GET(request: NextRequest) {
+  const authError = requireAdmin(request);
+  if (authError) return authError;
+
   const status = request.nextUrl.searchParams.get("status");
 
   try {

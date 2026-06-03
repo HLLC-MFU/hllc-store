@@ -1,5 +1,5 @@
 import { ObjectId, type Document } from "mongodb";
-import type { CreateProductInput, Product } from "@/lib/backend/types";
+import type { CreateProductInput, Product, LocalizedText } from "@/lib/backend/types";
 import { getProductCollection } from "./product-module";
 
 function assertText(value: unknown, field: string) {
@@ -8,6 +8,29 @@ function assertText(value: unknown, field: string) {
   }
 
   return value.trim();
+}
+
+function normalizeImageValue(value: unknown) {
+  if (typeof value !== "string") return "";
+  const imageUrl = value.trim();
+  if (!imageUrl) return "";
+
+  if (imageUrl.startsWith("data:")) {
+    if (!/^data:image\/(png|jpe?g|webp|gif);base64,/i.test(imageUrl)) {
+      throw new Error("imageUrl must be a PNG, JPG, WEBP, or GIF image");
+    }
+
+    if (imageUrl.length > 3_000_000) {
+      throw new Error("imageUrl is too large");
+    }
+  }
+
+  return imageUrl;
+}
+
+function normalizeOptionImageValue(value: unknown) {
+  if (value === undefined || value === null || value === "") return "";
+  return normalizeImageValue(value);
 }
 
 function assertNumber(value: unknown, field: string) {
@@ -46,7 +69,7 @@ function normalizeOptions(value: unknown) {
       .map((item) => {
         if (typeof item === "string") {
           const [label = "", imageUrl = ""] = item.split("|").map((part) => part.trim());
-          return label ? { label, imageUrl } : null;
+          return label ? { label, imageUrl: normalizeOptionImageValue(imageUrl) } : null;
         }
 
         if (item && typeof item === "object") {
@@ -66,7 +89,7 @@ function normalizeOptions(value: unknown) {
                 ? option.image.trim()
                 : "";
 
-          return label ? { label, imageUrl } : null;
+          return label ? { label, imageUrl: normalizeOptionImageValue(imageUrl) } : null;
         }
 
         return null;
@@ -81,7 +104,7 @@ function normalizeOptions(value: unknown) {
       .filter(Boolean)
       .map((item) => {
         const [label = "", imageUrl = ""] = item.split("|").map((part) => part.trim());
-        return { label, imageUrl };
+        return { label, imageUrl: normalizeOptionImageValue(imageUrl) };
       });
   }
 
@@ -89,16 +112,47 @@ function normalizeOptions(value: unknown) {
 }
 
 export function toProduct(doc: Document): Product {
+  const imageUrls: string[] = Array.isArray(doc.imageUrls)
+    ? doc.imageUrls.filter((u: unknown) => typeof u === "string" && u)
+    : [];
+
+  let nameObj: LocalizedText = { th: "" };
+  if (doc.name && typeof doc.name === "object") {
+    nameObj = {
+      th: doc.name.th || "",
+      en: doc.name.en || undefined,
+    };
+  } else {
+    nameObj = {
+      th: typeof doc.name === "string" ? doc.name : "",
+      en: typeof doc.nameEn === "string" ? doc.nameEn : undefined,
+    };
+  }
+
+  let descObj: LocalizedText = { th: "" };
+  if (doc.description && typeof doc.description === "object") {
+    descObj = {
+      th: doc.description.th || "",
+      en: doc.description.en || undefined,
+    };
+  } else {
+    descObj = {
+      th: typeof doc.description === "string" ? doc.description : "",
+      en: typeof doc.descriptionEn === "string" ? doc.descriptionEn : undefined,
+    };
+  }
+
   return {
     id: doc._id.toString(),
-    name: doc.name,
+    name: nameObj,
     slug: doc.slug,
-    description: doc.description ?? "",
+    description: descObj,
     price: Number(doc.price ?? 0),
     stock: Number(doc.stock ?? 0),
     category: doc.category ?? "",
     options: normalizeOptions(doc.options),
-    imageUrl: doc.imageUrl ?? "",
+    imageUrl: doc.imageUrl || imageUrls[0] || "",
+    imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
     active: doc.active ?? true,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
@@ -107,18 +161,27 @@ export function toProduct(doc: Document): Product {
 
 function buildCreateProduct(input: CreateProductInput) {
   const timestamp = now();
-  const name = assertText(input.name, "name");
+  const nameTh = assertText(input.name.th, "name.th");
+  const slug = createSlug(input.slug || nameTh) || `product-${Date.now()}`;
 
   return {
-    name,
-    slug: createSlug(input.slug || name),
-    description:
-      typeof input.description === "string" ? input.description.trim() : "",
+    name: {
+      th: nameTh,
+      en: typeof input.name.en === "string" ? input.name.en.trim() : "",
+    },
+    slug,
+    description: {
+      th: typeof input.description?.th === "string" ? input.description.th.trim() : "",
+      en: typeof input.description?.en === "string" ? input.description.en.trim() : "",
+    },
     price: assertNumber(input.price, "price"),
     stock: assertNumber(input.stock, "stock"),
     category: typeof input.category === "string" ? input.category.trim() : "",
     options: normalizeOptions(input.options),
-    imageUrl: typeof input.imageUrl === "string" ? input.imageUrl.trim() : "",
+    imageUrl: normalizeImageValue(input.imageUrl),
+    imageUrls: Array.isArray(input.imageUrls)
+      ? input.imageUrls.map((url) => normalizeImageValue(url)).filter(Boolean)
+      : [],
     active: input.active ?? true,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -158,15 +221,25 @@ export async function updateProduct(
   const updateData: Document = { updatedAt: now() };
 
   if (input.name !== undefined) {
-    updateData.name = assertText(input.name, "name");
-    updateData.slug = createSlug(input.slug || input.name);
+    if (input.name.th !== undefined) {
+      updateData["name.th"] = assertText(input.name.th, "name.th");
+      updateData.slug = createSlug(input.slug || input.name.th);
+    }
+    if (input.name.en !== undefined) {
+      updateData["name.en"] = typeof input.name.en === "string" ? input.name.en.trim() : "";
+    }
   } else if (input.slug !== undefined) {
     updateData.slug = createSlug(input.slug);
   }
 
   if (input.description !== undefined) {
-    updateData.description =
-      typeof input.description === "string" ? input.description.trim() : "";
+    if (input.description.th !== undefined) {
+      updateData["description.th"] =
+        typeof input.description.th === "string" ? input.description.th.trim() : "";
+    }
+    if (input.description.en !== undefined) {
+      updateData["description.en"] = typeof input.description.en === "string" ? input.description.en.trim() : "";
+    }
   }
 
   if (input.price !== undefined) {
@@ -187,8 +260,13 @@ export async function updateProduct(
   }
 
   if (input.imageUrl !== undefined) {
-    updateData.imageUrl =
-      typeof input.imageUrl === "string" ? input.imageUrl.trim() : "";
+    updateData.imageUrl = normalizeImageValue(input.imageUrl);
+  }
+
+  if (input.imageUrls !== undefined) {
+    updateData.imageUrls = Array.isArray(input.imageUrls)
+      ? input.imageUrls.map((url) => normalizeImageValue(url)).filter(Boolean)
+      : [];
   }
 
   if (input.active !== undefined) {
@@ -210,11 +288,33 @@ export async function updateProduct(
 
 export async function deleteProduct(productId: string) {
   const collection = await getProductCollection();
-  const result = await collection.deleteOne({ _id: assertObjectId(productId) });
+  const oid = assertObjectId(productId);
+
+  const result = await collection.deleteOne({ _id: oid });
 
   if (result.deletedCount === 0) {
     throw new Error("product not found");
   }
+
+  const { getDb } = await import("@/lib/backend/mongodb");
+  const db = await getDb();
+  const timestamp = new Date().toISOString();
+
+  await db.collection("orders").updateMany(
+    {
+      "items.productId": oid,
+      status: { $in: ["pending_payment", "payment_review"] },
+    },
+    {
+      $set: {
+        status: "cancelled",
+        cancellationReason: `สินค้า ${productId} ถูกลบออกจากระบบ`,
+        cancelledBy: "system",
+        cancelledAt: timestamp,
+        updatedAt: timestamp,
+      },
+    },
+  );
 
   return { success: true };
 }

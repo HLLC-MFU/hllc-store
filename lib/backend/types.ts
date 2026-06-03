@@ -9,16 +9,22 @@ export type OrderStatus =
 
 export type SlipStatus = "none" | "pending" | "approved" | "rejected";
 
+export type LocalizedText = {
+  th: string;
+  en?: string;
+};
+
 export type Product = {
   id: string;
-  name: string;
+  name: LocalizedText;
   slug: string;
-  description?: string;
+  description?: LocalizedText;
   price: number;
   stock: number;
   category?: string;
   options?: ProductOption[];
   imageUrl?: string;
+  imageUrls?: string[];
   active: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -46,13 +52,12 @@ export type CustomerInput = {
 export type PaymentSlipInput = {
   imageUrl: string;
   paidAt?: string;
-  amount?: number;
   note?: string;
 };
 
 export type OrderItem = {
   productId: string;
-  name: string;
+  name: LocalizedText;
   price: number;
   quantity: number;
   subtotal: number;
@@ -62,7 +67,6 @@ export type OrderItem = {
 export type PaymentSlip = {
   imageUrl: string;
   paidAt?: string;
-  amount?: number;
   note?: string;
   status: SlipStatus;
   reviewedBy?: string;
@@ -78,6 +82,8 @@ export type Order = {
   status: OrderStatus;
   slip: PaymentSlip;
   trackingNumber?: string;
+  cancellationReason?: string;
+  adminNotes?: { text: string; by: string; at: string; action: string }[];
   createdAt: string;
   updatedAt: string;
 };
@@ -88,14 +94,15 @@ export type CreateOrderInput = {
 };
 
 export type CreateProductInput = {
-  name: string;
+  name: LocalizedText;
   slug?: string;
-  description?: string;
+  description?: LocalizedText;
   price: number;
   stock: number;
   category?: string;
   options?: ProductOptionInput[] | string;
   imageUrl?: string;
+  imageUrls?: string[];
   active?: boolean;
 };
 

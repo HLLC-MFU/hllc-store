@@ -12,14 +12,26 @@ const TabsContext = React.createContext<TabsContextValue | null>(null);
 
 export function Tabs({
   defaultValue,
+  value: controlledValue,
+  onValueChange,
   className,
   children,
 }: {
-  defaultValue: string;
+  defaultValue?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
   className?: string;
   children: React.ReactNode;
 }) {
-  const [value, setValue] = React.useState(defaultValue);
+  const [internalValue, setInternalValue] = React.useState(defaultValue ?? "");
+
+  const isControlled = controlledValue !== undefined;
+  const value = isControlled ? controlledValue : internalValue;
+
+  const setValue = (v: string) => {
+    if (!isControlled) setInternalValue(v);
+    onValueChange?.(v);
+  };
 
   return (
     <TabsContext.Provider value={{ value, setValue }}>
@@ -60,6 +72,7 @@ export function TabsTrigger({
       )}
       onClick={() => context?.setValue(value)}
       type="button"
+      data-state={active ? "active" : "inactive"}
       {...props}
     />
   );
