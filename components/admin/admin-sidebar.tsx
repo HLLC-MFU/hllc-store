@@ -27,7 +27,7 @@ export function AdminSidebar({
     {
       key: "dashboard",
       icon: LayoutDashboard,
-      label: "หน้าหลัก",
+      label: t("admin.tab.dashboard"),
       count: null,
       badge: null,
     },

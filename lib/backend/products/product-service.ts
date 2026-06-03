@@ -1,5 +1,5 @@
 import { ObjectId, type Document } from "mongodb";
-import type { CreateProductInput, Product } from "@/lib/backend/types";
+import type { CreateProductInput, Product, LocalizedText } from "@/lib/backend/types";
 import { getProductCollection } from "./product-module";
 
 function assertText(value: unknown, field: string) {
@@ -116,11 +116,37 @@ export function toProduct(doc: Document): Product {
     ? doc.imageUrls.filter((u: unknown) => typeof u === "string" && u)
     : [];
 
+  let nameObj: LocalizedText = { th: "" };
+  if (doc.name && typeof doc.name === "object") {
+    nameObj = {
+      th: doc.name.th || "",
+      en: doc.name.en || undefined,
+    };
+  } else {
+    nameObj = {
+      th: typeof doc.name === "string" ? doc.name : "",
+      en: typeof doc.nameEn === "string" ? doc.nameEn : undefined,
+    };
+  }
+
+  let descObj: LocalizedText = { th: "" };
+  if (doc.description && typeof doc.description === "object") {
+    descObj = {
+      th: doc.description.th || "",
+      en: doc.description.en || undefined,
+    };
+  } else {
+    descObj = {
+      th: typeof doc.description === "string" ? doc.description : "",
+      en: typeof doc.descriptionEn === "string" ? doc.descriptionEn : undefined,
+    };
+  }
+
   return {
     id: doc._id.toString(),
-    name: doc.name,
+    name: nameObj,
     slug: doc.slug,
-    description: doc.description ?? "",
+    description: descObj,
     price: Number(doc.price ?? 0),
     stock: Number(doc.stock ?? 0),
     category: doc.category ?? "",
@@ -135,24 +161,27 @@ export function toProduct(doc: Document): Product {
 
 function buildCreateProduct(input: CreateProductInput) {
   const timestamp = now();
-  const name = assertText(input.name, "name");
-  const slug = createSlug(input.slug || name) || `product-${Date.now()}`;
-  const imageUrl = normalizeImageValue(input.imageUrl);
-  const imageUrls = Array.isArray(input.imageUrls)
-    ? input.imageUrls.map((url) => normalizeImageValue(url)).filter(Boolean)
-    : [];
+  const nameTh = assertText(input.name.th, "name.th");
+  const slug = createSlug(input.slug || nameTh) || `product-${Date.now()}`;
 
   return {
-    name,
+    name: {
+      th: nameTh,
+      en: typeof input.name.en === "string" ? input.name.en.trim() : "",
+    },
     slug,
-    description:
-      typeof input.description === "string" ? input.description.trim() : "",
+    description: {
+      th: typeof input.description?.th === "string" ? input.description.th.trim() : "",
+      en: typeof input.description?.en === "string" ? input.description.en.trim() : "",
+    },
     price: assertNumber(input.price, "price"),
     stock: assertNumber(input.stock, "stock"),
     category: typeof input.category === "string" ? input.category.trim() : "",
     options: normalizeOptions(input.options),
-    imageUrl,
-    imageUrls,
+    imageUrl: normalizeImageValue(input.imageUrl),
+    imageUrls: Array.isArray(input.imageUrls)
+      ? input.imageUrls.map((url) => normalizeImageValue(url)).filter(Boolean)
+      : [],
     active: input.active ?? true,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -192,15 +221,25 @@ export async function updateProduct(
   const updateData: Document = { updatedAt: now() };
 
   if (input.name !== undefined) {
-    updateData.name = assertText(input.name, "name");
-    updateData.slug = createSlug(input.slug || input.name);
+    if (input.name.th !== undefined) {
+      updateData["name.th"] = assertText(input.name.th, "name.th");
+      updateData.slug = createSlug(input.slug || input.name.th);
+    }
+    if (input.name.en !== undefined) {
+      updateData["name.en"] = typeof input.name.en === "string" ? input.name.en.trim() : "";
+    }
   } else if (input.slug !== undefined) {
     updateData.slug = createSlug(input.slug);
   }
 
   if (input.description !== undefined) {
-    updateData.description =
-      typeof input.description === "string" ? input.description.trim() : "";
+    if (input.description.th !== undefined) {
+      updateData["description.th"] =
+        typeof input.description.th === "string" ? input.description.th.trim() : "";
+    }
+    if (input.description.en !== undefined) {
+      updateData["description.en"] = typeof input.description.en === "string" ? input.description.en.trim() : "";
+    }
   }
 
   if (input.price !== undefined) {
@@ -226,7 +265,7 @@ export async function updateProduct(
 
   if (input.imageUrls !== undefined) {
     updateData.imageUrls = Array.isArray(input.imageUrls)
-      ? input.imageUrls.filter((u) => typeof u === "string" && u)
+      ? input.imageUrls.map((url) => normalizeImageValue(url)).filter(Boolean)
       : [];
   }
 

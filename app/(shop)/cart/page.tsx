@@ -32,12 +32,14 @@ type Order = {
   status: string;
 };
 
+const currencyFormatter = new Intl.NumberFormat("th-TH", {
+  style: "currency",
+  currency: "THB",
+  maximumFractionDigits: 0,
+});
+
 function money(value: number) {
-  return new Intl.NumberFormat("th-TH", {
-    style: "currency",
-    currency: "THB",
-    maximumFractionDigits: 0,
-  }).format(value);
+  return currencyFormatter.format(value);
 }
 
 function saveOrderLookup(orderId: string, phone: string) {
@@ -297,13 +299,15 @@ export default function CartPage() {
           <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-50">
             {item.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
+              <img src={item.imageUrl} alt={item.name[lang] || item.name.th} className="h-full w-full object-cover" />
             ) : (
               <ImageIcon className="h-7 w-7 text-gray-300" />
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-black text-gray-900">{item.name}</p>
+            <p className="truncate text-sm font-black text-gray-900">
+              {item.name[lang] || item.name.th}
+            </p>
             {item.selectedOption ? (
               <p className="mt-0.5 text-[10px] font-bold text-gray-400">{item.selectedOption}</p>
             ) : null}
@@ -570,7 +574,7 @@ export default function CartPage() {
             </p>
             <div className="mt-4 rounded-2xl bg-gray-50 p-3">
               <p className="truncate text-sm font-black text-gray-900">
-                {removeTarget.name}
+                {removeTarget.name[lang] || removeTarget.name.th}
               </p>
               <p className="mt-1 text-xs font-bold text-[#85241F]">
                 {money(removeTarget.price)} x {removeTarget.quantity}

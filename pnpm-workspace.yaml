@@ -1,6 +1,4 @@
 allowBuilds:
-  sharp: false
-  unrs-resolver: false
-ignoredBuiltDependencies:
-  - sharp
-  - unrs-resolver
+  "@tailwindcss/oxide": true
+  sharp: true
+  unrs-resolver: true

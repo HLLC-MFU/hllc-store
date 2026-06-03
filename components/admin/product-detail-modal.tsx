@@ -4,6 +4,7 @@ import * as React from "react";
 import { Image as ImageIcon, Package, Pencil, Trash2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/lib/language-context";
 import type { Product } from "./types";
 import { money } from "./utils";
 
@@ -13,6 +14,7 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
   onDelete: (id: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   const [confirmDelete, setConfirmDelete] = React.useState(false);
 
   const discountedPrice = product.discount
@@ -35,9 +37,9 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
       >
         {/* Image */}
         <div className="relative w-full aspect-video bg-gray-50 shrink-0">
-          {product.imageUrl ? (
+          {product.imageUrls && product.imageUrls[0] ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+            <img src={product.imageUrls[0]} alt={product.name.th} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <ImageIcon className="w-12 h-12 text-gray-200" />
@@ -58,14 +60,8 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
 
         {/* Content */}
         <div className="overflow-y-auto flex-1 p-5 flex flex-col gap-4">
-          {/* Name + category */}
           <div>
-            <h2 className="font-black text-gray-900 text-lg leading-tight">{product.name}</h2>
-            {product.category && (
-              <Badge variant="outline" className="mt-1.5 text-[10px] font-bold text-slate-500 bg-slate-50">
-                {product.category}
-              </Badge>
-            )}
+            <h2 className="font-black text-gray-900 text-lg leading-tight">{product.name.th}</h2>
           </div>
 
           {/* Price + stock */}
@@ -87,48 +83,30 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
           </div>
 
           {/* Description */}
-          {product.description && (
-            <p className="text-xs text-gray-500 leading-relaxed">{product.description}</p>
+          {product.description?.th && (
+            <p className="text-xs text-gray-500 leading-relaxed">{product.description.th}</p>
           )}
 
-          {/* Options */}
-          {product.options && product.options.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">ตัวเลือก</span>
-              <div className="flex flex-col gap-1.5">
-                {product.options.map((opt, idx) => (
-                  <div key={idx} className="flex items-center gap-2.5 bg-gray-50 rounded-xl px-3 py-2">
-                    {opt.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={opt.imageUrl} alt={opt.label} className="w-8 h-8 rounded-lg object-cover border border-gray-200 shrink-0" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 shrink-0" />
-                    )}
-                    <span className="text-xs font-bold text-gray-700">{opt.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+
 
           {/* Delete confirmation inline */}
           {confirmDelete ? (
             <div className="bg-red-50 border border-red-100 rounded-2xl p-4 flex flex-col gap-3">
-              <p className="text-sm font-bold text-red-700 text-center">ลบสินค้านี้ใช่ไหม?</p>
-              <p className="text-xs text-red-500 text-center">การลบไม่สามารถย้อนกลับได้</p>
+              <p className="text-sm font-bold text-red-700 text-center">{t("admin.products.edit.delete_modal_title")}</p>
+              <p className="text-xs text-red-500 text-center">{t("admin.products.edit.delete_modal_desc")}</p>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   onClick={() => setConfirmDelete(false)}
                   className="flex-1 rounded-xl h-9 text-xs font-bold cursor-pointer border-red-200 text-red-600 hover:bg-red-50"
                 >
-                  ยกเลิก
+                  {t("admin.products.edit.delete_modal_cancel")}
                 </Button>
                 <Button
                   onClick={handleDelete}
                   className="flex-1 rounded-xl h-9 text-xs font-bold bg-red-500 hover:bg-red-600 text-white cursor-pointer shadow-md shadow-red-500/20"
                 >
-                  ลบเลย
+                  {t("admin.products.edit.delete_modal_confirm")}
                 </Button>
               </div>
             </div>

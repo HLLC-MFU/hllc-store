@@ -1,11 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type CSSProperties, type MouseEvent, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Image as ImageIcon, ShoppingCart, X } from "lucide-react";
+import { useMemo, useRef, useState, type UIEvent } from "react";
+import { ChevronLeft, Image as ImageIcon, ShoppingBag, Truck } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
+
+export type LocalizedText = {
+  th: string;
+  en?: string;
+};
 
 export type ProductDetailOption = {
   label: string;
@@ -14,8 +18,8 @@ export type ProductDetailOption = {
 
 export type ProductDetailProduct = {
   id: string;
-  name: string;
-  description?: string;
+  name: LocalizedText;
+  description?: LocalizedText;
   price: number;
   stock: number;
   category?: string;
@@ -25,345 +29,232 @@ export type ProductDetailProduct = {
   shipping?: number;
 };
 
+const currencyFormatter = new Intl.NumberFormat("th-TH", {
+  style: "currency",
+  currency: "THB",
+  maximumFractionDigits: 0,
+});
+
 function money(value: number) {
-  return new Intl.NumberFormat("th-TH", {
-    style: "currency",
-    currency: "THB",
-    maximumFractionDigits: 0,
-  }).format(value);
+  return currencyFormatter.format(value);
 }
 
-type CartParticle = {
-  id: number;
-  x: number;
-  y: number;
-  size: number;
-  color: string;
-  liftX: number;
-  liftY: number;
-  midX: number;
-  midY: number;
-  endX: number;
-  endY: number;
-};
-
 export function ProductDetailView({ product }: { product: ProductDetailProduct }) {
-  const [imagePreview, setImagePreview] = useState<{ src: string; alt: string } | null>(null);
-  const [cartParticles, setCartParticles] = useState<CartParticle[]>([]);
-  const cartShortcutRef = useRef<HTMLAnchorElement>(null);
   const router = useRouter();
-  const { addItem, count } = useCart();
-  const { lang, setLang, t } = useLanguage();
+  const { addItem } = useCart();
+  const { lang } = useLanguage();
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedOption, setSelectedOption] = useState(product.options?.[0]?.label ?? "");
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const productName = product.name[lang] || product.name.th;
+  const productDescription = product.description?.[lang] || product.description?.th || "";
   const baseImage = product.imageUrl || product.imageUrls?.[0] || "";
-  const options = product.options?.length
-    ? product.options
-    : [{ label: "", imageUrl: baseImage }];
+  const optionItems = useMemo(
+    () => (product.options?.length ? product.options : [{ label: "", imageUrl: baseImage }]),
+    [baseImage, product.options],
+  );
+  const selectedVariant = optionItems.find((option) => option.label === selectedOption) ?? optionItems[0];
+  const images = useMemo(() => {
+    const allImages = [
+      selectedVariant?.imageUrl,
+      ...(product.imageUrls ?? []),
+      baseImage,
+    ].filter((src): src is string => Boolean(src));
 
-  useEffect(() => {
-    if (!imagePreview) return;
+    return Array.from(new Set(allImages));
+  }, [baseImage, product.imageUrls, selectedVariant?.imageUrl]);
 
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setImagePreview(null);
-      }
-    }
+  const shipping = product.shipping ?? 50;
+  const outOfStock = product.stock < 1;
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [imagePreview]);
-
-  function launchCartParticles(event: MouseEvent<HTMLButtonElement>) {
-    const sourceRect = event.currentTarget.getBoundingClientRect();
-    const targetRect = cartShortcutRef.current?.getBoundingClientRect();
-
-    if (!targetRect || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    const startX = sourceRect.left + sourceRect.width / 2;
-    const startY = sourceRect.top + sourceRect.height / 2;
-    const endX = targetRect.left + targetRect.width / 2 - startX;
-    const endY = targetRect.top + targetRect.height / 2 - startY;
-    const colors = ["#D9001B", "#F4B63D", "#85241F", "#FFFFFF"];
-
-    const nextParticles = Array.from({ length: 7 }, (_, index) => {
-      const liftX = (index - 3) * 6;
-      const liftY = -18 - (index % 3) * 5;
-      const wobble = (index % 2 === 0 ? 1 : -1) * (14 + index * 2);
-
-      return {
-        id: Date.now() + index,
-        x: startX + (index - 3) * 2,
-        y: startY + (index % 2 === 0 ? -2 : 2),
-        size: index === 3 ? 10 : 7,
-        color: colors[index % colors.length],
-        liftX,
-        liftY,
-        midX: endX * 0.54 + wobble,
-        midY: endY * 0.46 - 42 - index * 3,
-        endX,
-        endY,
-      };
-    });
-
-    setCartParticles((current) => [...current, ...nextParticles]);
-    window.setTimeout(() => {
-      setCartParticles((current) =>
-        current.filter((particle) => !nextParticles.some((next) => next.id === particle.id)),
-      );
-    }, 900);
-  }
-
-  function addProductToCart(variantOption?: string, goToCart = false, event?: MouseEvent<HTMLButtonElement>) {
-    const selectedVariant = product.options?.find((option) => option.label === variantOption);
-    const itemImage = selectedVariant?.imageUrl || baseImage;
-
-    if (!goToCart && event) {
-      launchCartParticles(event);
-    }
-
+  function addSelectedToCart() {
     addItem({
       productId: product.id,
       name: product.name,
-      description: product.description ?? "",
+      description: product.description,
       price: product.price,
       stock: product.stock,
-      imageUrl: itemImage,
-      selectedOption: variantOption ?? "",
+      imageUrl: selectedVariant?.imageUrl || images[0] || "",
+      selectedOption,
     });
+  }
 
-    if (goToCart) {
-      setImagePreview(null);
-      router.push("/cart");
+  function handleBuyNow() {
+    addSelectedToCart();
+    router.push("/cart");
+  }
+
+  function handleScroll(event: UIEvent<HTMLDivElement>) {
+    const container = event.currentTarget;
+    const index = Math.round(container.scrollLeft / container.clientWidth);
+    if (index !== currentIndex && index >= 0 && index < images.length) {
+      setCurrentIndex(index);
     }
   }
 
-  function openImagePreview(src: string, alt: string) {
-    if (!src) return;
-    setImagePreview({ src, alt });
+  function scrollToImage(index: number) {
+    setCurrentIndex(index);
+    scrollContainerRef.current?.scrollTo({
+      left: index * scrollContainerRef.current.clientWidth,
+      behavior: "smooth",
+    });
   }
 
-  const languageSwitch = (
-    <div className="flex h-11 items-center gap-1.5">
-      {(["th", "en"] as const).map((nextLang) => (
-        <button
-          key={nextLang}
-          type="button"
-          onClick={() => setLang(nextLang)}
-          className={`rounded-lg px-2.5 py-1 text-xs font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#85241F]/30 ${
-            lang === nextLang
-              ? "bg-[#85241F] text-white shadow-sm"
-              : "text-gray-400 hover:text-gray-700"
-          }`}
-        >
-          {nextLang.toUpperCase()}
-        </button>
-      ))}
-    </div>
-  );
-
-  const cartShortcut = (
-    <Link
-      ref={cartShortcutRef}
-      href="/cart"
-      className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1F2937] text-white shadow-md shadow-slate-900/20 ring-1 ring-slate-900/10 hover:bg-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F4B63D]/60"
-      aria-label={t("nav.cart")}
-    >
-      <ShoppingCart className="h-5 w-5" />
-      {count > 0 ? (
-        <span className="absolute -right-1.5 -top-1.5 min-w-6 rounded-full bg-[#F4B63D] px-1.5 text-center text-[11px] font-black leading-6 text-[#3B1F05] ring-2 ring-white">
-          {count > 99 ? "99+" : count}
-        </span>
-      ) : null}
-    </Link>
-  );
-
   return (
-    <main className="min-h-screen bg-white">
-      <header className="sticky top-0 z-40 border-b border-gray-100 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 items-center gap-3">
-            <Link
-              href="/home"
-              className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-200 sm:flex"
-              aria-label={lang === "th" ? "กลับหน้าสินค้า" : "Back to products"}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase text-gray-400">
-                {lang === "th" ? "เลือกซื้อ" : "Choose item"}
-              </p>
-              <h1 className="truncate text-sm font-black text-gray-950 sm:text-base">
-                {product.name}
-              </h1>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {cartShortcut}
-            {languageSwitch}
-            <Link
-              href="/home"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-200"
-              aria-label={lang === "th" ? "ปิด" : "Close"}
-            >
-              <X className="h-4 w-4" />
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-5 flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-black text-gray-950">
-              {product.options?.length
-                ? lang === "th" ? "เลือกประเภทสินค้า" : "Select product type"
-                : lang === "th" ? "รายละเอียดสินค้า" : "Product detail"}
-            </h2>
-            {product.description ? (
-              <p className="mt-1 text-xs font-semibold text-gray-400">{product.description}</p>
-            ) : null}
-          </div>
-          <span className="text-xs font-semibold text-gray-400">
-            ({options.length} {t("shop.items_count")})
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {options.map((option, index) => {
-            const optionImageUrl = option.imageUrl || baseImage;
-            const optionLabel = option.label || product.category || product.description || "";
-
-            return (
-              <article
-                key={`${option.label}-${index}`}
-                className="min-w-0 overflow-hidden rounded-2xl bg-white ring-1 ring-gray-100 transition-all hover:shadow-md hover:ring-[#85241F]/30"
-              >
-                <div className="block w-full text-left">
-                  <button
-                    type="button"
-                    onClick={() => openImagePreview(optionImageUrl, `${product.name} ${option.label}`.trim())}
-                    className="relative block aspect-square w-full cursor-zoom-in overflow-hidden bg-[#f7f7f7] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#85241F]/25"
-                    aria-label={lang === "th" ? "ดูรูปสินค้า" : "View product image"}
-                  >
-                    {optionImageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={optionImageUrl}
-                        alt={`${product.name} ${option.label}`.trim()}
-                        className="h-full w-full object-contain p-3"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-gray-300">
-                        <ImageIcon className="h-10 w-10" />
-                      </div>
-                    )}
-                    {product.stock < 1 ? (
-                      <span className="absolute bottom-2 right-2 rounded-lg bg-gray-900/80 px-1.5 py-0.5 text-[10px] font-black text-white shadow-sm">
-                        {t("shop.out_of_stock")}
-                      </span>
-                    ) : null}
-                  </button>
-                  <div className="px-2.5 py-2">
-                    <p className="line-clamp-2 min-h-9 text-xs font-black leading-snug text-gray-950">
-                      {product.name}
-                    </p>
-                    {optionLabel ? (
-                      <p className="mt-1 truncate text-[11px] font-semibold text-gray-500">
-                        {optionLabel}
-                      </p>
-                    ) : null}
-                    <p className="mt-1 text-sm font-black text-gray-950">
-                      {money(product.price)}
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-[minmax(0,1fr)_38px] gap-2 px-2.5 pb-2.5">
-                  <button
-                    type="button"
-                    onClick={() => addProductToCart(option.label, true)}
-                    disabled={product.stock < 1}
-                    className={`h-9 min-w-0 rounded-lg text-xs font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9001B]/30 ${
-                      product.stock < 1
-                        ? "bg-gray-100 text-gray-400"
-                        : "bg-[#D9001B] text-white hover:bg-[#B72D2A]"
-                    }`}
-                  >
-                    {lang === "th" ? "ซื้อสินค้า" : "Buy"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => addProductToCart(option.label, false, event)}
-                    disabled={product.stock < 1}
-                    className={`flex h-9 w-[38px] items-center justify-center rounded-full border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#85241F]/25 ${
-                      product.stock < 1
-                        ? "border-gray-200 bg-gray-50 text-gray-400"
-                        : "border-[#85241F] bg-white text-[#85241F] hover:bg-[#85241F]/6"
-                    }`}
-                    aria-label={lang === "th" ? "เพิ่มไปยังรถเข็น" : "Add to cart"}
-                  >
-                    <ShoppingCart className="h-4 w-4" />
-                  </button>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      {imagePreview ? (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-4"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setImagePreview(null)}
+    <div className="flex min-h-screen flex-col bg-white">
+      <div className="sticky top-0 z-10 flex h-12 items-center border-b border-gray-100 bg-white px-4">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="-ml-1 flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+          aria-label={lang === "th" ? "กลับ" : "Back"}
         >
-          <div
-            className="relative w-full max-w-3xl"
-            onClick={(event) => event.stopPropagation()}
-          >
+          <ChevronLeft className="h-5 w-5 text-gray-700" />
+        </button>
+      </div>
+
+      <div className="relative aspect-square w-full overflow-hidden bg-gray-50">
+        {images.length > 0 ? (
+          <>
+            <div
+              ref={scrollContainerRef}
+              onScroll={handleScroll}
+              className="scrollbar-none flex h-full w-full snap-x snap-mandatory overflow-x-auto scroll-smooth"
+            >
+              {images.map((src, index) => (
+                <div key={src} className="flex h-full w-full shrink-0 snap-center items-center justify-center bg-gray-50">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt={`${productName} ${index + 1}`} className="h-full w-full object-contain" />
+                </div>
+              ))}
+            </div>
+            {images.length > 1 ? (
+              <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex justify-center gap-1.5">
+                {images.map((_, index) => (
+                  <span
+                    key={index}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      index === currentIndex ? "w-4 bg-[#85241F]" : "w-1.5 bg-gray-300"
+                    }`}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gray-100">
+            <ImageIcon className="h-12 w-12 text-gray-300" />
+          </div>
+        )}
+      </div>
+
+      {images.length > 1 ? (
+        <div className="scrollbar-none flex gap-2 overflow-x-auto border-b border-gray-100 px-4 py-3">
+          {images.map((src, index) => (
+            <button
+              key={src}
+              type="button"
+              onClick={() => scrollToImage(index)}
+              className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${
+                index === currentIndex ? "border-[#85241F]" : "border-transparent opacity-50 hover:opacity-80"
+              }`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={src} alt={`${productName} ${index + 1}`} className="h-full w-full object-cover" />
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="flex flex-1 flex-col gap-4 px-4 pb-32 pt-4">
+        <div>
+          <p className="text-3xl font-black leading-none text-[#85241F]">{money(product.price)}</p>
+          <h1 className="mt-1.5 text-lg font-bold leading-snug text-gray-900">{productName}</h1>
+        </div>
+
+        {optionItems.some((option) => option.label) ? (
+          <>
+            <div className="border-t border-gray-100" />
+            <div>
+              <p className="mb-2 text-sm font-bold text-gray-900">
+                {lang === "th" ? "ตัวเลือกสินค้า" : "Product options"}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {optionItems.map((option) => {
+                  const active = selectedOption === option.label;
+                  return (
+                    <button
+                      key={option.label}
+                      type="button"
+                      onClick={() => setSelectedOption(option.label)}
+                      className={`flex min-w-0 items-center gap-2 rounded-xl border p-2 text-left transition-all ${
+                        active ? "border-[#85241F] bg-[#85241F]/5" : "border-gray-100 bg-white hover:border-gray-200"
+                      }`}
+                    >
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-50">
+                        {option.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={option.imageUrl} alt={option.label} className="h-full w-full object-cover" />
+                        ) : (
+                          <ImageIcon className="h-4 w-4 text-gray-300" />
+                        )}
+                      </span>
+                      <span className="truncate text-xs font-black text-gray-800">{option.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        ) : null}
+
+        <div className="border-t border-gray-100" />
+
+        <div className="flex items-center gap-2.5 text-sm text-gray-500">
+          <Truck className="h-4 w-4 shrink-0 text-gray-400" />
+          <span>{lang === "th" ? "ค่าจัดส่ง" : "Shipping"}</span>
+          <span className="ml-auto font-semibold text-gray-900">{money(shipping)}</span>
+        </div>
+
+        {productDescription ? (
+          <>
+            <div className="border-t border-gray-100" />
+            <div>
+              <p className="mb-1.5 text-sm font-bold text-gray-900">
+                {lang === "th" ? "รายละเอียด" : "Description"}
+              </p>
+              <p className="text-sm leading-relaxed text-gray-500">{productDescription}</p>
+            </div>
+          </>
+        ) : null}
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-gray-100 bg-white px-4 py-3">
+        {outOfStock ? (
+          <div className="w-full rounded-xl bg-gray-100 py-3.5 text-center text-sm font-bold text-gray-400">
+            {lang === "th" ? "สินค้าหมด" : "Out of Stock"}
+          </div>
+        ) : (
+          <div className="flex gap-2.5">
             <button
               type="button"
-              onClick={() => setImagePreview(null)}
-              className="absolute right-2 top-2 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-gray-600 shadow-lg hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-              aria-label={lang === "th" ? "ปิดรูป" : "Close image"}
+              onClick={addSelectedToCart}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#85241F] py-3 text-sm font-bold text-[#85241F] transition-transform active:scale-95"
             >
-              <X className="h-4 w-4" />
+              <ShoppingBag className="h-4 w-4" />
+              {lang === "th" ? "เพิ่มลงตะกร้า" : "Add to Cart"}
             </button>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={imagePreview.src}
-              alt={imagePreview.alt}
-              className="max-h-[84vh] w-full rounded-2xl bg-white object-contain p-2 shadow-2xl"
-            />
+            <button
+              type="button"
+              onClick={handleBuyNow}
+              className="flex flex-1 items-center justify-center rounded-xl bg-[#85241F] py-3 text-sm font-bold text-white transition-transform active:scale-95"
+            >
+              {lang === "th" ? "ซื้อเลย" : "Buy Now"}
+            </button>
           </div>
-        </div>
-      ) : null}
-
-      <div className="pointer-events-none fixed inset-0 z-[90] overflow-hidden">
-        {cartParticles.map((particle) => {
-          const particleStyle = {
-            left: particle.x,
-            top: particle.y,
-            width: particle.size,
-            height: particle.size,
-            backgroundColor: particle.color,
-            "--cart-fly-lift-x": `${particle.liftX}px`,
-            "--cart-fly-lift-y": `${particle.liftY}px`,
-            "--cart-fly-mid-x": `${particle.midX}px`,
-            "--cart-fly-mid-y": `${particle.midY}px`,
-            "--cart-fly-end-x": `${particle.endX}px`,
-            "--cart-fly-end-y": `${particle.endY}px`,
-          } as CSSProperties & Record<string, string | number>;
-
-          return (
-            <span
-              key={particle.id}
-              className="shop-cart-particle absolute -ml-1 -mt-1 rounded-full border border-white/70"
-              style={particleStyle}
-            />
-          );
-        })}
+        )}
       </div>
-    </main>
+    </div>
   );
 }

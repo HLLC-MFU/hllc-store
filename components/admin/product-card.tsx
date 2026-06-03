@@ -29,8 +29,8 @@ export function ProductCard({ product, onUpdate, onDelete, onEdit, t }: {
         className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-xs hover:shadow-md hover:border-gray-200/80 transition-all duration-200 flex flex-col group cursor-pointer"
       >
         <div className="relative aspect-square bg-gray-50 overflow-hidden">
-          {product.imageUrl
-            ? <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+          {product.imageUrls && product.imageUrls[0]
+            ? <img src={product.imageUrls[0]} alt={product.name.th} className="w-full h-full object-cover" />
             : <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-8 h-8 text-gray-300" /></div>}
           {product.discount ? (
             <Badge className="absolute top-2.5 left-2.5 bg-[#85241F] text-white text-[9px] font-black px-2 py-0.5 rounded-lg shadow-sm">
@@ -53,12 +53,8 @@ export function ProductCard({ product, onUpdate, onDelete, onEdit, t }: {
           </div>
         </div>
         <div className="p-3.5 flex-1 flex flex-col justify-between">
-          <p className="font-extrabold text-xs text-gray-800 truncate leading-tight">{product.name}</p>
-          {product.category ? (
-            <Badge variant="outline" className="mt-1 inline-flex w-fit items-center rounded-md bg-slate-50 px-1.5 py-0.5 text-[9px] font-bold text-slate-500">
-              {product.category}
-            </Badge>
-          ) : null}
+          <p className="font-extrabold text-xs text-gray-800 truncate leading-tight">{product.name.th}</p>
+
           <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
             <div>
               {discountedPrice ? (

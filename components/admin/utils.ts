@@ -1,7 +1,9 @@
 import type { Order } from "./types";
 
+const currencyFormatter = new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 });
+
 export function money(v: number) {
-  return new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 }).format(v);
+  return currencyFormatter.format(v);
 }
 
 export function timeAgo(iso: string, lang: "th" | "en") {

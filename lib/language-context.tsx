@@ -182,23 +182,37 @@ const DICTIONARY: TranslationDict = {
   "admin.toast.product_updated": { th: "อัปเดตข้อมูลสินค้าแล้ว", en: "Product updated successfully" },
   "admin.toast.product_deleted": { th: "ลบสินค้าออกจากระบบแล้ว", en: "Product deleted successfully" },
 
-  // Mock Products Translations
-  "product.mock-1.name": { th: "เสื้อกันฝน Classic", en: "Classic Raincoat" },
-  "product.mock-1.desc": { th: "กันน้ำ 100% เนื้อผ้าเบา มีฮูด ใส่ง่าย", en: "105% waterproof, lightweight fabric, has a hood, easy to wear" },
-  "product.mock-2.name": { th: "ร่มพับ Ultra Light", en: "Ultra Light Folding Umbrella" },
-  "product.mock-2.desc": { th: "พับ 3 ตอน น้ำหนักเพียง 280g กระทัดรัด", en: "3-section folding umbrella, weight only 280g, compact size" },
-  "product.mock-3.name": { th: "ชุดกันฝน Pro Set", en: "Pro Rain Suit Set" },
-  "product.mock-3.desc": { th: "เสื้อ + กางเกง กันน้ำ กันลม ครบชุด", en: "Jacket + Pants, waterproof, windproof, full set" },
-  "product.mock-4.name": { th: "ร่มกอล์ฟ XL", en: "Golf Umbrella XL" },
-  "product.mock-4.desc": { th: "เส้นผ่านศูนย์กลาง 130cm คุ้มแดดคุ้มฝน", en: "130cm diameter, excellent sun and rain protection" },
-  "product.mock-5.name": { th: "เสื้อกันฝน Reflective", en: "Reflective Raincoat" },
-  "product.mock-5.desc": { th: "ติดแถบสะท้อนแสง ปลอดภัยขับมอเตอร์ไซค์", en: "High-visibility reflective strip, safe for motorcycling" },
-  "product.mock-6.name": { th: "ปอนโช กันฝน", en: "Rain Poncho" },
-  "product.mock-6.desc": { th: "สวมทับได้ทันที เหมาะสำหรับปั่นจักรยาน", en: "Instant slip-on, suitable for cycling" },
-  "product.mock-7.name": { th: "รองเท้ากันน้ำ", en: "Waterproof Shoes" },
-  "product.mock-7.desc": { th: "วัสดุ EVA อย่างดี กันน้ำ 100% ทนทาน", en: "Premium EVA material, 100% waterproof, durable" },
-  "product.mock-8.name": { th: "หมวกกันฝน ปีกรอบ", en: "Wide Brim Rain Hat" },
-  "product.mock-8.desc": { th: "วัสดุกันน้ำ ปีกกว้างคุ้มแดดคุ้มฝน", en: "Waterproof material, wide brim for sun and rain protection" },
+  // Dashboard & Statistics
+  "admin.tab.dashboard": { th: "หน้าหลัก", en: "Dashboard" },
+  "admin.stats.revenue_desc": { th: "ยอดขายสะสม", en: "Accumulated sales" },
+  "admin.stats.total_orders": { th: "คำสั่งซื้อทั้งหมด", en: "Total Orders" },
+  "admin.stats.preparing": { th: "เตรียมจัดส่ง", en: "Preparing" },
+  "admin.stats.shipped": { th: "จัดส่งแล้ว", en: "Shipped" },
+  "admin.stats.view_all": { th: "ดูทั้งหมด {count} รายการ →", en: "View all {count} items →" },
+  "admin.orders.shipping_type": { th: "ประเภทการจัดส่ง", en: "Shipping Type" },
+  "admin.orders.shipping_all": { th: "ทั้งหมด", en: "All" },
+  "admin.orders.shipping_delivery": { th: "จัดส่ง", en: "Delivery" },
+  "admin.orders.shipping_pickup": { th: "รับเอง", en: "Pickup" },
+  "admin.orders.status_label": { th: "สถานะ", en: "Status" },
+
+  // Options & Delete Product Modal
+  "admin.products.options": { th: "ตัวเลือก", en: "Options" },
+  "admin.products.edit.delete_modal_title": { th: "ลบสินค้านี้ใช่ไหม?", en: "Delete this product?" },
+  "admin.products.edit.delete_modal_desc": { th: "การลบไม่สามารถย้อนกลับได้", en: "This action cannot be undone." },
+  "admin.products.edit.delete_modal_confirm": { th: "ลบเลย", en: "Delete" },
+  "admin.products.edit.delete_modal_cancel": { th: "ยกเลิก", en: "Cancel" },
+  "admin.products.label.name_th": { th: "ชื่อสินค้า (ภาษาไทย) *", en: "Product Name (Thai) *" },
+  "admin.products.label.name_en": { th: "ชื่อสินค้า (ภาษาอังกฤษ)", en: "Product Name (English)" },
+  "admin.products.label.description_th": { th: "คำอธิบายสินค้า (ภาษาไทย)", en: "Product Description (Thai)" },
+  "admin.products.label.description_en": { th: "คำอธิบายสินค้า (ภาษาอังกฤษ)", en: "Product Description (English)" },
+  "admin.products.label.price_label": { th: "ราคา (฿) *", en: "Price (฿) *" },
+  "admin.products.label.stock_label": { th: "สต็อกสินค้า *", en: "Stock Quantity *" },
+  "admin.products.edit.title": { th: "แก้ไขสินค้า", en: "Edit Product" },
+  "admin.products.image.primary": { th: "หลัก", en: "Primary" },
+  "admin.products.image.add": { th: "เพิ่ม", en: "Add" },
+  "admin.products.image.required": { th: "ต้องมีรูปอย่างน้อย 1 รูป", en: "At least 1 image is required" },
+  "admin.products.image.upload": { th: "อัปโหลดรูปสินค้า", en: "Upload product images" },
+  "admin.products.image.hint": { th: "สูงสุด {max} รูป · รูปแรก = รูปหลัก", en: "Max {max} images · First image = Primary" },
 };
 
 interface LanguageContextType {
@@ -247,8 +261,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   return (
     <LanguageContext.Provider value={{ lang, setLang, t }}>
-      {/* Provide an easy SSR fallback by just displaying children once mounting/hydration completes safely */}
-      {children}
+      {/* Provide an easy SSR fallback by just displaying children once mounting/hydration completes safely
+          Wrap with key={lang} to force re-render children cleanly on change, avoiding stale React click event states */}
+      <div key={lang}>{children}</div>
     </LanguageContext.Provider>
   );
 }
