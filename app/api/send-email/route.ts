@@ -16,7 +16,7 @@ function asString(value: unknown) {
 function sanitizeEmailError(error: unknown) {
   if (error instanceof Error) {
     if (/Username and Password not accepted|Invalid login|EAUTH/i.test(error.message)) {
-      return "Gmail authentication failed. Check GMAIL_USER and use a Gmail App Password, not your normal Gmail password.";
+      return "Email authentication failed. Check Gmail OAuth2, SMTP credentials, or Gmail App Password settings.";
     }
 
     return error.message;

@@ -14,27 +14,78 @@ export type EmailPayload = {
 
 let transporter: nodemailer.Transporter<SMTPTransport.SentMessageInfo> | null = null;
 
-function getRequiredEnv(name: "GMAIL_USER" | "GMAIL_APP_PASSWORD") {
-  const value = process.env[name]?.trim();
-  if (!value) {
-    throw new Error(`${name} is required. Set it in .env using a Gmail App Password.`);
-  }
-
-  return name === "GMAIL_APP_PASSWORD" ? value.replace(/\s/g, "") : value;
+function readEnv(name: string) {
+  return process.env[name]?.trim() ?? "";
 }
 
-function getEmailTransporter() {
+function getRequiredEnv(
+  name:
+    | "GMAIL_USER"
+    | "GMAIL_APP_PASSWORD"
+    | "GMAIL_OAUTH_CLIENT_ID"
+    | "GMAIL_OAUTH_CLIENT_SECRET"
+    | "GMAIL_OAUTH_REFRESH_TOKEN"
+    | "SMTP_HOST"
+    | "SMTP_USER"
+    | "SMTP_PASSWORD",
+) {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(`${name} is required for email delivery.`);
+  }
+
+  return name === "GMAIL_APP_PASSWORD" || name === "SMTP_PASSWORD" ? value.replace(/\s/g, "") : value;
+}
+
+function getSenderEmail() {
+  return readEnv("SMTP_FROM") || readEnv("SMTP_USER") || readEnv("GMAIL_USER");
+}
+
+function getEmailTransporter(): nodemailer.Transporter<SMTPTransport.SentMessageInfo> {
   if (transporter) return transporter;
 
-  transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: getRequiredEnv("GMAIL_USER"),
-      pass: getRequiredEnv("GMAIL_APP_PASSWORD"),
-    },
-  });
+  if (readEnv("GMAIL_OAUTH_CLIENT_ID")) {
+    transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        type: "OAuth2",
+        user: getRequiredEnv("GMAIL_USER"),
+        clientId: getRequiredEnv("GMAIL_OAUTH_CLIENT_ID"),
+        clientSecret: getRequiredEnv("GMAIL_OAUTH_CLIENT_SECRET"),
+        refreshToken: getRequiredEnv("GMAIL_OAUTH_REFRESH_TOKEN"),
+      },
+    });
 
-  return transporter;
+    return transporter;
+  }
+
+  if (readEnv("SMTP_HOST")) {
+    transporter = nodemailer.createTransport({
+      host: getRequiredEnv("SMTP_HOST"),
+      port: Number(readEnv("SMTP_PORT") || 587),
+      secure: readEnv("SMTP_SECURE") === "true",
+      auth: {
+        user: getRequiredEnv("SMTP_USER"),
+        pass: getRequiredEnv("SMTP_PASSWORD"),
+      },
+    });
+
+    return transporter;
+  }
+
+  if (readEnv("GMAIL_USER") || readEnv("GMAIL_APP_PASSWORD")) {
+    transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: getRequiredEnv("GMAIL_USER"),
+        pass: getRequiredEnv("GMAIL_APP_PASSWORD"),
+      },
+    });
+
+    return transporter;
+  }
+
+  throw new Error("Email provider is not configured. Set GMAIL_OAUTH_* values, SMTP_* values, or GMAIL_USER/GMAIL_APP_PASSWORD.");
 }
 
 export function validateEmailPayload(payload: EmailPayload) {
@@ -55,7 +106,7 @@ export async function sendEmail(payload: EmailPayload): Promise<void> {
   validateEmailPayload(payload);
 
   await getEmailTransporter().sendMail({
-    from: getRequiredEnv("GMAIL_USER"),
+    from: getSenderEmail(),
     to: payload.to,
     subject: payload.subject,
     text: payload.text,
