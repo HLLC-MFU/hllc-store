@@ -27,7 +27,7 @@ export type ProductOption = {
 
 export type Order = {
   id: string;
-  customer: { name: string; phone: string; address: string };
+  customer: { name: string; phone: string; email?: string; address: string };
   items: { productId: string; name: LocalizedText; price: number; quantity: number; subtotal: number }[];
   total: number;
   status: OrderStatus;

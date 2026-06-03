@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { safeParseWithLang, registerSchema } from "@/lib/schemas-i18n";
 
 export default function AdminRegisterPage() {
   const [message, setMessage] = useState("");
@@ -15,11 +16,15 @@ export default function AdminRegisterPage() {
     setLoading(true);
     setMessage("");
     const formData = new FormData(event.currentTarget);
-    const password = String(formData.get("password") ?? "");
-    const confirmPassword = String(formData.get("confirmPassword") ?? "");
+    const data = {
+      username: String(formData.get("username") ?? ""),
+      password: String(formData.get("password") ?? ""),
+      confirmPassword: String(formData.get("confirmPassword") ?? ""),
+    };
 
-    if (password !== confirmPassword) {
-      setMessage("รหัสผ่านไม่ตรงกัน");
+    const result = safeParseWithLang(registerSchema("th"), data, "th");
+    if (!result.success || !result.data) {
+      setMessage(result.error ?? "ข้อมูลไม่ถูกต้อง");
       setLoading(false);
       return;
     }
@@ -28,8 +33,8 @@ export default function AdminRegisterPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        username: String(formData.get("username") ?? "").trim(),
-        password,
+        username: result.data.username.trim(),
+        password: result.data.password,
       }),
     });
     const payload = await response.json();

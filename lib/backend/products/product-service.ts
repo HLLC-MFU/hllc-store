@@ -1,31 +1,24 @@
 import { ObjectId, type Document } from "mongodb";
+import { z } from "zod";
+import { createProductSchema, imageUrlSchema, parseOrThrow } from "@/lib/schemas";
 import type { CreateProductInput, Product, LocalizedText } from "@/lib/backend/types";
 import { getProductCollection } from "./product-module";
 
 function assertText(value: unknown, field: string) {
-  if (typeof value !== "string" || !value.trim()) {
-    throw new Error(`${field} is required`);
+  const result = z.string().min(1, { message: `${field} is required` }).safeParse(value);
+  if (!result.success) {
+    throw new Error(result.error.issues[0]?.message ?? `${field} is required`);
   }
-
-  return value.trim();
+  return result.data.trim();
 }
 
 function normalizeImageValue(value: unknown) {
-  if (typeof value !== "string") return "";
-  const imageUrl = value.trim();
-  if (!imageUrl) return "";
-
-  if (imageUrl.startsWith("data:")) {
-    if (!/^data:image\/(png|jpe?g|webp|gif);base64,/i.test(imageUrl)) {
-      throw new Error("imageUrl must be a PNG, JPG, WEBP, or GIF image");
-    }
-
-    if (imageUrl.length > 3_000_000) {
-      throw new Error("imageUrl is too large");
-    }
+  if (value === undefined || value === null || value === "") return "";
+  const result = imageUrlSchema.safeParse(value);
+  if (!result.success) {
+    throw new Error(result.error.issues[0]?.message ?? "imageUrl is invalid");
   }
-
-  return imageUrl;
+  return result.data;
 }
 
 function normalizeOptionImageValue(value: unknown) {
@@ -34,13 +27,11 @@ function normalizeOptionImageValue(value: unknown) {
 }
 
 function assertNumber(value: unknown, field: string) {
-  const numberValue = Number(value);
-
-  if (!Number.isFinite(numberValue) || numberValue < 0) {
-    throw new Error(`${field} must be a positive number`);
+  const result = z.coerce.number().finite().min(0, { message: `${field} must be a positive number` }).safeParse(value);
+  if (!result.success) {
+    throw new Error(result.error.issues[0]?.message ?? `${field} must be a positive number`);
   }
-
-  return numberValue;
+  return result.data;
 }
 
 function assertObjectId(id: string) {
@@ -161,22 +152,23 @@ export function toProduct(doc: Document): Product {
 
 function buildCreateProduct(input: CreateProductInput) {
   const timestamp = now();
-  const nameTh = assertText(input.name.th, "name.th");
-  const slug = createSlug(input.slug || nameTh) || `product-${Date.now()}`;
+  const parsed = parseOrThrow(createProductSchema, input);
+  const nameTh = parsed.name.th;
+  const slug = createSlug(parsed.slug || nameTh) || `product-${Date.now()}`;
 
   return {
     name: {
       th: nameTh,
-      en: typeof input.name.en === "string" ? input.name.en.trim() : "",
+      en: parsed.name.en ?? "",
     },
     slug,
     description: {
-      th: typeof input.description?.th === "string" ? input.description.th.trim() : "",
-      en: typeof input.description?.en === "string" ? input.description.en.trim() : "",
+      th: parsed.description?.th ?? "",
+      en: parsed.description?.en ?? "",
     },
-    price: assertNumber(input.price, "price"),
-    stock: assertNumber(input.stock, "stock"),
-    category: typeof input.category === "string" ? input.category.trim() : "",
+    price: parsed.price,
+    stock: parsed.stock,
+    category: parsed.category ?? "",
     options: normalizeOptions(input.options),
     imageUrl: normalizeImageValue(input.imageUrl),
     imageUrls: Array.isArray(input.imageUrls)

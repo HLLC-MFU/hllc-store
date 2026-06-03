@@ -17,7 +17,11 @@ export async function POST(request: NextRequest) {
   const response = await adminProductRouter.POST(request);
   const actor = getAdminIdentity(request);
   if (actor && response.ok) {
-    await writeAuditLog(actor, "product.created");
+    const payload = await response.clone().json().catch(() => null) as { data?: { id?: string; name?: { th?: string; en?: string } } } | null;
+    await writeAuditLog(actor, "product.created", {
+      productId: payload?.data?.id,
+      productName: payload?.data?.name?.th || payload?.data?.name?.en,
+    });
   }
 
   return response;

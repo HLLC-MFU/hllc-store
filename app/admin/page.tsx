@@ -20,6 +20,8 @@ import { api } from "@/components/admin/utils";
 import AddProductForm from "@/components/admin/add-product-form";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AppHeader } from "@/components/shared/app-header";
+import { EmailInput } from "@/components/shared/email-input";
+import { safeParseWithLang, emailPayloadSchema } from "@/lib/schemas-i18n";
 
 // Refactored modular components
 import { AdminLogin } from "@/components/admin/admin-login";
@@ -49,7 +51,9 @@ type AuditLog = {
   actorUsername: string;
   actorRole: AdminRole;
   action: string;
+  actionLabel?: string;
   metadata: Record<string, unknown>;
+  targetLabel?: string;
   createdAt: string;
 };
 
@@ -59,6 +63,23 @@ type EmailFormState = {
   text: string;
   html: string;
 };
+
+function metaText(metadata: Record<string, unknown>, key: string) {
+  const value = metadata[key];
+  return typeof value === "string" && value.trim() ? value.trim() : "";
+}
+
+function auditDetail(log: AuditLog) {
+  const parts = [
+    log.targetLabel ? `Target: ${log.targetLabel}` : "",
+    metaText(log.metadata, "status") ? `Status: ${metaText(log.metadata, "status")}` : "",
+    metaText(log.metadata, "reason") ? `Reason: ${metaText(log.metadata, "reason")}` : "",
+    metaText(log.metadata, "note") ? `Note: ${metaText(log.metadata, "note")}` : "",
+    metaText(log.metadata, "role") ? `Role: ${metaText(log.metadata, "role")}` : "",
+  ].filter(Boolean);
+
+  return parts.join(" | ");
+}
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = React.useState("dashboard");
@@ -361,6 +382,14 @@ export default function AdminPage() {
   async function sendMockEmail(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setEmailSending(true);
+
+    const validation = safeParseWithLang(emailPayloadSchema("th"), emailForm, "th");
+    if (!validation.success) {
+      notify(validation.error ?? "อีเมลไม่ถูกต้อง");
+      setEmailSending(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/send-email", {
         method: "POST",
@@ -510,11 +539,10 @@ export default function AdminPage() {
                     <form className="mt-5 flex flex-col gap-3" onSubmit={sendMockEmail}>
                       <label className="grid gap-1.5">
                         <span className="text-xs font-black text-gray-700">To</span>
-                        <Input
-                          type="email"
-                          required
+                        <EmailInput
                           value={emailForm.to}
-                          onChange={(event) => setEmailForm((form) => ({ ...form, to: event.target.value }))}
+                          onChange={(val) => setEmailForm((form) => ({ ...form, to: val }))}
+                          lang={lang}
                           placeholder="customer@example.com"
                           className="h-11 rounded-xl text-xs"
                         />
@@ -663,16 +691,20 @@ export default function AdminPage() {
                           <div key={log.id} className="rounded-xl border border-gray-100 px-3 py-2">
                             <div className="flex items-start justify-between gap-2">
                               <div>
-                                <p className="text-xs font-black text-gray-900">{log.action}</p>
-                                <p className="text-[10px] font-bold text-gray-400">{log.actorUsername} / {log.actorRole}</p>
+                                <p className="text-xs font-black text-gray-900">
+                                  {log.actorUsername} <span className="text-gray-400">did</span> {log.actionLabel ?? log.action}
+                                </p>
+                                <p className="text-[10px] font-bold text-gray-400">{log.actorRole}</p>
                               </div>
                               <span className="shrink-0 text-[10px] font-bold text-gray-400">
                                 {new Date(log.createdAt).toLocaleString("th-TH")}
                               </span>
                             </div>
-                            <pre className="mt-2 overflow-x-auto rounded-lg bg-gray-50 p-2 text-[10px] font-semibold text-gray-500">
-                              {JSON.stringify(log.metadata, null, 2)}
-                            </pre>
+                            {auditDetail(log) ? (
+                              <p className="mt-2 rounded-lg bg-gray-50 p-2 text-[10px] font-semibold text-gray-500">
+                                {auditDetail(log)}
+                              </p>
+                            ) : null}
                           </div>
                         ))}
                         {auditLogs.length === 0 ? (
