@@ -15,6 +15,7 @@ const DICTIONARY: TranslationDict = {
   // Navigation
   "nav.home": { th: "หน้าหลัก", en: "Home" },
   "nav.cart": { th: "ตะกร้า", en: "Cart" },
+  "nav.track_order": { th: "ติดตามคำสั่งซื้อ", en: "Track Order" },
   "nav.profile": { th: "โปรไฟล์", en: "Profile" },
   "nav.guest": { th: "ผู้ใช้ทั่วไป", en: "Guest User" },
   "nav.store": { th: "ร้านค้า", en: "Store" },

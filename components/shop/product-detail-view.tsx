@@ -5,7 +5,6 @@ import { useState, useRef, useCallback } from "react";
 import { ShoppingCart } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
-import { PageHeader } from "@/components/shop/page-header";
 
 export type LocalizedText = {
   th: string;
@@ -97,8 +96,6 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
           </span>
         </div>
       </div>
-      <PageHeader title={lang === "th" ? "รายละเอียดสินค้า" : "Product Details"} backHref="/home" />
-
       {/* Image Card */}
       <div className="rounded-2xl bg-gray-100 overflow-hidden">
         {images.length > 0 ? (
