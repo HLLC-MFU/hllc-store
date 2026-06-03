@@ -1,13 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { PackagePlus, Pencil, Upload, XCircle } from "lucide-react";
+import { PackagePlus, Pencil, Plus, Trash2, Upload, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useLanguage } from "@/lib/language-context";
 import type { Product } from "./types";
+
+type ProductOptionDraft = {
+  label: string;
+  imageUrl: string;
+};
 
 export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlledOpen, onClose, product }: {
   onSubmit: (fd: FormData) => void;
@@ -26,9 +31,16 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
 
   const [imagePreviews, setImagePreviews] = React.useState<string[]>(() => {
     if (product?.imageUrls && product.imageUrls.length > 0) return product.imageUrls;
+    if (product?.imageUrl) return [product.imageUrl];
     return [];
   });
   const [imageError, setImageError] = React.useState(false);
+  const [options, setOptions] = React.useState<ProductOptionDraft[]>(() =>
+    (product?.options ?? []).map((option) => ({
+      label: option.label,
+      imageUrl: option.imageUrl ?? "",
+    })),
+  );
 
   const fileRef = React.useRef<HTMLInputElement>(null);
   const formRef = React.useRef<HTMLFormElement>(null);
@@ -54,6 +66,42 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
     setImagePreviews((prev) => prev.filter((_, i) => i !== idx));
   }
 
+  function updateOption(index: number, patch: Partial<ProductOptionDraft>) {
+    setOptions((current) =>
+      current.map((option, optionIndex) =>
+        optionIndex === index ? { ...option, ...patch } : option,
+      ),
+    );
+  }
+
+  function addOption() {
+    setOptions((current) => [...current, { label: "", imageUrl: "" }]);
+  }
+
+  function removeOption(index: number) {
+    setOptions((current) => current.filter((_, optionIndex) => optionIndex !== index));
+  }
+
+  function handleOptionFile(index: number, file?: File) {
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = typeof event.target?.result === "string" ? event.target.result : "";
+      if (result) updateOption(index, { imageUrl: result });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function cleanOptions() {
+    return options
+      .map((option) => ({
+        label: option.label.trim(),
+        imageUrl: option.imageUrl.trim(),
+      }))
+      .filter((option) => option.label);
+  }
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (imagePreviews.length === 0) {
@@ -64,6 +112,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
     const fd = new FormData(e.currentTarget);
     if (imagePreviews[0]) fd.set("imageUrl", imagePreviews[0]);
     fd.set("imageUrls", JSON.stringify(imagePreviews));
+    fd.set("options", JSON.stringify(cleanOptions()));
 
     if (isEditMode && onUpdate && product) {
       onUpdate({
@@ -78,7 +127,10 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
           th: String(fd.get("description") ?? product.description?.th ?? "").trim(),
           en: String(fd.get("descriptionEn") ?? product.description?.en ?? "").trim() || undefined,
         },
+        category: String(fd.get("category") ?? product.category ?? "").trim() || undefined,
+        imageUrl: imagePreviews[0] ?? product.imageUrl,
         imageUrls: imagePreviews.length > 0 ? imagePreviews : undefined,
+        options: cleanOptions(),
       });
     } else {
       onSubmit(fd);
@@ -86,6 +138,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
 
     formRef.current?.reset();
     setImagePreviews([]);
+    setOptions([]);
     handleClose();
   }
 
@@ -174,7 +227,10 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.stock")}</Label>
                 <Input name="stock" type="number" min="0" required defaultValue={product?.stock ?? ""} placeholder={t("admin.products.placeholder.stock")} className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
-
+              <div className="col-span-2">
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">หมวดหมู่</Label>
+                <Input name="category" defaultValue={product?.category ?? ""} placeholder="เช่น เสื้อผ้า, รองเท้า" className="rounded-xl border-gray-200 text-xs h-10" />
+              </div>
               <div className="col-span-2">
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.description")}</Label>
                 <Textarea name="description" rows={2} defaultValue={product?.description?.th ?? ""} placeholder={t("admin.products.placeholder.description")} className="rounded-xl border-gray-200 text-xs resize-none" />
@@ -183,6 +239,55 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.description_en")}</Label>
                 <Textarea name="descriptionEn" rows={2} defaultValue={product?.description?.en ?? ""} placeholder={t("admin.products.placeholder.description_en")} className="rounded-xl border-gray-200 text-xs resize-none" />
               </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-gray-500">OPTIONS</Label>
+                <button
+                  type="button"
+                  onClick={addOption}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-dashed border-gray-200 px-3 text-[10px] font-black text-gray-500 transition-colors hover:border-[#85241F]/30 hover:text-[#85241F]"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  เพิ่มตัวเลือกสินค้า
+                </button>
+              </div>
+
+              {options.map((option, index) => (
+                <div key={index} className="grid grid-cols-[minmax(0,1fr)_3.5rem_2.5rem] items-center gap-2">
+                  <Input
+                    value={option.label}
+                    onChange={(event) => updateOption(index, { label: event.target.value })}
+                    placeholder="เช่น M, L, สีดำ"
+                    className="h-10 rounded-xl border-gray-200 text-xs"
+                  />
+                  <label className="flex h-14 cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-dashed border-gray-200 bg-gray-50">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => {
+                        handleOptionFile(index, event.target.files?.[0]);
+                        event.target.value = "";
+                      }}
+                    />
+                    {option.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={option.imageUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <Upload className="h-4 w-4 text-gray-400" />
+                    )}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => removeOption(index)}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-red-100 bg-red-50 text-red-400 transition-colors hover:bg-red-100"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
             </div>
 
             <Button type="submit" className="bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-11 w-full text-xs font-bold shadow-md shadow-[#85241F]/10 cursor-pointer transition-all active:scale-98">

@@ -20,6 +20,22 @@ function assertText(value: unknown, field: string) {
   return value.trim();
 }
 
+function assertImageValue(value: unknown, field: string) {
+  const imageUrl = assertText(value, field);
+
+  if (imageUrl.startsWith("data:")) {
+    if (!/^data:image\/(png|jpe?g|webp|gif);base64,/i.test(imageUrl)) {
+      throw new Error(`${field} must be a PNG, JPG, WEBP, or GIF image`);
+    }
+
+    if (imageUrl.length > 3_000_000) {
+      throw new Error(`${field} is too large`);
+    }
+  }
+
+  return imageUrl;
+}
+
 function assertNumber(value: unknown, field: string) {
   const numberValue = Number(value);
 
@@ -376,7 +392,7 @@ export async function attachPaymentSlip(orderId: string, input: PaymentSlipInput
   const db = await getDb();
   const timestamp = now();
   const slip = {
-    imageUrl: assertText(input.imageUrl, "imageUrl"),
+    imageUrl: assertImageValue(input.imageUrl, "imageUrl"),
     paidAt: input.paidAt,
     note: input.note,
     status: "pending",

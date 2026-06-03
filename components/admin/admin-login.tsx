@@ -9,27 +9,22 @@ import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/lib/language-context";
 
 type AdminLoginProps = {
-  onLoginSuccess: () => void;
+  onLogin: (form: HTMLFormElement) => Promise<boolean>;
+  loading?: boolean;
 };
 
-export function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
+export function AdminLogin({ onLogin, loading = false }: AdminLoginProps) {
   const [loginError, setLoginError] = React.useState("");
   const { t } = useLanguage();
 
-  const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
+  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const username = String(fd.get("username")).trim();
-    const password = String(fd.get("password")).trim();
-
-    if (username === "admin" && password === "password") {
-      sessionStorage.setItem("admin-logged-in", "true");
-      onLoginSuccess();
-    } else {
+    const ok = await onLogin(e.currentTarget);
+    if (!ok) {
       setLoginError(t("admin.login.error"));
       setTimeout(() => setLoginError(""), 3000);
     }
-  };
+  }
 
   return (
     <main
@@ -42,7 +37,7 @@ export function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
 
       {/* Card Container with glassmorphism */}
       <div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-4xl p-8 shadow-2xl flex flex-col gap-6 relative z-10 animate-in fade-in zoom-in-95 duration-500">
-        
+
         {/* Floating Language Switcher */}
         <div className="absolute top-4 right-4">
           <LanguageChip />
@@ -63,7 +58,7 @@ export function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
               name="username"
               type="text"
               required
-              defaultValue="admin"
+            defaultValue="adminae"
               className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#85241F] focus:ring-1 focus:ring-[#85241F] transition-all"
             />
           </div>
@@ -74,7 +69,7 @@ export function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
               name="password"
               type="password"
               required
-              defaultValue="password"
+            defaultValue="admin12315"
               className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#85241F] focus:ring-1 focus:ring-[#85241F] transition-all"
             />
           </div>
@@ -87,10 +82,14 @@ export function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
 
           <Button
             type="submit"
+            disabled={loading}
             className="w-full bg-linear-to-r from-[#85241F] to-[#b8332b] hover:opacity-95 text-white font-black py-3.5 px-4 rounded-2xl text-xs shadow-lg shadow-[#85241F]/20 active:scale-98 transition-all cursor-pointer mt-2"
           >
-            {t("admin.login.button")}
+            {loading ? "Loading..." : t("admin.login.button")}
           </Button>
+          <a href="/admin/register" className="text-center text-[10px] font-bold text-white/50 hover:text-white">
+            Set password for created admin account
+          </a>
         </form>
 
         <div className="text-center text-[9px] text-white/35 border-t border-white/5 pt-4 mt-2">

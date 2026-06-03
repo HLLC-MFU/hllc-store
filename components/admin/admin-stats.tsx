@@ -22,7 +22,7 @@ type AdminStatsProps = {
 
 export function AdminStats({ orders, pendingSlips, setActiveTab, t }: AdminStatsProps) {
   // Stats dashboard data aggregates
-  const statsRevenue = orders.reduce((sum, o) => 
+  const statsRevenue = orders.reduce((sum, o) =>
     ["packing", "shipped", "completed"].includes(o.status) ? sum + o.total : sum, 0
   );
   const statsPending = pendingSlips.length;

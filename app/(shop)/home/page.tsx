@@ -80,7 +80,7 @@ function apiToDisplay(product: ApiProduct): DisplayProduct {
 
 export default async function HomePage() {
   const rawProducts = await listStoreProducts();
-  
+
   // Transform products on server side
   const displayProducts = rawProducts
     .filter((p) => p.active !== false) // Only show active products
@@ -88,4 +88,3 @@ export default async function HomePage() {
 
   return <HomeClient products={displayProducts} />;
 }
-

@@ -10,6 +10,29 @@ function assertText(value: unknown, field: string) {
   return value.trim();
 }
 
+function normalizeImageValue(value: unknown) {
+  if (typeof value !== "string") return "";
+  const imageUrl = value.trim();
+  if (!imageUrl) return "";
+
+  if (imageUrl.startsWith("data:")) {
+    if (!/^data:image\/(png|jpe?g|webp|gif);base64,/i.test(imageUrl)) {
+      throw new Error("imageUrl must be a PNG, JPG, WEBP, or GIF image");
+    }
+
+    if (imageUrl.length > 3_000_000) {
+      throw new Error("imageUrl is too large");
+    }
+  }
+
+  return imageUrl;
+}
+
+function normalizeOptionImageValue(value: unknown) {
+  if (value === undefined || value === null || value === "") return "";
+  return normalizeImageValue(value);
+}
+
 function assertNumber(value: unknown, field: string) {
   const numberValue = Number(value);
 
@@ -46,7 +69,7 @@ function normalizeOptions(value: unknown) {
       .map((item) => {
         if (typeof item === "string") {
           const [label = "", imageUrl = ""] = item.split("|").map((part) => part.trim());
-          return label ? { label, imageUrl } : null;
+          return label ? { label, imageUrl: normalizeOptionImageValue(imageUrl) } : null;
         }
 
         if (item && typeof item === "object") {
@@ -66,7 +89,7 @@ function normalizeOptions(value: unknown) {
                 ? option.image.trim()
                 : "";
 
-          return label ? { label, imageUrl } : null;
+          return label ? { label, imageUrl: normalizeOptionImageValue(imageUrl) } : null;
         }
 
         return null;
@@ -81,7 +104,7 @@ function normalizeOptions(value: unknown) {
       .filter(Boolean)
       .map((item) => {
         const [label = "", imageUrl = ""] = item.split("|").map((part) => part.trim());
-        return { label, imageUrl };
+        return { label, imageUrl: normalizeOptionImageValue(imageUrl) };
       });
   }
 
@@ -155,8 +178,10 @@ function buildCreateProduct(input: CreateProductInput) {
     stock: assertNumber(input.stock, "stock"),
     category: typeof input.category === "string" ? input.category.trim() : "",
     options: normalizeOptions(input.options),
-    imageUrl: typeof input.imageUrl === "string" ? input.imageUrl.trim() : "",
-    imageUrls: Array.isArray(input.imageUrls) ? input.imageUrls.filter((u) => typeof u === "string" && u) : [],
+    imageUrl: normalizeImageValue(input.imageUrl),
+    imageUrls: Array.isArray(input.imageUrls)
+      ? input.imageUrls.map((url) => normalizeImageValue(url)).filter(Boolean)
+      : [],
     active: input.active ?? true,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -235,13 +260,12 @@ export async function updateProduct(
   }
 
   if (input.imageUrl !== undefined) {
-    updateData.imageUrl =
-      typeof input.imageUrl === "string" ? input.imageUrl.trim() : "";
+    updateData.imageUrl = normalizeImageValue(input.imageUrl);
   }
 
   if (input.imageUrls !== undefined) {
     updateData.imageUrls = Array.isArray(input.imageUrls)
-      ? input.imageUrls.filter((u) => typeof u === "string" && u)
+      ? input.imageUrls.map((url) => normalizeImageValue(url)).filter(Boolean)
       : [];
   }
 

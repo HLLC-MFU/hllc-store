@@ -6,16 +6,15 @@ import { Button } from "@/components/ui/button";
 import type { OrderStatus } from "@/components/admin/types";
 import { useLanguage } from "@/lib/language-context";
 
-
 type ConfirmationModalProps = {
   confirm: { orderId: string; approved: boolean; note?: string } | null;
   setConfirm: (val: null) => void;
   confirmApprove: () => Promise<void>;
-  
+
   statusConfirm: { orderId: string; status: OrderStatus } | null;
   setStatusConfirm: (val: null) => void;
   confirmStatusChange: () => void;
-  
+
   lightbox: string | null;
   setLightbox: (val: null) => void;
 };
