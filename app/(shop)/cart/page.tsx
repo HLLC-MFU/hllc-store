@@ -25,7 +25,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCart, type CartItem } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
-import { PageHeader } from "@/components/shop/page-header";
 import { EmailInput } from "@/components/shared/email-input";
 import { PhoneInput } from "@/components/shared/phone-input";
 import { safeParseWithLang, checkoutFormSchema, normalizePhone, normalizeEmail } from "@/lib/schemas-i18n";
@@ -352,14 +351,6 @@ export default function CartPage() {
       <div className="mx-auto max-w-5xl">
         {step !== "success" && (
           <>
-            <PageHeader
-              title={step === "payment"
-                ? lang === "th" ? "ชำระเงิน" : "Payment"
-                : step === "info"
-                  ? lang === "th" ? "ข้อมูลจัดส่ง" : "Delivery info"
-                  : lang === "th" ? "รถเข็น" : "My cart"}
-            />
-
             {/* Step Indicator */}
             <div className="mb-8 flex items-center justify-between max-w-xs mx-auto relative px-6 select-none">
               {/* Line Container */}

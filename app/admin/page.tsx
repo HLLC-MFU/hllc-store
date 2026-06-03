@@ -13,13 +13,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useLanguage } from "@/lib/language-context";
 import type { Order, OrderStatus, Product } from "@/components/admin/types";
 import { api } from "@/components/admin/utils";
 import AddProductForm from "@/components/admin/add-product-form";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
-import { AppHeader } from "@/components/shared/app-header";
+import { AppHeader, type NavItem } from "@/components/shared/app-header";
 import { EmailInput } from "@/components/shared/email-input";
 import { safeParseWithLang, emailPayloadSchema } from "@/lib/schemas-i18n";
 
@@ -441,55 +441,24 @@ export default function AdminPage() {
       />
 
       <div className="lg:hidden">
-        <AppHeader />
+        <AppHeader
+          showCart={false}
+          logoHref="/admin"
+          navItems={[
+            { label: t("admin.tab.dashboard"), icon: LayoutDashboard, onClick: () => setActiveTab("dashboard") },
+            { label: t("admin.tab.orders"),    icon: ClipboardList,   onClick: () => setActiveTab("orders"),   badge: pendingSlips.length },
+            { label: t("admin.tab.products"),  icon: Package,         onClick: () => setActiveTab("products") },
+            { label: "Email",                  icon: Mail,            onClick: () => setActiveTab("email") },
+            ...(currentUser?.role === "superAdmin"
+              ? [{ label: "SuperAdmin", icon: LayoutDashboard, onClick: () => setActiveTab("superAdmin") } as NavItem]
+              : []),
+          ]}
+        />
       </div>
 
-      <div className="lg:pl-56 xl:pl-64">
+      <div className="lg:pl-56 xl:pl-64 pt-14 lg:pt-0">
         <div className="max-w-240 mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={`lg:hidden w-full grid ${currentUser?.role === "superAdmin" ? "grid-cols-5" : "grid-cols-4"} bg-transparent h-auto gap-2 p-0`}>
-              <TabsTrigger
-                value="dashboard"
-                className="h-11 rounded-2xl font-bold text-xs gap-1.5 transition-all cursor-pointer border-2 border-gray-200 text-gray-900 bg-white data-[state=active]:border-[#85241F] data-[state=active]:text-[#85241F] data-[state=active]:shadow-sm"
-              >
-                <LayoutDashboard className="w-4 h-4" />
-                {t("admin.tab.dashboard")}
-              </TabsTrigger>
-              <TabsTrigger
-                value="orders"
-                className="h-11 rounded-2xl font-bold text-xs gap-1.5 transition-all cursor-pointer border-2 border-gray-200 text-gray-900 bg-white data-[state=active]:border-[#85241F] data-[state=active]:text-[#85241F] data-[state=active]:shadow-sm"
-              >
-                <ClipboardList className="w-4 h-4" />
-                {t("admin.tab.orders")}
-                {pendingSlips.length > 0 && (
-                  <span className="bg-orange-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full animate-pulse">
-                    {pendingSlips.length}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger
-                value="products"
-                className="h-11 rounded-2xl font-bold text-xs gap-1.5 transition-all cursor-pointer border-2 border-gray-200 text-gray-900 bg-white data-[state=active]:border-[#85241F] data-[state=active]:text-[#85241F] data-[state=active]:shadow-sm"
-              >
-                <Package className="w-4 h-4" />
-                {t("admin.tab.products")}
-              </TabsTrigger>
-              <TabsTrigger
-                value="email"
-                className="h-11 rounded-2xl font-bold text-xs gap-1.5 transition-all cursor-pointer border-2 border-gray-200 text-gray-900 bg-white data-[state=active]:border-[#85241F] data-[state=active]:text-[#85241F] data-[state=active]:shadow-sm"
-              >
-                <Mail className="w-4 h-4" />
-                Email
-              </TabsTrigger>
-              {currentUser?.role === "superAdmin" ? (
-                <TabsTrigger
-                  value="superAdmin"
-                  className="h-11 rounded-2xl font-bold text-xs gap-1.5 transition-all cursor-pointer border-2 border-gray-200 text-gray-900 bg-white data-[state=active]:border-[#85241F] data-[state=active]:text-[#85241F] data-[state=active]:shadow-sm"
-                >
-                  Super
-                </TabsTrigger>
-              ) : null}
-            </TabsList>
 
             <TabsContent value="dashboard" className="mt-5 animate-in fade-in duration-200">
               <AdminStats
