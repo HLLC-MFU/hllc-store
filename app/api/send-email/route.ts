@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendEmail, type EmailPayload } from "@/lib/backend/email-service";
+import { sendEmail } from "@/lib/backend/email-service";
 import { readLimitedJson } from "@/lib/backend/request-utils";
+import { emailPayloadSchema, parseOrThrow } from "@/lib/schemas";
 
 type SendEmailBody = {
   to?: unknown;
@@ -8,10 +9,6 @@ type SendEmailBody = {
   text?: unknown;
   html?: unknown;
 };
-
-function asString(value: unknown) {
-  return typeof value === "string" ? value : undefined;
-}
 
 function sanitizeEmailError(error: unknown) {
   if (error instanceof Error) {
@@ -28,12 +25,12 @@ function sanitizeEmailError(error: unknown) {
 export async function POST(request: NextRequest) {
   try {
     const body = await readLimitedJson<SendEmailBody>(request, 32_000);
-    const payload: EmailPayload = {
-      to: asString(body.to) ?? "",
-      subject: asString(body.subject) ?? "",
-      text: asString(body.text),
-      html: asString(body.html),
-    };
+    const payload = parseOrThrow(emailPayloadSchema, {
+      to: body.to,
+      subject: body.subject,
+      text: body.text,
+      html: body.html,
+    });
 
     await sendEmail(payload);
 

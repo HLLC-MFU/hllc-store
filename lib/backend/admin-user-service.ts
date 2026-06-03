@@ -1,6 +1,7 @@
 import "server-only";
 
 import { ObjectId, type Document } from "mongodb";
+import { z } from "zod";
 import {
   ADMIN_PASSWORD,
   ADMIN_USERNAME,
@@ -28,11 +29,11 @@ function now() {
 }
 
 function cleanUsername(username: unknown) {
-  if (typeof username !== "string" || !username.trim()) {
-    throw new Error("username is required");
+  const result = z.string().min(1, { message: "username is required" }).safeParse(username);
+  if (!result.success) {
+    throw new Error(result.error.issues[0]?.message ?? "username is required");
   }
-
-  return username.trim().toLowerCase();
+  return result.data.trim().toLowerCase();
 }
 
 function cleanRole(role: unknown): AdminRole {
@@ -136,14 +137,10 @@ export async function createAdminUser(input: { username?: unknown; role?: unknow
   return publicUser({ ...doc, _id: result.insertedId } as AdminUserDoc & Document);
 }
 
-export async function registerAdminPassword(input: { username?: unknown; password?: unknown }) {
+export async function registerAdminPassword(input: { username: string; password: string }) {
   await ensureDefaultSuperAdmin();
   const username = cleanUsername(input.username);
-  const password = typeof input.password === "string" ? input.password : "";
-
-  if (password.length < 8) {
-    throw new Error("password must be at least 8 characters");
-  }
+  const password = input.password;
 
   const db = await getDb();
   const existing = await db.collection<AdminUserDoc>("admin_users").findOne({ username, active: true });

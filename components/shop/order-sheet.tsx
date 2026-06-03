@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { CheckCircle2, ChevronLeft, Minus, Plus, Upload, X, Search } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import { EmailInput } from "@/components/shared/email-input";
+import { safeParseWithLang, orderSheetSchema, normalizePhone, normalizeEmail } from "@/lib/schemas-i18n";
+import type { Lang } from "@/lib/schemas-i18n";
 
 export type OrderProduct = {
   id: string;
@@ -346,73 +349,42 @@ export function OrderSheet({
 
   const total = product.price * qty;
 
-  function validationMessage() {
-    const isPickup = deliveryMode === "pickup";
-    const missing: string[] = [];
-    const invalid: string[] = [];
-
-    if (!email.trim()) {
-      missing.push("email");
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      invalid.push(lang === "th" ? "email ไม่ถูกต้อง" : "email is invalid");
-    }
-
-    if (isPickup) {
-      if (!pickupName.trim()) missing.push(lang === "th" ? "ชื่อผู้รับสินค้า" : "pickup name");
-      if (!pickupTime.trim()) missing.push(lang === "th" ? "เวลารับสินค้า" : "pickup time");
-      if (!pickupPhone.trim()) {
-        missing.push(lang === "th" ? "เบอร์โทรศัพท์" : "phone number");
-      } else if (pickupPhone.replace(/\D/g, "").length < 9) {
-        invalid.push(lang === "th" ? "เบอร์โทรศัพท์ต้องมีอย่างน้อย 9 หลัก" : "phone number must be at least 9 digits");
-      }
-    } else {
-      if (!firstName.trim()) missing.push(lang === "th" ? "ชื่อ" : "first name");
-      if (!lastName.trim()) missing.push(lang === "th" ? "นามสกุล" : "last name");
-      if (!streetAddress.trim()) missing.push(lang === "th" ? "ที่อยู่จัดส่ง" : "shipping address");
-      if (!district.trim()) missing.push(lang === "th" ? "เขต/อำเภอ" : "district");
-      if (!province) missing.push(lang === "th" ? "จังหวัด" : "province");
-
-      const trimmedPostalCode = postalCode.trim();
-      if (!trimmedPostalCode) {
-        missing.push(lang === "th" ? "รหัสไปรษณีย์" : "postal code");
-      } else if (trimmedPostalCode.length !== 5) {
-        invalid.push(lang === "th" ? "รหัสไปรษณีย์ต้องมี 5 หลัก" : "postal code must be 5 digits");
-      }
-
-      const rawPhone = phone.replace(/\D/g, "");
-      if (!phone.trim()) {
-        missing.push(lang === "th" ? "เบอร์โทรศัพท์" : "phone number");
-      } else if (rawPhone.length < 9) {
-        invalid.push(lang === "th" ? "เบอร์โทรศัพท์ต้องมีอย่างน้อย 9 หลัก" : "phone number must be at least 9 digits");
-      }
-    }
-
-    const messages: string[] = [];
-    if (missing.length) {
-      messages.push(
-        lang === "th"
-          ? `กรุณากรอก: ${missing.join(", ")}`
-          : `Please fill in: ${missing.join(", ")}`
-      );
-    }
-    messages.push(...invalid);
-
-    return messages.join(lang === "th" ? " • " : " • ");
-  }
-
   async function handleCreateOrder() {
     if (!product) return;
     const isPickup = deliveryMode === "pickup";
-    const formError = validationMessage();
-    if (formError) {
-      setError(formError);
+
+    const payload = isPickup
+      ? {
+          deliveryMode: "pickup" as const,
+          pickupName,
+          pickupTime,
+          pickupPhone: normalizePhone(pickupPhone),
+          email: normalizeEmail(email),
+        }
+      : {
+          deliveryMode: "delivery" as const,
+          firstName,
+          lastName,
+          streetAddress,
+          district,
+          province,
+          postalCode,
+          phone: normalizePhone(phone),
+          email: normalizeEmail(email),
+        };
+
+    const result = safeParseWithLang(orderSheetSchema(lang as Lang), payload, lang as Lang);
+    if (!result.success) {
+      const errors = Object.values(result.fieldErrors ?? {});
+      setError(errors.join(lang === "th" ? " • " : " • "));
       return;
     }
+
     setLoading(true);
     setError("");
     const fullName = isPickup ? pickupName.trim() : `${firstName.trim()} ${lastName.trim()}`;
-    const rawPhone = isPickup ? pickupPhone.replace(/\D/g, "") : phone.replace(/\D/g, "");
-    const normalizedEmail = email.trim().toLowerCase();
+    const rawPhone = isPickup ? normalizePhone(pickupPhone) : normalizePhone(phone);
+    const normalizedEmail = normalizeEmail(email);
     const fullAddress = isPickup
       ? `รับเองที่ D1 — เวลา ${pickupTime.trim()}`
       : `${streetAddress.trim()}, ${district.trim()}, ${province} ${postalCode.trim()}`;
@@ -672,13 +644,14 @@ export function OrderSheet({
                     type="tel" inputMode="tel"
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#85241F] transition-colors" />
                 </div>
-                <div>
-                  <label className="text-xs text-gray-400 mb-1 block font-semibold">{t("checkout.label.email")}</label>
-                  <input value={email} onChange={(e) => setEmail(e.target.value)}
-                    placeholder="customer@example.com"
-                    type="email"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#85241F] transition-colors" />
-                </div>
+                <EmailInput
+                  value={email}
+                  onChange={setEmail}
+                  lang={lang}
+                  label={t("checkout.label.email")}
+                  placeholder="customer@example.com"
+                  className="rounded-xl"
+                />
               </>
             )}
 
@@ -727,12 +700,14 @@ export function OrderSheet({
                     placeholder="099-999-9999" type="tel" inputMode="tel"
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#85241F] transition-colors" />
                 </div>
-                <div>
-                  <label className="text-xs text-gray-400 mb-1 block font-semibold">{t("checkout.label.email")}</label>
-                  <input value={email} onChange={(e) => setEmail(e.target.value)}
-                    placeholder="customer@example.com" type="email"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#85241F] transition-colors" />
-                </div>
+                <EmailInput
+                  value={email}
+                  onChange={setEmail}
+                  lang={lang}
+                  label={t("checkout.label.email")}
+                  placeholder="customer@example.com"
+                  className="rounded-xl"
+                />
                 <div className="border border-[#85241F]/30 bg-[#85241F]/4 rounded-2xl px-4 py-3 flex items-center justify-between mt-1">
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded-full bg-[#85241F] flex items-center justify-center shrink-0">

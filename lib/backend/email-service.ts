@@ -88,18 +88,10 @@ function getEmailTransporter(): nodemailer.Transporter<SMTPTransport.SentMessage
   throw new Error("Email provider is not configured. Set GMAIL_OAUTH_* values, SMTP_* values, or GMAIL_USER/GMAIL_APP_PASSWORD.");
 }
 
+import { emailPayloadSchema, parseOrThrow } from "@/lib/schemas";
+
 export function validateEmailPayload(payload: EmailPayload) {
-  if (!payload.to?.trim()) {
-    throw new Error("to is required");
-  }
-
-  if (!payload.subject?.trim()) {
-    throw new Error("subject is required");
-  }
-
-  if (!payload.text?.trim() && !payload.html?.trim()) {
-    throw new Error("text or html is required");
-  }
+  parseOrThrow(emailPayloadSchema, payload);
 }
 
 export async function sendEmail(payload: EmailPayload): Promise<void> {

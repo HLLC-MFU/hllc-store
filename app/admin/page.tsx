@@ -20,6 +20,7 @@ import { api } from "@/components/admin/utils";
 import AddProductForm from "@/components/admin/add-product-form";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AppHeader } from "@/components/shared/app-header";
+import { EmailInput } from "@/components/shared/email-input";
 
 // Refactored modular components
 import { AdminLogin } from "@/components/admin/admin-login";
@@ -529,11 +530,10 @@ export default function AdminPage() {
                     <form className="mt-5 flex flex-col gap-3" onSubmit={sendMockEmail}>
                       <label className="grid gap-1.5">
                         <span className="text-xs font-black text-gray-700">To</span>
-                        <Input
-                          type="email"
-                          required
+                        <EmailInput
                           value={emailForm.to}
-                          onChange={(event) => setEmailForm((form) => ({ ...form, to: event.target.value }))}
+                          onChange={(val) => setEmailForm((form) => ({ ...form, to: val }))}
+                          lang={lang}
                           placeholder="customer@example.com"
                           className="h-11 rounded-xl text-xs"
                         />
