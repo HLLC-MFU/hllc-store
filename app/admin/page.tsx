@@ -21,6 +21,7 @@ import AddProductForm from "@/components/admin/add-product-form";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AppHeader } from "@/components/shared/app-header";
 import { EmailInput } from "@/components/shared/email-input";
+import { safeParseWithLang, emailPayloadSchema } from "@/lib/schemas-i18n";
 
 // Refactored modular components
 import { AdminLogin } from "@/components/admin/admin-login";
@@ -381,6 +382,14 @@ export default function AdminPage() {
   async function sendMockEmail(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setEmailSending(true);
+
+    const validation = safeParseWithLang(emailPayloadSchema("th"), emailForm, "th");
+    if (!validation.success) {
+      notify(validation.error ?? "อีเมลไม่ถูกต้อง");
+      setEmailSending(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/send-email", {
         method: "POST",

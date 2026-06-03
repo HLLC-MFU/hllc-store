@@ -1,33 +1,32 @@
 "use client";
 
 import { useState, useCallback, forwardRef } from "react";
-import { Mail, AlertCircle } from "lucide-react";
-import { validateEmail } from "@/lib/validation";
+import { Phone, AlertCircle } from "lucide-react";
+import { validatePhone, normalizePhone } from "@/lib/schemas-i18n";
 import { cn } from "@/lib/utils";
 
-export interface EmailInputProps
+export interface PhoneInputProps
   extends Omit<
     React.InputHTMLAttributes<HTMLInputElement>,
     "type" | "onChange" | "value" | "defaultValue"
   > {
-  /** Controlled value */
   value: string;
-  /** Change handler receives the raw string */
   onChange: (value: string) => void;
-  /** Language for error messages */
   lang?: "th" | "en";
-  /** Show mail icon on the left */
   showIcon?: boolean;
-  /** Validate and show error on blur */
   validateOnBlur?: boolean;
-  /** External error (overrides internal validation) */
   error?: string;
-  /** Label text above the input */
   label?: string;
-  /** ref forwarded to the underlying <input> */
 }
 
-export const EmailInput = forwardRef<HTMLInputElement, EmailInputProps>(
+function formatPhoneDisplay(raw: string) {
+  const d = raw.replace(/\D/g, "").slice(0, 10);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}-${d.slice(3)}`;
+  return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+}
+
+export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
   (
     {
       value,
@@ -45,7 +44,7 @@ export const EmailInput = forwardRef<HTMLInputElement, EmailInputProps>(
   ) => {
     const [touched, setTouched] = useState(false);
 
-    const validationError = validateEmail(value, lang);
+    const validationError = validatePhone(value, lang);
     const visibleError = externalError || (touched ? validationError : "");
     const hasError = Boolean(visibleError);
 
@@ -66,17 +65,17 @@ export const EmailInput = forwardRef<HTMLInputElement, EmailInputProps>(
         )}
         <div className="relative">
           {showIcon && (
-            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           )}
           <input
             ref={ref}
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            value={value}
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            value={formatPhoneDisplay(value)}
             onChange={(e) => {
-              onChange(e.target.value);
-              // Clear external-style error as soon as user starts typing again
+              const digits = normalizePhone(e.target.value);
+              onChange(digits);
               if (externalError && touched) {
                 setTouched(false);
               }
@@ -84,10 +83,10 @@ export const EmailInput = forwardRef<HTMLInputElement, EmailInputProps>(
             onBlur={handleBlur}
             aria-invalid={hasError}
             className={cn(
-              "flex w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm outline-none transition-colors placeholder:text-gray-400 focus:border-[#85241F] focus:ring-2 focus:ring-[#85241F]/10",
+              "flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-400 focus:border-zinc-400 disabled:cursor-not-allowed disabled:opacity-50",
               showIcon && "pl-10",
               hasError
-                ? "border-red-300 bg-red-50/30 focus:border-red-400 focus:ring-red-100"
+                ? "border-red-300 bg-red-50/30 pr-10 focus:border-red-400"
                 : "",
               className
             )}
@@ -111,4 +110,4 @@ export const EmailInput = forwardRef<HTMLInputElement, EmailInputProps>(
   }
 );
 
-EmailInput.displayName = "EmailInput";
+PhoneInput.displayName = "PhoneInput";

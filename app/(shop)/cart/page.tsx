@@ -8,9 +8,16 @@ import {
   Check,
   ClipboardList,
   Copy,
+  Building2,
+  Hash,
+  Home,
+  MapPin,
   ShoppingCart,
+  Store,
   Trash2,
+  Truck,
   Upload,
+  User,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +27,7 @@ import { useCart, type CartItem } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
 import { PageHeader } from "@/components/shop/page-header";
 import { EmailInput } from "@/components/shared/email-input";
+import { PhoneInput } from "@/components/shared/phone-input";
 import { safeParseWithLang, checkoutFormSchema, normalizePhone, normalizeEmail } from "@/lib/schemas-i18n";
 import type { Lang } from "@/lib/schemas-i18n";
 import { SwipeableCartItem, itemKey, money } from "@/components/shop/cart/swipeable-cart-item";
@@ -79,7 +87,11 @@ export default function CartPage() {
     const key = itemKey(item);
     setSelectedIds(prev => {
       const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
       return next;
     });
   }, []);
@@ -97,6 +109,7 @@ export default function CartPage() {
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("delivery");
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const confirmRemoveText = useMemo(() => {
@@ -180,8 +193,8 @@ export default function CartPage() {
     const payload = {
       deliveryMode,
       name: String(raw.name ?? "").trim(),
-      phone: normalizePhone(String(raw.phone ?? "")),
-      email: normalizeEmail(String(raw.email ?? "")),
+      phone: normalizePhone(phone),
+      email: normalizeEmail(email),
       address: String(raw.address ?? "").trim(),
       district: String(raw.district ?? "").trim(),
       province: String(raw.province ?? "").trim(),
@@ -199,7 +212,7 @@ export default function CartPage() {
 
     pendingFormRef.current = formData;
     setShowConfirmModal(true);
-  }, [loading, items.length, deliveryMode, lang]);
+  }, [loading, items.length, deliveryMode, lang, phone, email]);
 
   const submitOrder = useCallback(async () => {
     if (loading) return;
@@ -542,26 +555,38 @@ export default function CartPage() {
                 <button
                   type="button"
                   onClick={() => setDeliveryMode("delivery")}
-                  className={`h-10 rounded-lg text-sm font-black transition-colors ${deliveryMode === "delivery"
+                  className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-black transition-colors ${deliveryMode === "delivery"
                     ? "bg-white text-[#85241F] shadow-sm"
                     : "text-gray-500"
                     }`}
                 >
+                  <Truck className="h-4 w-4" />
                   {lang === "th" ? "จัดส่ง" : "Delivery"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setDeliveryMode("pickup")}
-                  className={`h-10 rounded-lg text-sm font-black transition-colors ${deliveryMode === "pickup"
+                  className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-black transition-colors ${deliveryMode === "pickup"
                     ? "bg-white text-[#85241F] shadow-sm"
                     : "text-gray-500"
                     }`}
                 >
+                  <Store className="h-4 w-4" />
                   {lang === "th" ? "รับเอง" : "Pickup"}
                 </button>
               </div>
-              <Input name="name" placeholder={lang === "th" ? "ชื่อผู้รับ" : "Recipient name"} className="h-11 rounded-xl" />
-              <Input name="phone" placeholder={t("checkout.label.phone")} className="h-11 rounded-xl" />
+              <div className="relative">
+                <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Input name="name" placeholder={lang === "th" ? "ชื่อผู้รับ" : "Recipient name"} className="h-11 rounded-xl pl-10" />
+              </div>
+              <PhoneInput
+                name="phone"
+                value={phone}
+                onChange={setPhone}
+                lang={lang}
+                placeholder={t("checkout.label.phone")}
+                className="h-11 rounded-xl"
+              />
               <EmailInput
                 name="email"
                 value={email}
@@ -572,11 +597,23 @@ export default function CartPage() {
               />
               {deliveryMode === "delivery" ? (
                 <>
-                  <Textarea name="address" placeholder={t("checkout.label.address")} className="min-h-28 rounded-xl" />
+                  <div className="relative">
+                    <Home className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                    <Textarea name="address" placeholder={t("checkout.label.address")} className="min-h-28 rounded-xl pl-10" />
+                  </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <Input name="district" placeholder={lang === "th" ? "เขต/อำเภอ" : "District"} className="h-11 rounded-xl" />
-                    <Input name="province" placeholder={lang === "th" ? "จังหวัด" : "Province"} className="h-11 rounded-xl" />
-                    <Input name="postalCode" placeholder={lang === "th" ? "รหัสไปรษณีย์" : "Postal code"} className="h-11 rounded-xl" />
+                    <div className="relative">
+                      <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                      <Input name="district" placeholder={lang === "th" ? "เขต/อำเภอ" : "District"} className="h-11 rounded-xl pl-10" />
+                    </div>
+                    <div className="relative">
+                      <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                      <Input name="province" placeholder={lang === "th" ? "จังหวัด" : "Province"} className="h-11 rounded-xl pl-10" />
+                    </div>
+                    <div className="relative">
+                      <Hash className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                      <Input name="postalCode" placeholder={lang === "th" ? "รหัสไปรษณีย์" : "Postal code"} className="h-11 rounded-xl pl-10" />
+                    </div>
                   </div>
                 </>
               ) : (

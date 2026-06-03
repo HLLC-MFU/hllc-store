@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { CheckCircle2, ChevronLeft, Minus, Plus, Upload, X, Search } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 import { EmailInput } from "@/components/shared/email-input";
+import { PhoneInput } from "@/components/shared/phone-input";
 import { safeParseWithLang, orderSheetSchema, normalizePhone, normalizeEmail } from "@/lib/schemas-i18n";
 import type { Lang } from "@/lib/schemas-i18n";
 
@@ -637,13 +638,14 @@ export function OrderSheet({
                     placeholder={lang === "th" ? "เช่น 14:00 น." : "e.g. 2:00 PM"}
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#85241F] transition-colors" />
                 </div>
-                <div>
-                  <label className="text-xs text-gray-400 mb-1 block font-semibold">{t("checkout.label.phone")}</label>
-                  <input value={pickupPhone} onChange={(e) => setPickupPhone(formatPhone(e.target.value))}
-                    placeholder="099-999-9999"
-                    type="tel" inputMode="tel"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#85241F] transition-colors" />
-                </div>
+                <PhoneInput
+                  value={pickupPhone}
+                  onChange={setPickupPhone}
+                  lang={lang}
+                  label={t("checkout.label.phone")}
+                  placeholder="099-999-9999"
+                  className="rounded-xl"
+                />
                 <EmailInput
                   value={email}
                   onChange={setEmail}
@@ -694,12 +696,14 @@ export function OrderSheet({
                     placeholder="10110" inputMode="numeric"
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#85241F] transition-colors" />
                 </div>
-                <div>
-                  <label className="text-xs text-gray-400 mb-1 block font-semibold">{t("checkout.label.phone")}</label>
-                  <input value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))}
-                    placeholder="099-999-9999" type="tel" inputMode="tel"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#85241F] transition-colors" />
-                </div>
+                <PhoneInput
+                  value={phone}
+                  onChange={setPhone}
+                  lang={lang}
+                  label={t("checkout.label.phone")}
+                  placeholder="099-999-9999"
+                  className="rounded-xl"
+                />
                 <EmailInput
                   value={email}
                   onChange={setEmail}
