@@ -31,7 +31,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const emailPayload = body.approved
       ? slipApprovedEmail(customerName, orderId)
       : slipRejectedEmail(customerName, orderId, body.note);
-    void sendEmail(emailPayload);
+    if (emailPayload.to) {
+      void sendEmail(emailPayload).catch((error) => {
+        console.error("[EMAIL_ERROR]", error instanceof Error ? error.message : "failed to send email");
+      });
+    }
 
     return ok(order);
   } catch (error) {

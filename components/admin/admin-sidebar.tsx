@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, LayoutDashboard, Package, User } from "lucide-react";
+import { ClipboardList, LayoutDashboard, Mail, Package, User } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 import { LanguageChip } from "@/components/shared/language-chip";
 
@@ -43,6 +43,13 @@ export function AdminSidebar({
       icon: Package,
       label: t("admin.tab.products"),
       count: productCount,
+      badge: null,
+    },
+    {
+      key: "email",
+      icon: Mail,
+      label: "Email",
+      count: null,
       badge: null,
     },
     ...(isSuperAdmin

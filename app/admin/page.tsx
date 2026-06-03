@@ -4,9 +4,11 @@ import * as React from "react";
 import {
   ClipboardList,
   LayoutDashboard,
+  Mail,
   Package,
   PackagePlus,
   CheckCircle2,
+  Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,6 +53,13 @@ type AuditLog = {
   createdAt: string;
 };
 
+type EmailFormState = {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+};
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = React.useState("dashboard");
   const [orders, setOrders] = React.useState<Order[]>([]);
@@ -63,6 +72,13 @@ export default function AdminPage() {
   const [lightbox, setLightbox] = React.useState<string | null>(null);
   const [adminUsers, setAdminUsers] = React.useState<AdminUser[]>([]);
   const [auditLogs, setAuditLogs] = React.useState<AuditLog[]>([]);
+  const [emailForm, setEmailForm] = React.useState<EmailFormState>({
+    to: "",
+    subject: "HLLC Store order update",
+    text: "Hello, this is a test email from HLLC Store.",
+    html: "<p>Hello, this is a <strong>test email</strong> from HLLC Store.</p>",
+  });
+  const [emailSending, setEmailSending] = React.useState(false);
   const { lang, t } = useLanguage();
 
   const [loading, setLoading] = React.useState(false);
@@ -342,6 +358,30 @@ export default function AdminPage() {
     return <AdminLogin onLogin={handleLogin} loading={loginLoading} />;
   }
 
+  async function sendMockEmail(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setEmailSending(true);
+    try {
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(emailForm),
+      });
+      const payload = (await response.json()) as { message?: string };
+
+      if (!response.ok) {
+        notify(payload.message ?? "failed to send email");
+        return;
+      }
+
+      notify(payload.message ?? "email sent");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "failed to send email");
+    } finally {
+      setEmailSending(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f8fafc]">
       <ConfirmationModal
@@ -378,7 +418,7 @@ export default function AdminPage() {
       <div className="lg:pl-56 xl:pl-64">
         <div className="max-w-240 mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={`lg:hidden w-full grid ${currentUser?.role === "superAdmin" ? "grid-cols-4" : "grid-cols-3"} bg-transparent h-auto gap-2 p-0`}>
+            <TabsList className={`lg:hidden w-full grid ${currentUser?.role === "superAdmin" ? "grid-cols-5" : "grid-cols-4"} bg-transparent h-auto gap-2 p-0`}>
               <TabsTrigger
                 value="dashboard"
                 className="h-11 rounded-2xl font-bold text-xs gap-1.5 transition-all cursor-pointer border-2 border-gray-200 text-gray-900 bg-white data-[state=active]:border-[#85241F] data-[state=active]:text-[#85241F] data-[state=active]:shadow-sm"
@@ -404,6 +444,13 @@ export default function AdminPage() {
               >
                 <Package className="w-4 h-4" />
                 {t("admin.tab.products")}
+              </TabsTrigger>
+              <TabsTrigger
+                value="email"
+                className="h-11 rounded-2xl font-bold text-xs gap-1.5 transition-all cursor-pointer border-2 border-gray-200 text-gray-900 bg-white data-[state=active]:border-[#85241F] data-[state=active]:text-[#85241F] data-[state=active]:shadow-sm"
+              >
+                <Mail className="w-4 h-4" />
+                Email
               </TabsTrigger>
               {currentUser?.role === "superAdmin" ? (
                 <TabsTrigger
@@ -445,6 +492,113 @@ export default function AdminPage() {
                 lang={lang}
                 t={t}
               />
+            </TabsContent>
+            <TabsContent value="email" className="mt-4 animate-in fade-in duration-200">
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(360px,0.7fr)]">
+                <Card className="rounded-2xl border-gray-100 shadow-xs">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h2 className="text-sm font-black text-gray-900">Email Mockup</h2>
+                        <p className="mt-1 text-xs font-semibold text-gray-400">Send a Gmail test message from the admin panel.</p>
+                      </div>
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#85241F]/10 text-[#85241F]">
+                        <Mail className="h-5 w-5" />
+                      </div>
+                    </div>
+
+                    <form className="mt-5 flex flex-col gap-3" onSubmit={sendMockEmail}>
+                      <label className="grid gap-1.5">
+                        <span className="text-xs font-black text-gray-700">To</span>
+                        <Input
+                          type="email"
+                          required
+                          value={emailForm.to}
+                          onChange={(event) => setEmailForm((form) => ({ ...form, to: event.target.value }))}
+                          placeholder="customer@example.com"
+                          className="h-11 rounded-xl text-xs"
+                        />
+                      </label>
+
+                      <label className="grid gap-1.5">
+                        <span className="text-xs font-black text-gray-700">Subject</span>
+                        <Input
+                          required
+                          value={emailForm.subject}
+                          onChange={(event) => setEmailForm((form) => ({ ...form, subject: event.target.value }))}
+                          placeholder="Subject"
+                          className="h-11 rounded-xl text-xs"
+                        />
+                      </label>
+
+                      <label className="grid gap-1.5">
+                        <span className="text-xs font-black text-gray-700">Plain Text</span>
+                        <textarea
+                          value={emailForm.text}
+                          onChange={(event) => setEmailForm((form) => ({ ...form, text: event.target.value }))}
+                          placeholder="Email text"
+                          rows={5}
+                          className="min-h-28 rounded-xl border border-gray-200 bg-white px-3 py-3 text-xs font-semibold text-gray-700 outline-none transition-colors placeholder:text-gray-300 focus:border-[#85241F]"
+                        />
+                      </label>
+
+                      <label className="grid gap-1.5">
+                        <span className="text-xs font-black text-gray-700">HTML Optional</span>
+                        <textarea
+                          value={emailForm.html}
+                          onChange={(event) => setEmailForm((form) => ({ ...form, html: event.target.value }))}
+                          placeholder="<p>Email html</p>"
+                          rows={5}
+                          className="min-h-28 rounded-xl border border-gray-200 bg-white px-3 py-3 font-mono text-xs text-gray-700 outline-none transition-colors placeholder:text-gray-300 focus:border-[#85241F]"
+                        />
+                      </label>
+
+                      <Button
+                        disabled={emailSending}
+                        className="mt-2 h-11 rounded-xl bg-[#85241F] font-black hover:bg-[#B72D2A]"
+                      >
+                        <Send className="h-4 w-4" />
+                        {emailSending ? "Sending..." : "Send Test Email"}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-2xl border-gray-100 shadow-xs">
+                  <CardContent className="p-4">
+                    <h2 className="text-sm font-black text-gray-900">Preview</h2>
+                    <div className="mt-4 overflow-hidden rounded-2xl border border-gray-100 bg-white">
+                      <div className="border-b border-gray-100 bg-gray-50 px-4 py-3">
+                        <p className="truncate text-xs font-black text-gray-900">{emailForm.subject || "No subject"}</p>
+                        <p className="mt-1 truncate text-[10px] font-bold text-gray-400">To: {emailForm.to || "customer@example.com"}</p>
+                      </div>
+                      <div className="min-h-72 px-4 py-5">
+                        <div className="mx-auto max-w-sm rounded-2xl border border-gray-100">
+                          <div className="border-b border-gray-100 px-4 py-4">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src="/images/HLLCLOGO.png" alt="HLLC" className="h-12 w-auto object-contain" />
+                          </div>
+                          <div className="px-4 py-5">
+                            {emailForm.html.trim() ? (
+                              <div
+                                className="prose prose-sm max-w-none text-sm leading-relaxed text-gray-700"
+                                dangerouslySetInnerHTML={{ __html: emailForm.html }}
+                              />
+                            ) : (
+                              <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+                                {emailForm.text || "Email body preview"}
+                              </p>
+                            )}
+                          </div>
+                          <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
+                            <p className="text-[10px] font-bold text-gray-400">HLLC Store automated email mockup</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
             {currentUser?.role === "superAdmin" ? (
               <TabsContent value="superAdmin" className="mt-4 animate-in fade-in duration-200">
