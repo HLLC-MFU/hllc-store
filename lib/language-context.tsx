@@ -213,6 +213,12 @@ const DICTIONARY: TranslationDict = {
   "admin.products.image.required": { th: "ต้องมีรูปอย่างน้อย 1 รูป", en: "At least 1 image is required" },
   "admin.products.image.upload": { th: "อัปโหลดรูปสินค้า", en: "Upload product images" },
   "admin.products.image.hint": { th: "สูงสุด {max} รูป · รูปแรก = รูปหลัก", en: "Max {max} images · First image = Primary" },
+  "admin.products.placeholder.name": { th: "กรอกชื่อสินค้าภาษาไทย...", en: "Enter product name in Thai..." },
+  "admin.products.placeholder.name_en": { th: "กรอกชื่อสินค้าภาษาอังกฤษ...", en: "Enter product name in English..." },
+  "admin.products.placeholder.price": { th: "กรอกราคาสินค้า...", en: "Enter price..." },
+  "admin.products.placeholder.stock": { th: "กรอกจำนวนสต็อก...", en: "Enter stock quantity..." },
+  "admin.products.placeholder.description": { th: "กรอกรายละเอียดสินค้าภาษาไทย...", en: "Enter product description in Thai..." },
+  "admin.products.placeholder.description_en": { th: "กรอกรายละเอียดสินค้าภาษาอังกฤษ...", en: "Enter product description in English..." },
 };
 
 interface LanguageContextType {

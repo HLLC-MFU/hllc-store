@@ -103,7 +103,9 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
               ? <Pencil className="w-5 h-5 text-[#85241F]" />
               : <PackagePlus className="w-5 h-5 text-[#85241F]" />}
             <span className="font-black text-gray-900">
-              {isEditMode ? "แก้ไขสินค้า" : t("admin.products.add_title")}
+              {isEditMode
+              ? t("admin.products.edit.title")
+              : t("admin.products.add_title")}
             </span>
           </div>
           <Button variant="ghost" size="icon" onClick={handleClose} className="rounded-full h-8 w-8">
@@ -125,7 +127,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={src} alt="" className="w-full h-full object-cover rounded-xl border border-gray-200" />
                       {idx === 0 && (
-                        <span className="absolute top-1 left-1 bg-[#85241F] text-white text-[8px] font-black px-1.5 py-0.5 rounded-md">หลัก</span>
+                        <span className="absolute top-1 left-1 bg-[#85241F] text-white text-[8px] font-black px-1.5 py-0.5 rounded-md">{t("admin.products.image.primary")}</span>
                       )}
                       <button type="button" onClick={() => removeImage(idx)}
                         className="absolute top-1 right-1 w-6 h-6 bg-white rounded-full shadow flex items-center justify-center cursor-pointer">
@@ -137,7 +139,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                     <button type="button" onClick={() => fileRef.current?.click()}
                       className="aspect-square border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 hover:border-[#85241F]/30 transition-colors cursor-pointer">
                       <Upload className="w-4 h-4 text-gray-400" />
-                      <span className="text-[9px] text-gray-400 font-bold">เพิ่ม</span>
+                      <span className="text-[9px] text-gray-400 font-bold">{t("admin.products.image.add")}</span>
                     </button>
                   )}
                 </div>
@@ -147,9 +149,9 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                   className={`w-full border-2 border-dashed rounded-xl py-6 flex flex-col items-center gap-1.5 transition-colors cursor-pointer ${imageError ? "border-red-400 bg-red-50" : "border-gray-200 hover:border-[#85241F]/30"}`}>
                   <Upload className={`w-5 h-5 ${imageError ? "text-red-400" : "text-gray-400"}`} />
                   <span className={`text-xs font-bold ${imageError ? "text-red-500" : "text-gray-400"}`}>
-                    {imageError ? "ต้องมีรูปอย่างน้อย 1 รูป" : "อัปโหลดรูปสินค้า"}
+                    {imageError ? t("admin.products.image.required") : t("admin.products.image.upload")}
                   </span>
-                  <span className="text-[10px] text-gray-300">สูงสุด {MAX_IMAGES} รูป · รูปแรก = รูปหลัก</span>
+                  <span className="text-[10px] text-gray-300">{t("admin.products.image.hint", { max: MAX_IMAGES })}</span>
                 </button>
               )}
             </div>
@@ -158,34 +160,34 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.name")}</Label>
-                <Input name="name" required defaultValue={product?.name.th ?? ""} className="rounded-xl border-gray-200 text-xs h-10" />
+                <Input name="name" required defaultValue={product?.name.th ?? ""} placeholder={t("admin.products.placeholder.name")} className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
               <div className="col-span-2">
-                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">ชื่อสินค้า (English)</Label>
-                <Input name="nameEn" defaultValue={product?.name.en ?? ""} placeholder="Product Name in English" className="rounded-xl border-gray-200 text-xs h-10" />
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.name_en")}</Label>
+                <Input name="nameEn" defaultValue={product?.name.en ?? ""} placeholder={t("admin.products.placeholder.name_en")} className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
               <div>
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.price")}</Label>
-                <Input name="price" type="number" min="0" required defaultValue={product?.price ?? ""} className="rounded-xl border-gray-200 text-xs h-10" />
+                <Input name="price" type="number" min="0" required defaultValue={product?.price ?? ""} placeholder={t("admin.products.placeholder.price")} className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
               <div>
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.stock")}</Label>
-                <Input name="stock" type="number" min="0" required defaultValue={product?.stock ?? ""} className="rounded-xl border-gray-200 text-xs h-10" />
+                <Input name="stock" type="number" min="0" required defaultValue={product?.stock ?? ""} placeholder={t("admin.products.placeholder.stock")} className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
 
               <div className="col-span-2">
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.description")}</Label>
-                <Textarea name="description" rows={2} defaultValue={product?.description?.th ?? ""} className="rounded-xl border-gray-200 text-xs resize-none" />
+                <Textarea name="description" rows={2} defaultValue={product?.description?.th ?? ""} placeholder={t("admin.products.placeholder.description")} className="rounded-xl border-gray-200 text-xs resize-none" />
               </div>
               <div className="col-span-2">
-                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">รายละเอียดสินค้า (English)</Label>
-                <Textarea name="descriptionEn" rows={2} defaultValue={product?.description?.en ?? ""} placeholder="Product Description in English" className="rounded-xl border-gray-200 text-xs resize-none" />
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.description_en")}</Label>
+                <Textarea name="descriptionEn" rows={2} defaultValue={product?.description?.en ?? ""} placeholder={t("admin.products.placeholder.description_en")} className="rounded-xl border-gray-200 text-xs resize-none" />
               </div>
             </div>
 
             <Button type="submit" className="bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-11 w-full text-xs font-bold shadow-md shadow-[#85241F]/10 cursor-pointer transition-all active:scale-98">
               {isEditMode
-                ? <><Pencil className="w-4 h-4 mr-1" /> บันทึก</>
+                ? <><Pencil className="w-4 h-4 mr-1" /> {t("admin.products.edit.save")}</>
                 : <><PackagePlus className="w-4 h-4 mr-1" /> {t("admin.products.add_title")}</>}
             </Button>
           </form>
