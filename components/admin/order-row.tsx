@@ -88,7 +88,10 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
       </button>
 
       {open && (
-        <div className="border-t border-slate-100 p-4 bg-slate-50/20 flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200">
+        <div className="border-t border-slate-100 p-4 bg-slate-50/20 grid grid-cols-1 lg:grid-cols-2 gap-4 items-start animate-in slide-in-from-top-2 duration-200">
+
+          {/* LEFT COLUMN — order info */}
+          <div className="flex flex-col gap-4 min-w-0">
 
           {/* Admin Notes timeline */}
           {order.adminNotes && order.adminNotes.length > 0 && (
@@ -186,6 +189,10 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
               </div>
             </CardContent>
           </Card>
+          </div>
+
+          {/* RIGHT COLUMN — progress & actions */}
+          <div className="flex flex-col gap-4 min-w-0">
 
           {/* 3 — Stepper */}
           <Card className="rounded-2xl shadow-3xs">
@@ -392,6 +399,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
               </CardContent>
             </Card>
           )}
+          </div>
 
         </div>
       )}

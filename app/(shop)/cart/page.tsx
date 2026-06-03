@@ -12,7 +12,6 @@ import {
   Image as ImageIcon,
   Minus,
   Plus,
-  ShoppingCart,
   Trash2,
   Upload,
   X,
@@ -22,7 +21,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCart, type CartItem } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
-import { PageHeader } from "@/components/shop/page-header";
 import { TimeSelect } from "./components/TimeSelect";
 type Step = "cart" | "payment" | "info" | "success";
 type DeliveryMode = "delivery" | "pickup";
@@ -180,35 +178,37 @@ const SwipeableCartItem = memo(function SwipeableCartItem({
           )}
         </div>
 
-        {/* Details */}
-        <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 break-words text-sm font-black text-gray-900 leading-snug">
-            {item.name[lang] || item.name.th}
-          </p>
-          {item.selectedOption && (
-            <p className="mt-0.5 text-[10px] font-bold text-gray-400">{item.selectedOption}</p>
-          )}
-          <p className="mt-1 text-sm font-black text-[#85241F]">{money(item.price)}</p>
+        {/* Details + Qty */}
+        <div className="min-w-0 flex-1 flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="line-clamp-2 wrap-break-word text-base font-black text-gray-900 leading-snug">
+              {item.name[lang] || item.name.th}
+            </p>
+            {item.selectedOption && (
+              <p className="mt-0.5 text-[10px] font-bold text-gray-400">{item.selectedOption}</p>
+            )}
+            <p className="mt-1 text-base font-black text-[#85241F]">{money(item.price)}</p>
+          </div>
 
-          {/* Qty controls */}
-          <div className="mt-2 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          {/* Qty controls — right side */}
+          <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
               onClick={() => onDecrease(item)}
-              className="h-10 w-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 cursor-pointer"
+              className="h-9 w-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 cursor-pointer"
               aria-label={lang === "th" ? "ลดจำนวน" : "Decrease quantity"}
             >
-              <Minus className="h-4 w-4" />
+              <Minus className="h-3.5 w-3.5" />
             </button>
             <span className="w-6 text-center text-sm font-black text-gray-900">{item.quantity}</span>
             <button
               type="button"
               onClick={() => onIncrease(item)}
               disabled={item.stock !== undefined && item.quantity >= item.stock}
-              className="h-10 w-10 rounded-full bg-[#85241F] flex items-center justify-center text-white disabled:opacity-30 cursor-pointer"
+              className="h-9 w-9 rounded-full bg-[#85241F] flex items-center justify-center text-white disabled:opacity-30 cursor-pointer"
               aria-label={lang === "th" ? "เพิ่มจำนวน" : "Increase quantity"}
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
@@ -482,28 +482,6 @@ export default function CartPage() {
 
   const itemList = (
     <section className="space-y-3">
-      {!items.length ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-          <div className="w-20 h-20 rounded-3xl bg-gray-100 flex items-center justify-center">
-            <ShoppingCart className="w-9 h-9 text-gray-400" />
-          </div>
-          <div>
-            <p className="text-lg font-black text-gray-900">
-              {lang === "th" ? "รถเข็นว่างเปล่าเลย!" : "Your cart is empty!"}
-            </p>
-            <p className="mt-1 text-sm text-gray-400 font-medium">
-              {lang === "th" ? "ไปเลือกสินค้าที่ถูกใจก่อนนะ" : "Go pick something you like"}
-            </p>
-          </div>
-          <Link
-            href="/home"
-            className="mt-2 bg-[#85241F] hover:bg-[#B72D2A] text-white font-black text-sm px-6 py-3 rounded-2xl transition-all active:scale-95 shadow-md shadow-[#85241F]/20"
-          >
-            {lang === "th" ? "ไปเลือกสินค้า" : "Start shopping"}
-          </Link>
-        </div>
-      ) : null}
-
       {/* Select all header */}
       {items.length > 0 && (
         <div className="flex items-center justify-between mb-3">
@@ -548,16 +526,50 @@ export default function CartPage() {
   return (
     <main className="min-h-screen bg-white px-5 py-6 pb-24 lg:px-10">
       <div className="mx-auto max-w-5xl">
-        {step !== "success" && (
+        {step !== "success" && !items.length ? (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center">
+            {/* Cute bag illustration */}
+            <div className="relative">
+              <div className="w-28 h-28 rounded-4xl bg-[#85241F]/8 flex items-center justify-center">
+                <div className="w-20 h-20 rounded-3xl bg-[#85241F]/10 flex items-center justify-center">
+                  <svg viewBox="0 0 64 64" className="w-14 h-14" fill="none">
+                    {/* bag body */}
+                    <rect x="10" y="24" width="44" height="32" rx="8" fill="#85241F" opacity="0.15"/>
+                    <rect x="10" y="24" width="44" height="32" rx="8" stroke="#85241F" strokeWidth="2.5" fill="none"/>
+                    {/* bag handle */}
+                    <path d="M22 24 C22 16 42 16 42 24" stroke="#85241F" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+                    {/* smile */}
+                    <path d="M26 40 Q32 46 38 40" stroke="#85241F" strokeWidth="2" strokeLinecap="round" fill="none"/>
+                    {/* eyes */}
+                    <circle cx="26" cy="35" r="2" fill="#85241F"/>
+                    <circle cx="38" cy="35" r="2" fill="#85241F"/>
+                  </svg>
+                </div>
+              </div>
+              {/* sparkles */}
+              <span className="absolute -top-1 -right-1 text-xl">✨</span>
+              <span className="absolute bottom-0 -left-2 text-lg">🌸</span>
+            </div>
+
+            <div>
+              <p className="text-xl font-black text-gray-900">
+                {lang === "th" ? "ยังไม่มีสินค้าในรถเข็นเลย" : "Your cart is empty"}
+              </p>
+              <p className="mt-2 text-sm text-gray-400 font-medium">
+                {lang === "th" ? "ไปเลือกสินค้าที่ชอบก่อนนะ~" : "Go find something you love~"}
+              </p>
+            </div>
+
+            <Link
+              href="/home"
+              className="bg-[#85241F] hover:bg-[#B72D2A] text-white font-black text-sm px-8 py-3 rounded-2xl transition-all active:scale-95 shadow-md shadow-[#85241F]/20"
+            >
+              {lang === "th" ? "ไปเลือกสินค้า 🛍️" : "Start shopping 🛍️"}
+            </Link>
+          </div>
+        ) : step !== "success" && (
           <>
-            <PageHeader
-              title={step === "payment"
-                ? lang === "th" ? "ชำระเงิน" : "Payment"
-                : step === "info"
-                  ? lang === "th" ? "ข้อมูลจัดส่ง" : "Delivery info"
-                  : lang === "th" ? "รถเข็น" : "My cart"}
-            />
-            
+
             {/* Step Indicator */}
             <div className="mb-8 flex items-center justify-between max-w-xs mx-auto relative px-6 select-none">
               {/* Line Container */}
@@ -652,7 +664,7 @@ export default function CartPage() {
                     {receiptItems.map((item, idx) => (
                       <div key={idx} className="space-y-0.5">
                         <div className="flex justify-between items-start gap-4">
-                          <span className="break-words line-clamp-2">
+                          <span className="wrap-break-word line-clamp-2">
                             {item.name[lang] || item.name.th}
                           </span>
                           <span className="shrink-0 font-bold">

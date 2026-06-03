@@ -116,21 +116,8 @@ export function HomeClient({ products }: HomeClientProps) {
 
   return (
     <>
-      <div className="shop-page lg:hidden flex flex-col bg-white min-h-screen relative">
-        <div className="absolute right-5 top-6 z-30">
-          <LanguageChip />
-        </div>
-        <div className="pt-4 pb-4">
-          <div className="flex justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/images/HLLCLOGO.png"
-              alt="HLLC Logo"
-              className="shop-logo h-24 w-auto object-contain"
-            />
-          </div>
-        </div>
-        <div className="px-5 md:px-8 pb-8">
+      <div className="shop-page lg:hidden flex flex-col bg-white min-h-screen">
+        <div className="px-5 md:px-8 py-6 pb-8">
           {trackingEntry}
           {productGrid}
         </div>

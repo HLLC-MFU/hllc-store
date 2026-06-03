@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState, useRef, useCallback } from "react";
 import { ShoppingCart } from "lucide-react";
 import { useCart } from "@/lib/cart";
+import { useCartFly } from "@/lib/cart-fly";
 import { useLanguage } from "@/lib/language-context";
-import { PageHeader } from "@/components/shop/page-header";
 
 export type LocalizedText = {
   th: string;
@@ -35,7 +35,9 @@ function money(value: number) {
 export function ProductDetailView({ product }: { product: ProductDetailProduct }) {
   const router = useRouter();
   const { addItem } = useCart();
+  const { flyToCart } = useCartFly();
   const { lang } = useLanguage();
+  const addBtnRef = useRef<HTMLButtonElement>(null);
 
   const images = product.imageUrls ?? [];
 
@@ -66,6 +68,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         selectedOption: "",
       });
     }
+    if (addBtnRef.current) flyToCart(addBtnRef.current, images[0]);
     triggerToast();
   }
 
@@ -97,8 +100,6 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
           </span>
         </div>
       </div>
-      <PageHeader title={lang === "th" ? "รายละเอียดสินค้า" : "Product Details"} backHref="/home" />
-
       {/* Image Card */}
       <div className="rounded-2xl bg-gray-100 overflow-hidden">
         {images.length > 0 ? (
@@ -220,6 +221,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
 
             {/* Add to cart */}
             <button
+              ref={addBtnRef}
               type="button"
               onClick={handleAddToCart}
               className="flex items-center justify-center w-11 h-11 rounded-2xl bg-[#fce8e7] text-[#85241F] active:scale-95 transition-transform shrink-0"
