@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useRef } from "react";
-import { ChevronLeft, ShoppingBag, Truck } from "lucide-react";
+import { useState, useRef, useCallback } from "react";
+import { ShoppingCart, ShoppingBag } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
+import { PageHeader } from "@/components/shop/page-header";
 
 export type LocalizedText = {
   th: string;
@@ -39,21 +40,33 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   const images = product.imageUrls ?? [];
 
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const [expanded, setExpanded] = useState(false);
+  const [showToast, setShowToast] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
-  const shipping = product.shipping ?? 50;
   const outOfStock = product.stock < 1;
 
+  const triggerToast = useCallback(() => {
+    setShowToast(true);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setShowToast(false), 2000);
+  }, []);
+
   function handleAddToCart() {
-    addItem({
-      productId: product.id,
-      name: product.name,
-      description: product.description,
-      price: product.price,
-      stock: product.stock,
-      imageUrl: images[0] ?? "",
-      selectedOption: "",
-    });
+    for (let i = 0; i < quantity; i++) {
+      addItem({
+        productId: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        stock: product.stock,
+        imageUrl: images[0] ?? "",
+        selectedOption: "",
+      });
+    }
+    triggerToast();
   }
 
   function handleBuyNow() {
@@ -69,41 +82,37 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
     }
   };
 
-  const scrollToImage = (index: number) => {
-    setCurrentIndex(index);
-    const container = scrollContainerRef.current;
-    if (container) {
-      container.scrollTo({
-        left: index * container.clientWidth,
-        behavior: "smooth",
-      });
-    }
-  };
+  const descriptionText = product.description
+    ? product.description[lang] || product.description.th
+    : "";
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-100 flex items-center h-12 px-4">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="flex items-center justify-center w-8 h-8 -ml-1 rounded-full hover:bg-gray-100 transition-colors"
-        >
-          <ChevronLeft className="h-5 w-5 text-gray-700" />
-        </button>
+    <div className="min-h-screen bg-white px-5 py-6 pb-24 flex flex-col">
+      {/* Toast */}
+      <div className={`fixed inset-0 z-50 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${showToast ? "opacity-100" : "opacity-0"}`}>
+        <div className="flex items-center gap-3 bg-gray-900/90 text-white px-6 py-4 rounded-2xl shadow-xl">
+          <ShoppingCart className="h-5 w-5 text-green-400 shrink-0" />
+          <span className="text-sm font-semibold">
+            {lang === "th" ? `เพิ่มลงตะกร้าแล้ว ${quantity} ชิ้น` : `Added ${quantity} item${quantity > 1 ? "s" : ""} to cart`}
+          </span>
+        </div>
       </div>
+      <PageHeader title={lang === "th" ? "รายละเอียดสินค้า" : "Product Details"} backHref="/home" />
 
-      {/* Main image - Horizontal Scroll Gallery */}
-      <div className="relative w-full aspect-square bg-gray-50 overflow-hidden">
+      {/* Image Card */}
+      <div className="rounded-2xl bg-gray-100 overflow-hidden">
         {images.length > 0 ? (
-          <>
+          <div className="relative aspect-square">
             <div
               ref={scrollContainerRef}
               onScroll={handleScroll}
               className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none"
             >
               {images.map((src, i) => (
-                <div key={i} className="w-full h-full shrink-0 snap-center flex items-center justify-center bg-gray-50">
+                <div
+                  key={i}
+                  className="w-full h-full shrink-0 snap-center flex items-center justify-center"
+                >
                   <img
                     src={src}
                     alt={`${product.name[lang] || product.name.th} ${i + 1}`}
@@ -112,104 +121,117 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                 </div>
               ))}
             </div>
-            {/* Dot indicators overlay */}
             {images.length > 1 && (
-              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-10 pointer-events-none">
-                {images.map((_, i) => (
-                  <span
-                    key={i}
-                    className={`h-1.5 rounded-full transition-all duration-300 ${
-                      i === currentIndex ? "w-4 bg-[#85241F]" : "w-1.5 bg-gray-300"
-                    }`}
-                  />
-                ))}
+              <div className="absolute bottom-3 right-3 bg-black/40 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+                {currentIndex + 1}/{images.length}
               </div>
             )}
-          </>
+          </div>
         ) : (
-          <div className="w-full h-full bg-gray-100 flex items-center justify-center" />
+          <div className="aspect-square bg-gray-100" />
         )}
       </div>
 
-      {/* Thumbnail strip */}
-      {images.length > 1 && (
-        <div className="flex gap-2 px-4 py-3 overflow-x-auto scrollbar-none border-b border-gray-100">
-          {images.map((src, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => scrollToImage(i)}
-              className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
-                i === currentIndex
-                  ? "border-[#85241F]"
-                  : "border-transparent opacity-50 hover:opacity-80"
-              }`}
-            >
-              <img src={src} alt={`${product.name} ${i + 1}`} className="w-full h-full object-cover" />
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Info section */}
-      <div className="flex-1 px-4 pt-4 pb-28 flex flex-col gap-4">
-        {/* Price + Name */}
-        <div>
-          <p className="text-3xl font-black text-[#85241F] leading-none">
-            {money(product.price)}
-          </p>
-          <h1 className="mt-1.5 text-lg font-bold text-gray-900 leading-snug">
+      <div className="flex-1 pt-4 flex flex-col gap-3">
+
+        {/* Card: Name + Price */}
+        <div className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100 flex items-center justify-between gap-3">
+          <h1 className="flex-1 min-w-0 text-base font-bold text-gray-900 leading-snug">
             {product.name[lang] || product.name.th}
           </h1>
+          <p className="shrink-0 text-lg font-black text-[#85241F]">
+            {money(product.price)}
+          </p>
         </div>
 
-        <div className="border-t border-gray-100" />
-
-        {/* Shipping row */}
-        <div className="flex flex-col gap-2.5">
-          <div className="flex items-center gap-2.5 text-sm text-gray-500">
-            <Truck className="h-4 w-4 shrink-0 text-gray-400" />
-            <span>{lang === "th" ? "ค่าจัดส่ง" : "Shipping"}</span>
-            <span className="ml-auto font-semibold text-gray-900">{money(shipping)}</span>
+        {/* Card: Quantity */}
+        <div className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100 flex items-center justify-between">
+          <span className="text-sm font-semibold text-gray-700">
+            {lang === "th" ? "จำนวน" : "Quantity"}
+          </span>
+          <div className="flex items-center gap-5">
+            <button
+              type="button"
+              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+              className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors text-lg leading-none"
+            >
+              −
+            </button>
+            <span className="w-4 text-center text-base font-bold text-gray-900">
+              {quantity}
+            </span>
+            <button
+              type="button"
+              onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
+              className="w-8 h-8 rounded-full bg-[#85241F] flex items-center justify-center text-white hover:bg-[#6b1c18] transition-colors text-lg leading-none"
+            >
+              +
+            </button>
           </div>
         </div>
 
-        {/* Description */}
-        {product.description && (product.description[lang] || product.description.th) && (
-          <>
-            <div className="border-t border-gray-100" />
-            <div>
-              <p className="text-sm font-bold text-gray-900 mb-1.5">
-                {lang === "th" ? "รายละเอียด" : "Description"}
-              </p>
-              <p className="text-sm leading-relaxed text-gray-500">
-                {product.description[lang] || product.description.th}
-              </p>
-            </div>
-          </>
+        {/* Card: Description */}
+        {descriptionText && (
+          <div className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100">
+            <p className="text-sm font-bold text-gray-900 mb-2">
+              {lang === "th" ? "รายละเอียด" : "Description"}
+            </p>
+            <p className="text-sm leading-relaxed text-gray-500">
+              {expanded ? descriptionText : descriptionText.slice(0, 120)}
+              {!expanded && descriptionText.length > 120 && (
+                <>
+                  {"... "}
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(true)}
+                    className="text-[#85241F] font-semibold hover:underline"
+                  >
+                    {lang === "th" ? "อ่านเพิ่มเติม" : "Learn More"}
+                  </button>
+                </>
+              )}
+            </p>
+          </div>
         )}
+
       </div>
 
       {/* Bottom action bar */}
       <div className="fixed inset-x-0 bottom-0 z-20 bg-white border-t border-gray-100 px-4 py-3">
         {outOfStock ? (
-          <div className="w-full py-3.5 rounded-xl bg-gray-100 text-center text-sm font-bold text-gray-400">
+          <div className="w-full py-3.5 rounded-2xl bg-gray-100 text-center text-sm font-bold text-gray-400">
             {lang === "th" ? "สินค้าหมด" : "Out of Stock"}
           </div>
         ) : (
-          <div className="flex gap-2.5">
+          <div className="flex items-center gap-3">
+            {/* Total price */}
+            <div className="flex flex-col justify-center shrink-0">
+              <span className="text-xs text-gray-400 font-medium">
+                {lang === "th" ? "ราคารวม" : "Total"}
+              </span>
+              <span className="text-base font-black text-[#85241F] leading-tight">
+                {money(product.price * quantity)}
+              </span>
+            </div>
+
+            {/* Divider */}
+            <div className="w-px h-8 bg-gray-200 shrink-0" />
+
+            {/* Add to cart */}
             <button
               type="button"
               onClick={handleAddToCart}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#85241F] py-3 text-sm font-bold text-[#85241F] active:scale-95 transition-transform"
+              className="flex items-center justify-center w-11 h-11 rounded-2xl bg-[#fce8e7] text-[#85241F] active:scale-95 transition-transform shrink-0"
             >
-              <ShoppingBag className="h-4 w-4" />
-              {lang === "th" ? "เพิ่มลงตะกร้า" : "Add to Cart"}
+              <ShoppingCart className="h-5 w-5" />
             </button>
+
+            {/* Buy now */}
             <button
               type="button"
               onClick={handleBuyNow}
-              className="flex flex-1 items-center justify-center rounded-xl bg-[#85241F] py-3 text-sm font-bold text-white active:scale-95 transition-transform"
+              className="flex-1 flex items-center justify-center rounded-2xl bg-[#85241F] h-11 text-sm font-bold text-white active:scale-95 transition-transform"
             >
               {lang === "th" ? "ซื้อเลย" : "Buy Now"}
             </button>

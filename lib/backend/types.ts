@@ -57,7 +57,7 @@ export type PaymentSlipInput = {
 
 export type OrderItem = {
   productId: string;
-  name: string;
+  name: LocalizedText;
   price: number;
   quantity: number;
   subtotal: number;
