@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/lib/language-context";
+import { safeParseWithLang, loginSchema } from "@/lib/schemas-i18n";
+import type { Lang } from "@/lib/schemas-i18n";
 
 type AdminLoginProps = {
   onLogin: (form: HTMLFormElement) => Promise<boolean>;
@@ -15,10 +17,24 @@ type AdminLoginProps = {
 
 export function AdminLogin({ onLogin, loading = false }: AdminLoginProps) {
   const [loginError, setLoginError] = React.useState("");
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setLoginError("");
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      username: String(formData.get("username") ?? ""),
+      password: String(formData.get("password") ?? ""),
+    };
+
+    const result = safeParseWithLang(loginSchema(lang as Lang), data, lang as Lang);
+    if (!result.success) {
+      setLoginError(result.error ?? t("admin.login.error"));
+      setTimeout(() => setLoginError(""), 3000);
+      return;
+    }
+
     const ok = await onLogin(e.currentTarget);
     if (!ok) {
       setLoginError(t("admin.login.error"));

@@ -19,6 +19,7 @@ type Order = {
   customer: {
     name: string;
     phone: string;
+    email?: string;
     address: string;
   };
   items: {

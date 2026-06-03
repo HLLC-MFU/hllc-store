@@ -2,18 +2,22 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Check,
-  CheckCircle2,
   ClipboardList,
   Copy,
-  Image as ImageIcon,
-  Minus,
-  Plus,
+  Building2,
+  Hash,
+  Home,
+  MapPin,
+  ShoppingCart,
+  Store,
   Trash2,
+  Truck,
   Upload,
+  User,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +25,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCart, type CartItem } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
+import { PageHeader } from "@/components/shop/page-header";
+import { EmailInput } from "@/components/shared/email-input";
+import { PhoneInput } from "@/components/shared/phone-input";
+import { safeParseWithLang, checkoutFormSchema, normalizePhone, normalizeEmail } from "@/lib/schemas-i18n";
+import type { Lang } from "@/lib/schemas-i18n";
+import { SwipeableCartItem, itemKey, money } from "@/components/shop/cart/swipeable-cart-item";
+import { ReceiptView } from "@/components/shop/cart/receipt-view";
 import { TimeSelect } from "./components/TimeSelect";
 type Step = "cart" | "payment" | "info" | "success";
 type DeliveryMode = "delivery" | "pickup";
@@ -32,19 +43,10 @@ type Order = {
   customer?: {
     name: string;
     phone: string;
+    email: string;
     address: string;
   };
 };
-
-const currencyFormatter = new Intl.NumberFormat("th-TH", {
-  style: "currency",
-  currency: "THB",
-  maximumFractionDigits: 0,
-});
-
-function money(value: number) {
-  return currencyFormatter.format(value);
-}
 
 function saveOrderLookup(orderId: string, phone: string) {
   try {
@@ -59,163 +61,6 @@ function saveOrderLookup(orderId: string, phone: string) {
 
 const bankAccountName = "นันทเดช วงศ์ไชยา";
 const bankAccountNumber = "6621540027";
-
-function itemKey(item: CartItem) {
-  return `${item.productId}-${item.selectedOption ?? ""}`;
-}
-
-const SwipeableCartItem = memo(function SwipeableCartItem({
-  item,
-  lang,
-  selected,
-  onSelect,
-  onDecrease,
-  onIncrease,
-  onRemove,
-}: {
-  item: CartItem;
-  lang: "th" | "en";
-  selected: boolean;
-  onSelect: (item: CartItem) => void;
-  onDecrease: (item: CartItem) => void;
-  onIncrease: (item: CartItem) => void;
-  onRemove: (item: CartItem) => void;
-}) {
-  const [swipeX, setSwipeXState] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const swipeXRef = useRef(0);
-  const startX = useRef(0);
-  const baseX = useRef(0);
-  const dragging = useRef(false);
-  const MAX = 80;
-  const SNAP = 40;
-
-  function setSwipeX(x: number) {
-    swipeXRef.current = x;
-    setSwipeXState(x);
-  }
-
-  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    dragging.current = true;
-    setIsDragging(true);
-    startX.current = e.clientX;
-    baseX.current = swipeXRef.current;
-    e.currentTarget.setPointerCapture(e.pointerId);
-  }
-
-  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!dragging.current) return;
-    const delta = e.clientX - startX.current;
-    setSwipeX(Math.max(-MAX, Math.min(0, baseX.current + delta)));
-  }
-
-  function onPointerUp() {
-    if (!dragging.current) return;
-    dragging.current = false;
-    setIsDragging(false);
-    setSwipeX(swipeXRef.current < -SNAP ? -MAX : 0);
-  }
-
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
-      {/* Delete button revealed on swipe */}
-      <div className="absolute inset-y-0 right-0 w-20 bg-[#85241F] flex items-center justify-center">
-        <button
-          type="button"
-          onClick={() => onRemove(item)}
-          className="text-white p-3 h-full w-full flex items-center justify-center cursor-pointer"
-          aria-label={lang === "th" ? "ลบสินค้าออกจากตะกร้า" : "Remove item from cart"}
-        >
-          <Trash2 className="h-5 w-5" />
-        </button>
-      </div>
-
-      {/* Sliding card */}
-      <div
-        style={{
-          transform: `translateX(${swipeX}px)`,
-          transition: isDragging ? "none" : "transform 0.2s ease",
-          touchAction: "pan-y",
-        }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        onClick={() => { if (swipeXRef.current <= -MAX + 4) setSwipeX(0); }}
-        className="relative z-10 flex items-center gap-3 bg-white p-3 select-none"
-      >
-        {/* Checkbox */}
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onSelect(item); }}
-          className="h-11 w-11 -m-2.5 shrink-0 flex items-center justify-center cursor-pointer rounded-full active:bg-gray-100/50"
-          aria-label={lang === "th" ? "เลือกสินค้านี้" : "Select this item"}
-          aria-checked={selected}
-          role="checkbox"
-        >
-          <div
-            className={`h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-colors ${
-              selected ? "bg-[#85241F] border-[#85241F]" : "border-gray-300 bg-white"
-            }`}
-          >
-            {selected && <Check className="h-3.5 w-3.5 text-white" />}
-          </div>
-        </button>
-
-        {/* Image */}
-        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center relative">
-          {item.imageUrl ? (
-            <Image
-              src={item.imageUrl}
-              alt={item.name[lang] || item.name.th}
-              width={80}
-              height={80}
-              unoptimized
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <ImageIcon className="h-7 w-7 text-gray-300" />
-          )}
-        </div>
-
-        {/* Details + Qty */}
-        <div className="min-w-0 flex-1 flex items-center gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="line-clamp-2 wrap-break-word text-base font-black text-gray-900 leading-snug">
-              {item.name[lang] || item.name.th}
-            </p>
-            {item.selectedOption && (
-              <p className="mt-0.5 text-[10px] font-bold text-gray-400">{item.selectedOption}</p>
-            )}
-            <p className="mt-1 text-base font-black text-[#85241F]">{money(item.price)}</p>
-          </div>
-
-          {/* Qty controls — right side */}
-          <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              onClick={() => onDecrease(item)}
-              className="h-9 w-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 cursor-pointer"
-              aria-label={lang === "th" ? "ลดจำนวน" : "Decrease quantity"}
-            >
-              <Minus className="h-3.5 w-3.5" />
-            </button>
-            <span className="w-6 text-center text-sm font-black text-gray-900">{item.quantity}</span>
-            <button
-              type="button"
-              onClick={() => onIncrease(item)}
-              disabled={item.stock !== undefined && item.quantity >= item.stock}
-              className="h-9 w-9 rounded-full bg-[#85241F] flex items-center justify-center text-white disabled:opacity-30 cursor-pointer"
-              aria-label={lang === "th" ? "เพิ่มจำนวน" : "Increase quantity"}
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-});
 
 export default function CartPage() {
   const { items, updateQty, removeItem, clearCart } = useCart();
@@ -242,7 +87,11 @@ export default function CartPage() {
     const key = itemKey(item);
     setSelectedIds(prev => {
       const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
       return next;
     });
   }, []);
@@ -259,6 +108,8 @@ export default function CartPage() {
   const pendingFormRef = useRef<FormData | null>(null);
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("delivery");
   const [copiedAccount, setCopiedAccount] = useState(false);
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const confirmRemoveText = useMemo(() => {
@@ -330,61 +181,6 @@ export default function CartPage() {
     setStep("info");
   }, [slipImage, lang]);
 
-  const checkoutValidationMessage = useCallback(({
-    name,
-    phone,
-    address,
-    district,
-    province,
-    postalCode,
-    pickupTime,
-  }: {
-    name: string;
-    phone: string;
-    address: string;
-    district: string;
-    province: string;
-    postalCode: string;
-    pickupTime: string;
-  }) => {
-    const missing: string[] = [];
-    const invalid: string[] = [];
-
-    if (!name) missing.push(lang === "th" ? "ชื่อผู้รับ" : "recipient name");
-
-    if (!phone) {
-      missing.push(lang === "th" ? "เบอร์โทรศัพท์" : "phone number");
-    } else if (phone.length < 9) {
-      invalid.push(lang === "th" ? "เบอร์โทรศัพท์ต้องมีอย่างน้อย 9 หลัก" : "phone number must be at least 9 digits");
-    }
-
-    if (deliveryMode === "pickup") {
-      if (!pickupTime) missing.push(lang === "th" ? "เวลารับสินค้า" : "pickup time");
-    } else {
-      if (!address) missing.push(lang === "th" ? "ที่อยู่จัดส่ง" : "shipping address");
-      if (!district) missing.push(lang === "th" ? "เขต/อำเภอ" : "district");
-      if (!province) missing.push(lang === "th" ? "จังหวัด" : "province");
-
-      if (!postalCode) {
-        missing.push(lang === "th" ? "รหัสไปรษณีย์" : "postal code");
-      } else if (!/^\d{5}$/.test(postalCode)) {
-        invalid.push(lang === "th" ? "รหัสไปรษณีย์ต้องมี 5 หลัก" : "postal code must be 5 digits");
-      }
-    }
-
-    const messages: string[] = [];
-    if (missing.length) {
-      messages.push(
-        lang === "th"
-          ? `กรุณากรอก: ${missing.join(", ")}`
-          : `Please fill in: ${missing.join(", ")}`
-      );
-    }
-    messages.push(...invalid);
-
-    return messages.join(" • ");
-  }, [deliveryMode, lang]);
-
   const handleCheckout = useCallback((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (loading) return;
@@ -392,26 +188,31 @@ export default function CartPage() {
 
     setMessage("");
     const formData = new FormData(event.currentTarget);
-    const name = String(formData.get("name") ?? "").trim();
-    const phone = String(formData.get("phone") ?? "").replace(/\D/g, "");
-    const address = String(formData.get("address") ?? "").trim();
-    const district = String(formData.get("district") ?? "").trim();
-    const province = String(formData.get("province") ?? "").trim();
-    const postalCode = String(formData.get("postalCode") ?? "").trim();
-    const pickupTime = String(formData.get("pickupTime") ?? "").trim();
+    const raw = Object.fromEntries(formData.entries());
 
-    const validationError = checkoutValidationMessage({
-      name, phone, address, district, province, postalCode, pickupTime,
-    });
+    const payload = {
+      deliveryMode,
+      name: String(raw.name ?? "").trim(),
+      phone: normalizePhone(phone),
+      email: normalizeEmail(email),
+      address: String(raw.address ?? "").trim(),
+      district: String(raw.district ?? "").trim(),
+      province: String(raw.province ?? "").trim(),
+      postalCode: String(raw.postalCode ?? "").trim(),
+      pickupTime: String(raw.pickupTime ?? "").trim(),
+    };
 
-    if (validationError) {
-      setMessage(validationError);
+    const result = safeParseWithLang(checkoutFormSchema(lang as Lang), payload, lang as Lang);
+
+    if (!result.success) {
+      const errors = Object.values(result.fieldErrors ?? {});
+      setMessage(errors.join(" • "));
       return;
     }
 
     pendingFormRef.current = formData;
     setShowConfirmModal(true);
-  }, [loading, items.length, checkoutValidationMessage]);
+  }, [loading, items.length, deliveryMode, lang, phone, email]);
 
   const submitOrder = useCallback(async () => {
     if (loading) return;
@@ -424,6 +225,7 @@ export default function CartPage() {
 
     const name = String(formData.get("name") ?? "").trim();
     const phone = String(formData.get("phone") ?? "").replace(/\D/g, "");
+    const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const address = String(formData.get("address") ?? "").trim();
     const district = String(formData.get("district") ?? "").trim();
     const province = String(formData.get("province") ?? "").trim();
@@ -440,7 +242,7 @@ export default function CartPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customer: { name, phone, address: fullAddress },
+          customer: { name, phone, email, address: fullAddress },
           items: selectedItems.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
@@ -482,6 +284,28 @@ export default function CartPage() {
 
   const itemList = (
     <section className="space-y-3">
+      {!items.length ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+          <div className="w-20 h-20 rounded-3xl bg-gray-100 flex items-center justify-center">
+            <ShoppingCart className="w-9 h-9 text-gray-400" />
+          </div>
+          <div>
+            <p className="text-lg font-black text-gray-900">
+              {lang === "th" ? "รถเข็นว่างเปล่าเลย!" : "Your cart is empty!"}
+            </p>
+            <p className="mt-1 text-sm text-gray-400 font-medium">
+              {lang === "th" ? "ไปเลือกสินค้าที่ถูกใจก่อนนะ" : "Go pick something you like"}
+            </p>
+          </div>
+          <Link
+            href="/home"
+            className="mt-2 bg-[#85241F] hover:bg-[#B72D2A] text-white font-black text-sm px-6 py-3 rounded-2xl transition-all active:scale-95 shadow-md shadow-[#85241F]/20"
+          >
+            {lang === "th" ? "ไปเลือกสินค้า" : "Start shopping"}
+          </Link>
+        </div>
+      ) : null}
+
       {/* Select all header */}
       {items.length > 0 && (
         <div className="flex items-center justify-between mb-3">
@@ -526,56 +350,22 @@ export default function CartPage() {
   return (
     <main className="min-h-screen bg-white px-5 py-6 pb-24 lg:px-10">
       <div className="mx-auto max-w-5xl">
-        {step !== "success" && !items.length ? (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center">
-            {/* Cute bag illustration */}
-            <div className="relative">
-              <div className="w-28 h-28 rounded-4xl bg-[#85241F]/8 flex items-center justify-center">
-                <div className="w-20 h-20 rounded-3xl bg-[#85241F]/10 flex items-center justify-center">
-                  <svg viewBox="0 0 64 64" className="w-14 h-14" fill="none">
-                    {/* bag body */}
-                    <rect x="10" y="24" width="44" height="32" rx="8" fill="#85241F" opacity="0.15"/>
-                    <rect x="10" y="24" width="44" height="32" rx="8" stroke="#85241F" strokeWidth="2.5" fill="none"/>
-                    {/* bag handle */}
-                    <path d="M22 24 C22 16 42 16 42 24" stroke="#85241F" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
-                    {/* smile */}
-                    <path d="M26 40 Q32 46 38 40" stroke="#85241F" strokeWidth="2" strokeLinecap="round" fill="none"/>
-                    {/* eyes */}
-                    <circle cx="26" cy="35" r="2" fill="#85241F"/>
-                    <circle cx="38" cy="35" r="2" fill="#85241F"/>
-                  </svg>
-                </div>
-              </div>
-              {/* sparkles */}
-              <span className="absolute -top-1 -right-1 text-xl">✨</span>
-              <span className="absolute bottom-0 -left-2 text-lg">🌸</span>
-            </div>
-
-            <div>
-              <p className="text-xl font-black text-gray-900">
-                {lang === "th" ? "ยังไม่มีสินค้าในรถเข็นเลย" : "Your cart is empty"}
-              </p>
-              <p className="mt-2 text-sm text-gray-400 font-medium">
-                {lang === "th" ? "ไปเลือกสินค้าที่ชอบก่อนนะ~" : "Go find something you love~"}
-              </p>
-            </div>
-
-            <Link
-              href="/home"
-              className="bg-[#85241F] hover:bg-[#B72D2A] text-white font-black text-sm px-8 py-3 rounded-2xl transition-all active:scale-95 shadow-md shadow-[#85241F]/20"
-            >
-              {lang === "th" ? "ไปเลือกสินค้า 🛍️" : "Start shopping 🛍️"}
-            </Link>
-          </div>
-        ) : step !== "success" && (
+        {step !== "success" && (
           <>
+            <PageHeader
+              title={step === "payment"
+                ? lang === "th" ? "ชำระเงิน" : "Payment"
+                : step === "info"
+                  ? lang === "th" ? "ข้อมูลจัดส่ง" : "Delivery info"
+                  : lang === "th" ? "รถเข็น" : "My cart"}
+            />
 
             {/* Step Indicator */}
             <div className="mb-8 flex items-center justify-between max-w-xs mx-auto relative px-6 select-none">
               {/* Line Container */}
               <div className="absolute top-3.5 left-[38px] right-[38px] h-0.5 -translate-y-1/2 z-0">
                 <div className="w-full h-full bg-gray-100 relative rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="absolute inset-y-0 left-0 bg-[#85241F] transition-all duration-300 rounded-full"
                     style={{
                       width: step === "cart" ? "0%" : step === "payment" ? "50%" : "100%"
@@ -589,27 +379,25 @@ export default function CartPage() {
                 { id: "info", th: "จัดส่ง", en: "Delivery", num: 3 },
               ].map((s, idx) => {
                 const isActive = step === s.id;
-                const isCompleted = 
-                  (step === "payment" && idx < 1) || 
+                const isCompleted =
+                  (step === "payment" && idx < 1) ||
                   (step === "info" && idx < 2);
-                
+
                 return (
                   <div key={s.id} className="relative z-10 flex flex-col items-center">
-                    <div 
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-300 ${
-                        isActive 
-                          ? "bg-[#85241F] text-white ring-4 ring-[#85241F]/15 scale-110" 
-                          : isCompleted 
-                            ? "bg-emerald-600 text-white" 
+                    <div
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-300 ${isActive
+                          ? "bg-[#85241F] text-white ring-4 ring-[#85241F]/15 scale-110"
+                          : isCompleted
+                            ? "bg-emerald-600 text-white"
                             : "bg-white border-2 border-gray-200 text-gray-400"
-                      }`}
+                        }`}
                     >
                       {isCompleted ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : s.num}
                     </div>
-                    <span 
-                      className={`mt-1.5 text-[10px] font-bold transition-colors duration-300 ${
-                        isActive ? "text-[#85241F]" : "text-gray-400"
-                      }`}
+                    <span
+                      className={`mt-1.5 text-[10px] font-bold transition-colors duration-300 ${isActive ? "text-[#85241F]" : "text-gray-400"
+                        }`}
                     >
                       {lang === "th" ? s.th : s.en}
                     </span>
@@ -621,142 +409,7 @@ export default function CartPage() {
         )}
 
         {step === "success" && createdOrder ? (
-          <div className="flex min-h-[80vh] flex-col items-center justify-center py-10 text-center">
-            <div className="w-full max-w-sm">
-              <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-100 success-pop">
-                <CheckCircle2 className="h-14 w-14 text-emerald-600" />
-              </div>
-              <h1 className="text-2xl font-black text-gray-900">
-                {lang === "th" ? "คำสั่งซื้อสำเร็จ!" : "Order placed!"}
-              </h1>
-              <p className="mt-2 text-sm font-semibold text-gray-500">
-                {lang === "th" ? "เราได้รับคำสั่งซื้อของคุณแล้ว" : "We have received your order"}
-              </p>
-              
-              {/* Receipt Wrapper */}
-              <div className="receipt-wrapper receipt-animate relative mx-auto mt-8 mb-6 p-6 w-full max-w-[340px] text-left font-mono text-xs text-neutral-800">
-                <div className="receipt-edge-top" />
-                
-                {/* Header */}
-                <div className="text-center space-y-1">
-                  <h2 className="text-sm font-bold tracking-wider text-neutral-900 uppercase">HLLC STORE</h2>
-                </div>
-
-                <div className="my-3 text-center text-neutral-400">
-                  *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-                </div>
-
-                <div className="text-center font-bold text-neutral-900 tracking-wide uppercase">
-                  {lang === "th" ? "ใบเสร็จรับเงิน / RECEIPT" : "CASH RECEIPT"}
-                </div>
-
-                <div className="my-3 text-center text-neutral-400">
-                  *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-                </div>
-
-                {/* Items Table */}
-                <div className="space-y-2">
-                  <div className="flex justify-between font-bold text-neutral-900">
-                    <span>{lang === "th" ? "รายการ" : "Description"}</span>
-                    <span>{lang === "th" ? "ราคา" : "Price"}</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {receiptItems.map((item, idx) => (
-                      <div key={idx} className="space-y-0.5">
-                        <div className="flex justify-between items-start gap-4">
-                          <span className="wrap-break-word line-clamp-2">
-                            {item.name[lang] || item.name.th}
-                          </span>
-                          <span className="shrink-0 font-bold">
-                            {money(item.price * item.quantity)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-[10px] text-neutral-500 pl-2">
-                          <span>
-                            {item.quantity} x {money(item.price)}
-                            {item.selectedOption ? ` (${item.selectedOption})` : ""}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="my-4 text-center text-neutral-400">
-                  *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-                </div>
-
-                {/* Subtotals & Total */}
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-neutral-600">
-                    <span>{lang === "th" ? "ยอดรวม" : "Subtotal"}</span>
-                    <span>{money(createdOrder.total)}</span>
-                  </div>
-                  <div className="flex justify-between text-neutral-600">
-                    <span>{lang === "th" ? "วิธีชำระเงิน" : "Payment"}</span>
-                    <span className="font-bold">{lang === "th" ? "โอนเงิน (สลิป)" : "Bank Transfer"}</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-sm text-neutral-900 pt-1.5 border-t border-dashed border-neutral-300">
-                    <span>{lang === "th" ? "ยอดชำระสุทธิ" : "Total"}</span>
-                    <span>{money(createdOrder.total)}</span>
-                  </div>
-                </div>
-
-                <div className="my-4 text-center text-neutral-400">
-                  *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-                </div>
-
-                {/* Footer Info */}
-                <div className="space-y-1 text-[10px] text-neutral-500">
-                  <div className="flex justify-between">
-                    <span>{lang === "th" ? "เลขพัสดุ:" : "Tracking No.:"}</span>
-                    <span className="font-bold text-neutral-700">{createdOrder.customer?.phone || "-"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>{lang === "th" ? "วันที่:" : "Date:"}</span>
-                    <span>{new Date().toLocaleString(lang === "th" ? "th-TH" : "en-US", { dateStyle: "short", timeStyle: "short" })}</span>
-                  </div>
-                </div>
-
-                <div className="my-4 text-center text-neutral-400">
-                  *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-                </div>
-
-                {/* Barcode */}
-                <div className="text-center space-y-3">
-                  {/* Barcode component */}
-                  <div className="flex justify-center items-center h-8 w-full gap-[1px] opacity-75 mix-blend-multiply my-1 select-none">
-                    {[2, 1, 3, 1, 2, 4, 1, 2, 1, 3, 2, 1, 4, 1, 2, 1, 3, 1, 2, 4, 1, 2, 1, 3, 2].map((w, i) => (
-                      <div key={i} className="bg-neutral-800 h-full" style={{ width: `${w}px` }} />
-                    ))}
-                  </div>
-                  
-                  <p className="text-[9px] text-neutral-400 tracking-widest font-mono">
-                    *{createdOrder.customer?.phone}*
-                  </p>
-                </div>
-
-                <div className="receipt-edge-bottom" />
-              </div>
-              <Button
-                asChild
-                className="mt-6 h-13 w-full rounded-2xl bg-emerald-600 text-sm font-black hover:bg-emerald-700"
-              >
-                <Link href="/profile">
-                  {lang === "th" ? "ดูสถานะคำสั่งซื้อ" : "Track my order"}
-                </Link>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="mt-3 h-12 w-full rounded-2xl text-sm font-black"
-              >
-                <Link href="/home">
-                  {lang === "th" ? "กลับหน้าแรก" : "Back to home"}
-                </Link>
-              </Button>
-            </div>
-          </div>
+          <ReceiptView lang={lang} createdOrder={createdOrder} receiptItems={receiptItems} />
         ) : null}
 
         {step !== "success" && message ? (
@@ -806,16 +459,15 @@ export default function CartPage() {
               <p className="text-xs font-bold text-gray-500">{t("checkout.payment_amount")}</p>
               <p className="mt-1 text-2xl font-black text-[#85241F]">{money(selectedTotal)}</p>
             </div>
-            <div className={`mb-4 rounded-2xl border p-3 transition-all duration-300 ${
-              copiedAccount 
-                ? "border-emerald-500 bg-emerald-50/70 shadow-sm shadow-emerald-500/5 ring-1 ring-emerald-500/10" 
+            <div className={`mb-4 rounded-2xl border p-3 transition-all duration-300 ${copiedAccount
+                ? "border-emerald-500 bg-emerald-50/70 shadow-sm shadow-emerald-500/5 ring-1 ring-emerald-500/10"
                 : "border-[#1E63B6]/10 bg-[#1E63B6]/5"
-            }`}>
+              }`}>
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-[#1E63B6]/10 relative">
                   <Image
-                    src="/images/image.png"
-                    alt="Krungthai"
+                    src="/images/bangkokBank.jpg"
+                    alt="Bangkok Bank"
                     width={48}
                     height={48}
                     className="h-full w-full object-cover scale-110 transition-transform"
@@ -826,7 +478,7 @@ export default function CartPage() {
                     {lang === "th" ? "บัญชีรับชำระ" : "Payment account"}
                   </p>
                   <p className="mt-0.5 text-sm font-black text-gray-950">
-                    {lang === "th" ? "ธนาคารกรุงไทย" : "Krungthai Bank"}
+                    {lang === "th" ? "ธนาคารกรุงเทพ" : "Bangkok Bank"}
                   </p>
                   <p className="mt-1 truncate text-xs font-bold text-gray-500">
                     {bankAccountName}
@@ -903,33 +555,65 @@ export default function CartPage() {
                 <button
                   type="button"
                   onClick={() => setDeliveryMode("delivery")}
-                  className={`h-10 rounded-lg text-sm font-black transition-colors ${deliveryMode === "delivery"
+                  className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-black transition-colors ${deliveryMode === "delivery"
                     ? "bg-white text-[#85241F] shadow-sm"
                     : "text-gray-500"
                     }`}
                 >
+                  <Truck className="h-4 w-4" />
                   {lang === "th" ? "จัดส่ง" : "Delivery"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setDeliveryMode("pickup")}
-                  className={`h-10 rounded-lg text-sm font-black transition-colors ${deliveryMode === "pickup"
+                  className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-black transition-colors ${deliveryMode === "pickup"
                     ? "bg-white text-[#85241F] shadow-sm"
                     : "text-gray-500"
                     }`}
                 >
+                  <Store className="h-4 w-4" />
                   {lang === "th" ? "รับเอง" : "Pickup"}
                 </button>
               </div>
-              <Input name="name" placeholder={lang === "th" ? "ชื่อผู้รับ" : "Recipient name"} className="h-11 rounded-xl" />
-              <Input name="phone" placeholder={t("checkout.label.phone")} className="h-11 rounded-xl" />
+              <div className="relative">
+                <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Input name="name" placeholder={lang === "th" ? "ชื่อผู้รับ" : "Recipient name"} className="h-11 rounded-xl pl-10" />
+              </div>
+              <PhoneInput
+                name="phone"
+                value={phone}
+                onChange={setPhone}
+                lang={lang}
+                placeholder={t("checkout.label.phone")}
+                className="h-11 rounded-xl"
+              />
+              <EmailInput
+                name="email"
+                value={email}
+                onChange={setEmail}
+                lang={lang}
+                placeholder={t("checkout.label.email")}
+                className="h-11 rounded-xl"
+              />
               {deliveryMode === "delivery" ? (
                 <>
-                  <Textarea name="address" placeholder={t("checkout.label.address")} className="min-h-28 rounded-xl" />
+                  <div className="relative">
+                    <Home className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                    <Textarea name="address" placeholder={t("checkout.label.address")} className="min-h-28 rounded-xl pl-10" />
+                  </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <Input name="district" placeholder={lang === "th" ? "เขต/อำเภอ" : "District"} className="h-11 rounded-xl" />
-                    <Input name="province" placeholder={lang === "th" ? "จังหวัด" : "Province"} className="h-11 rounded-xl" />
-                    <Input name="postalCode" placeholder={lang === "th" ? "รหัสไปรษณีย์" : "Postal code"} className="h-11 rounded-xl" />
+                    <div className="relative">
+                      <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                      <Input name="district" placeholder={lang === "th" ? "เขต/อำเภอ" : "District"} className="h-11 rounded-xl pl-10" />
+                    </div>
+                    <div className="relative">
+                      <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                      <Input name="province" placeholder={lang === "th" ? "จังหวัด" : "Province"} className="h-11 rounded-xl pl-10" />
+                    </div>
+                    <div className="relative">
+                      <Hash className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                      <Input name="postalCode" placeholder={lang === "th" ? "รหัสไปรษณีย์" : "Postal code"} className="h-11 rounded-xl pl-10" />
+                    </div>
                   </div>
                 </>
               ) : (

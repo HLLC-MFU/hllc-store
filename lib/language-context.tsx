@@ -15,7 +15,6 @@ const DICTIONARY: TranslationDict = {
   // Navigation
   "nav.home": { th: "หน้าหลัก", en: "Home" },
   "nav.cart": { th: "ตะกร้า", en: "Cart" },
-  "nav.track_order": { th: "ติดตามคำสั่งซื้อ", en: "Track Order" },
   "nav.profile": { th: "โปรไฟล์", en: "Profile" },
   "nav.guest": { th: "ผู้ใช้ทั่วไป", en: "Guest User" },
   "nav.store": { th: "ร้านค้า", en: "Store" },
@@ -66,6 +65,7 @@ const DICTIONARY: TranslationDict = {
   "checkout.label.province": { th: "จังหวัด", en: "Province" },
   "checkout.label.postal": { th: "รหัสไปรษณีย์", en: "Postal Code" },
   "checkout.label.phone": { th: "*เบอร์โทรศัพท์", en: "*Phone Number" },
+  "checkout.label.email": { th: "*อีเมล", en: "*Email" },
   "checkout.free_shipping_banner": { th: "ฟรีค่าจัดส่ง (1–3 วัน)", en: "Free Shipping (1-3 Days)" },
   "checkout.pickup.name": { th: "*ชื่อผู้รับ", en: "*Recipient Name" },
   "checkout.pickup.time": { th: "*เวลาที่จะมารับ", en: "*Pickup Time" },

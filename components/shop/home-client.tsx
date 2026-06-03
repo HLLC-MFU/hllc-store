@@ -74,41 +74,61 @@ export function HomeClient({ products }: HomeClientProps) {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
-          {products.map((p) => (
-            <Link
-              key={p.id}
-              href={`/products/${p.id}`}
-              className="group rounded-3xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.13)] transition-all duration-300 overflow-hidden active:scale-[0.98]"
-            >
-              {/* Image — full width, no frame */}
-              <div className="relative aspect-square bg-[#f5f5f5] overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {p.imageUrl ? (
-                  <img
-                    src={p.imageUrl}
-                    alt={p.name[lang] || p.name.th}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <ImageIcon className="w-12 h-12 text-gray-200" />
-                  </div>
-                )}
-                {p.stock < 1 && (
-                  <span className="absolute bottom-2 left-2 rounded-xl bg-gray-900/75 px-2 py-0.5 text-[10px] font-bold text-white">
-                    {t("shop.out_of_stock")}
-                  </span>
-                )}
-              </div>
-              {/* Info */}
-              <div className="px-4 py-3.5 flex flex-col gap-0.5">
-                <p className="truncate text-sm font-black text-gray-900">
-                  {p.name[lang] || p.name.th}
-                </p>
-                <p className="mt-2 text-base font-black text-[#85241F]">{money(p.price)}</p>
-              </div>
-            </Link>
-          ))}
+          {products.map((p) => {
+            const isOutOfStock = p.stock < 1;
+            const cardContent = (
+              <>
+                {/* Image — full width, no frame */}
+                <div className="relative aspect-square bg-[#f5f5f5] overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {p.imageUrl ? (
+                    <img
+                      src={p.imageUrl}
+                      alt={p.name[lang] || p.name.th}
+                      className={`h-full w-full object-cover ${isOutOfStock ? "" : "transition-transform duration-300 group-hover:scale-105"}`}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <ImageIcon className="w-12 h-12 text-gray-200" />
+                    </div>
+                  )}
+                  {isOutOfStock && (
+                    <span className="absolute bottom-2 left-2 rounded-xl bg-gray-900/75 px-2 py-0.5 text-[10px] font-bold text-white">
+                      {t("shop.out_of_stock")}
+                    </span>
+                  )}
+                </div>
+                {/* Info */}
+                <div className="px-4 py-3.5 flex flex-col gap-0.5">
+                  <p className="truncate text-sm font-black text-gray-900">
+                    {p.name[lang] || p.name.th}
+                  </p>
+                  <p className="mt-2 text-base font-black text-[#85241F]">{money(p.price)}</p>
+                </div>
+              </>
+            );
+
+            if (isOutOfStock) {
+              return (
+                <div
+                  key={p.id}
+                  className="group rounded-3xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] overflow-hidden opacity-60 cursor-not-allowed"
+                >
+                  {cardContent}
+                </div>
+              );
+            }
+
+            return (
+              <Link
+                key={p.id}
+                href={`/products/${p.id}`}
+                className="group rounded-3xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.13)] transition-all duration-300 overflow-hidden active:scale-[0.98]"
+              >
+                {cardContent}
+              </Link>
+            );
+          })}
         </div>
       )}
     </section>
@@ -116,8 +136,21 @@ export function HomeClient({ products }: HomeClientProps) {
 
   return (
     <>
-      <div className="shop-page lg:hidden flex flex-col bg-white min-h-screen">
-        <div className="px-5 md:px-8 py-6 pb-8">
+      <div className="shop-page lg:hidden flex flex-col bg-white min-h-screen relative">
+        <div className="absolute right-5 top-6 z-30">
+          <LanguageChip />
+        </div>
+        <div className="pt-4 pb-4">
+          <div className="flex justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/HLLCLOGO.png"
+              alt="HLLC Logo"
+              className="shop-logo h-24 w-auto object-contain"
+            />
+          </div>
+        </div>
+        <div className="px-5 md:px-8 pb-8">
           {trackingEntry}
           {productGrid}
         </div>

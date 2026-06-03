@@ -7,6 +7,7 @@ import {
 import { ok, unauthorized } from "@/lib/backend/http";
 import { verifyAdminUser } from "@/lib/backend/admin-user-service";
 import { readLimitedJson } from "@/lib/backend/request-utils";
+import { loginSchema, parseOrThrow } from "@/lib/schemas";
 
 const attempts = new Map<string, { count: number; resetAt: number }>();
 const WINDOW_MS = 60_000;
@@ -52,9 +53,8 @@ export async function POST(request: NextRequest) {
     password?: unknown;
   }>(request, 8_000).catch(() => null));
 
-  const username = typeof body?.username === "string" ? body.username.trim() : "";
-  const password = typeof body?.password === "string" ? body.password : "";
-  const identity = await verifyAdminUser(username, password);
+  const parsed = parseOrThrow(loginSchema, body ?? {});
+  const identity = await verifyAdminUser(parsed.username, parsed.password);
 
   if (!identity) {
     return unauthorized("invalid username or password");

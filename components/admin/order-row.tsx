@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronUp,
   FileCheck2,
+  Mail,
   MapPin,
   MessageSquare,
   Package,
@@ -88,10 +89,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
       </button>
 
       {open && (
-        <div className="border-t border-slate-100 p-4 bg-slate-50/20 grid grid-cols-1 lg:grid-cols-2 gap-4 items-start animate-in slide-in-from-top-2 duration-200">
-
-          {/* LEFT COLUMN — order info */}
-          <div className="flex flex-col gap-4 min-w-0">
+        <div className="border-t border-slate-100 p-4 bg-slate-50/20 flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200">
 
           {/* Admin Notes timeline */}
           {order.adminNotes && order.adminNotes.length > 0 && (
@@ -167,6 +165,12 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                   <Phone className="w-3.5 h-3.5 shrink-0 text-gray-400" />
                   <span className="font-mono">{order.customer.phone}</span>
                 </div>
+                {order.customer.email ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
+                    <Mail className="w-3.5 h-3.5 shrink-0 text-gray-400" />
+                    <span className="break-all">{order.customer.email}</span>
+                  </div>
+                ) : null}
                 <div className="flex items-start gap-2 text-sm text-gray-600 font-medium">
                   <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5 text-gray-400" />
                   <span className="leading-relaxed">{order.customer.address}</span>
@@ -189,10 +193,6 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
               </div>
             </CardContent>
           </Card>
-          </div>
-
-          {/* RIGHT COLUMN — progress & actions */}
-          <div className="flex flex-col gap-4 min-w-0">
 
           {/* 3 — Stepper */}
           <Card className="rounded-2xl shadow-3xs">
@@ -399,7 +399,6 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
               </CardContent>
             </Card>
           )}
-          </div>
 
         </div>
       )}

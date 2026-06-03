@@ -1,5 +1,7 @@
 import { ObjectId, type Document } from "mongodb";
 import { getDb } from "./mongodb";
+import { z } from "zod";
+import { createOrderSchema, imageUrlSchema, parseOrThrow } from "@/lib/schemas";
 import type {
   CreateOrderInput,
   CreateProductInput,
@@ -13,37 +15,27 @@ import type {
 } from "./types";
 
 function assertText(value: unknown, field: string) {
-  if (typeof value !== "string" || !value.trim()) {
-    throw new Error(`${field} is required`);
+  const result = z.string().min(1, { message: `${field} is required` }).safeParse(value);
+  if (!result.success) {
+    throw new Error(result.error.issues[0]?.message ?? `${field} is required`);
   }
-
-  return value.trim();
+  return result.data.trim();
 }
 
 function assertImageValue(value: unknown, field: string) {
-  const imageUrl = assertText(value, field);
-
-  if (imageUrl.startsWith("data:")) {
-    if (!/^data:image\/(png|jpe?g|webp|gif);base64,/i.test(imageUrl)) {
-      throw new Error(`${field} must be a PNG, JPG, WEBP, or GIF image`);
-    }
-
-    if (imageUrl.length > 3_000_000) {
-      throw new Error(`${field} is too large`);
-    }
+  const result = imageUrlSchema.safeParse(value);
+  if (!result.success) {
+    throw new Error(result.error.issues[0]?.message ?? `${field} is invalid`);
   }
-
-  return imageUrl;
+  return result.data;
 }
 
 function assertNumber(value: unknown, field: string) {
-  const numberValue = Number(value);
-
-  if (!Number.isFinite(numberValue) || numberValue < 0) {
-    throw new Error(`${field} must be a positive number`);
+  const result = z.coerce.number().finite().min(0, { message: `${field} must be a positive number` }).safeParse(value);
+  if (!result.success) {
+    throw new Error(result.error.issues[0]?.message ?? `${field} must be a positive number`);
   }
-
-  return numberValue;
+  return result.data;
 }
 
 function assertObjectId(id: string) {
@@ -267,28 +259,17 @@ export async function getProduct(productId: string) {
 
 export async function createOrder(input: CreateOrderInput) {
   const db = await getDb();
+  const parsed = parseOrThrow(createOrderSchema, input);
   const customer = {
-    name: assertText(input.customer?.name, "customer.name"),
-    phone: assertText(input.customer?.phone, "customer.phone"),
-    address: assertText(input.customer?.address, "customer.address"),
+    ...parsed.customer,
+    email: parsed.customer.email.toLowerCase(),
   };
 
-  if (!Array.isArray(input.items) || input.items.length === 0) {
-    throw new Error("items is required");
-  }
-
-  const requestedItems = input.items.map((item) => ({
-    productId: assertText(item.productId, "items.productId"),
-    quantity: Number(item.quantity),
-    selectedOption:
-      typeof item.selectedOption === "string" ? item.selectedOption.trim() : "",
+  const requestedItems = parsed.items.map((item) => ({
+    productId: item.productId,
+    quantity: item.quantity,
+    selectedOption: item.selectedOption ?? "",
   }));
-
-  requestedItems.forEach((item) => {
-    if (!Number.isInteger(item.quantity) || item.quantity < 1) {
-      throw new Error("items.quantity must be a positive integer");
-    }
-  });
 
   const products = await db
     .collection("products")

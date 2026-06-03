@@ -23,14 +23,18 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const order = await reviewPaymentSlip(orderId, body);
     const actor = getAdminIdentity(request);
     if (actor) {
-      await writeAuditLog(actor, body.approved ? "slip.approved" : "slip.rejected", { orderId });
+      await writeAuditLog(actor, body.approved ? "slip.approved" : "slip.rejected", {
+        orderId,
+        customerName: order.customer.name,
+        note: body.note,
+      });
     }
 
     // Fire-and-forget email notification
     const customerName = order.customer.name;
     const emailPayload = body.approved
-      ? slipApprovedEmail(customerName, orderId)
-      : slipRejectedEmail(customerName, orderId, body.note);
+      ? slipApprovedEmail(customerName, orderId, order.customer.email, order.customer.phone)
+      : slipRejectedEmail(customerName, orderId, body.note, order.customer.email, order.customer.phone);
     if (emailPayload.to) {
       void sendEmail(emailPayload).catch((error) => {
         console.error("[EMAIL_ERROR]", error instanceof Error ? error.message : "failed to send email");

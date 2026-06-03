@@ -6,6 +6,7 @@ import { RefreshCw, Search, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/lib/language-context";
+import { PageHeader } from "@/components/shop/page-header";
 import { LogisticsProgress } from "@/components/shop/logistics-progress";
 
 type OrderStatus =
@@ -24,6 +25,7 @@ type Order = {
   customer: {
     name: string;
     phone: string;
+    email?: string;
     address: string;
   };
   items: {
@@ -124,6 +126,8 @@ function ProfileContent() {
   return (
     <main className="min-h-screen bg-white px-5 py-6 pb-24 lg:px-10">
       <div className="mx-auto max-w-4xl">
+        <PageHeader title={lang === "th" ? "ติดตามคำสั่งซื้อ" : "Order tracking"} />
+
         <section className="mb-5 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
           <form
             onSubmit={(event) => {
