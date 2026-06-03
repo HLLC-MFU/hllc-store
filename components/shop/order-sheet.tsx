@@ -280,6 +280,7 @@ export function OrderSheet({
   const [province, setProvince] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [pickupName, setPickupName] = useState("");
   const [pickupTime, setPickupTime] = useState("");
   const [pickupPhone, setPickupPhone] = useState("");
@@ -325,6 +326,7 @@ export function OrderSheet({
       setStreetAddress(""); setDistrict("");
       setProvince(""); setPostalCode("");
       setPhone("");
+      setEmail("");
       setPickupName(""); setPickupTime(""); setPickupPhone("");
       setError("");
       setOrderId("");
@@ -348,6 +350,12 @@ export function OrderSheet({
     const isPickup = deliveryMode === "pickup";
     const missing: string[] = [];
     const invalid: string[] = [];
+
+    if (!email.trim()) {
+      missing.push("email");
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      invalid.push(lang === "th" ? "email ไม่ถูกต้อง" : "email is invalid");
+    }
 
     if (isPickup) {
       if (!pickupName.trim()) missing.push(lang === "th" ? "ชื่อผู้รับสินค้า" : "pickup name");
@@ -404,6 +412,7 @@ export function OrderSheet({
     setError("");
     const fullName = isPickup ? pickupName.trim() : `${firstName.trim()} ${lastName.trim()}`;
     const rawPhone = isPickup ? pickupPhone.replace(/\D/g, "") : phone.replace(/\D/g, "");
+    const normalizedEmail = email.trim().toLowerCase();
     const fullAddress = isPickup
       ? `รับเองที่ D1 — เวลา ${pickupTime.trim()}`
       : `${streetAddress.trim()}, ${district.trim()}, ${province} ${postalCode.trim()}`;
@@ -412,7 +421,7 @@ export function OrderSheet({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customer: { name: fullName, phone: rawPhone, address: fullAddress },
+          customer: { name: fullName, phone: rawPhone, email: normalizedEmail, address: fullAddress },
           items: [{ productId: product.id, quantity: qty }],
         }),
       });
@@ -663,6 +672,13 @@ export function OrderSheet({
                     type="tel" inputMode="tel"
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#85241F] transition-colors" />
                 </div>
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block font-semibold">{t("checkout.label.email")}</label>
+                  <input value={email} onChange={(e) => setEmail(e.target.value)}
+                    placeholder="customer@example.com"
+                    type="email"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#85241F] transition-colors" />
+                </div>
               </>
             )}
 
@@ -709,6 +725,12 @@ export function OrderSheet({
                   <label className="text-xs text-gray-400 mb-1 block font-semibold">{t("checkout.label.phone")}</label>
                   <input value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))}
                     placeholder="099-999-9999" type="tel" inputMode="tel"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#85241F] transition-colors" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block font-semibold">{t("checkout.label.email")}</label>
+                  <input value={email} onChange={(e) => setEmail(e.target.value)}
+                    placeholder="customer@example.com" type="email"
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#85241F] transition-colors" />
                 </div>
                 <div className="border border-[#85241F]/30 bg-[#85241F]/4 rounded-2xl px-4 py-3 flex items-center justify-between mt-1">

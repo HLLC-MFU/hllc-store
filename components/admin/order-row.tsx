@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronUp,
   FileCheck2,
+  Mail,
   MapPin,
   MessageSquare,
   Package,
@@ -164,6 +165,12 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                   <Phone className="w-3.5 h-3.5 shrink-0 text-gray-400" />
                   <span className="font-mono">{order.customer.phone}</span>
                 </div>
+                {order.customer.email ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
+                    <Mail className="w-3.5 h-3.5 shrink-0 text-gray-400" />
+                    <span className="break-all">{order.customer.email}</span>
+                  </div>
+                ) : null}
                 <div className="flex items-start gap-2 text-sm text-gray-600 font-medium">
                   <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5 text-gray-400" />
                   <span className="leading-relaxed">{order.customer.address}</span>

@@ -270,8 +270,13 @@ export async function createOrder(input: CreateOrderInput) {
   const customer = {
     name: assertText(input.customer?.name, "customer.name"),
     phone: assertText(input.customer?.phone, "customer.phone"),
+    email: assertText(input.customer?.email, "customer.email").toLowerCase(),
     address: assertText(input.customer?.address, "customer.address"),
   };
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) {
+    throw new Error("customer.email is invalid");
+  }
 
   if (!Array.isArray(input.items) || input.items.length === 0) {
     throw new Error("items is required");

@@ -65,6 +65,7 @@ const DICTIONARY: TranslationDict = {
   "checkout.label.province": { th: "จังหวัด", en: "Province" },
   "checkout.label.postal": { th: "รหัสไปรษณีย์", en: "Postal Code" },
   "checkout.label.phone": { th: "*เบอร์โทรศัพท์", en: "*Phone Number" },
+  "checkout.label.email": { th: "*อีเมล", en: "*Email" },
   "checkout.free_shipping_banner": { th: "ฟรีค่าจัดส่ง (1–3 วัน)", en: "Free Shipping (1-3 Days)" },
   "checkout.pickup.name": { th: "*ชื่อผู้รับ", en: "*Recipient Name" },
   "checkout.pickup.time": { th: "*เวลาที่จะมารับ", en: "*Pickup Time" },

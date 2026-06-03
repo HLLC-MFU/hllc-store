@@ -34,6 +34,7 @@ type Order = {
   customer?: {
     name: string;
     phone: string;
+    email: string;
     address: string;
   };
 };
@@ -156,9 +157,8 @@ const SwipeableCartItem = memo(function SwipeableCartItem({
           role="checkbox"
         >
           <div
-            className={`h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-colors ${
-              selected ? "bg-[#85241F] border-[#85241F]" : "border-gray-300 bg-white"
-            }`}
+            className={`h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-colors ${selected ? "bg-[#85241F] border-[#85241F]" : "border-gray-300 bg-white"
+              }`}
           >
             {selected && <Check className="h-3.5 w-3.5 text-white" />}
           </div>
@@ -333,6 +333,7 @@ export default function CartPage() {
   const checkoutValidationMessage = useCallback(({
     name,
     phone,
+    email,
     address,
     district,
     province,
@@ -341,6 +342,7 @@ export default function CartPage() {
   }: {
     name: string;
     phone: string;
+    email: string;
     address: string;
     district: string;
     province: string;
@@ -356,6 +358,12 @@ export default function CartPage() {
       missing.push(lang === "th" ? "เบอร์โทรศัพท์" : "phone number");
     } else if (phone.length < 9) {
       invalid.push(lang === "th" ? "เบอร์โทรศัพท์ต้องมีอย่างน้อย 9 หลัก" : "phone number must be at least 9 digits");
+    }
+
+    if (!email) {
+      missing.push(lang === "th" ? "email/อีเมล" : "email");
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      invalid.push(lang === "th" ? "email ไม่ถูกต้อง" : "email is invalid");
     }
 
     if (deliveryMode === "pickup") {
@@ -394,6 +402,7 @@ export default function CartPage() {
     const formData = new FormData(event.currentTarget);
     const name = String(formData.get("name") ?? "").trim();
     const phone = String(formData.get("phone") ?? "").replace(/\D/g, "");
+    const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const address = String(formData.get("address") ?? "").trim();
     const district = String(formData.get("district") ?? "").trim();
     const province = String(formData.get("province") ?? "").trim();
@@ -401,7 +410,7 @@ export default function CartPage() {
     const pickupTime = String(formData.get("pickupTime") ?? "").trim();
 
     const validationError = checkoutValidationMessage({
-      name, phone, address, district, province, postalCode, pickupTime,
+      name, phone, email, address, district, province, postalCode, pickupTime,
     });
 
     if (validationError) {
@@ -424,6 +433,7 @@ export default function CartPage() {
 
     const name = String(formData.get("name") ?? "").trim();
     const phone = String(formData.get("phone") ?? "").replace(/\D/g, "");
+    const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const address = String(formData.get("address") ?? "").trim();
     const district = String(formData.get("district") ?? "").trim();
     const province = String(formData.get("province") ?? "").trim();
@@ -440,7 +450,7 @@ export default function CartPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customer: { name, phone, address: fullAddress },
+          customer: { name, phone, email, address: fullAddress },
           items: selectedItems.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
@@ -557,13 +567,13 @@ export default function CartPage() {
                   ? lang === "th" ? "ข้อมูลจัดส่ง" : "Delivery info"
                   : lang === "th" ? "รถเข็น" : "My cart"}
             />
-            
+
             {/* Step Indicator */}
             <div className="mb-8 flex items-center justify-between max-w-xs mx-auto relative px-6 select-none">
               {/* Line Container */}
               <div className="absolute top-3.5 left-[38px] right-[38px] h-0.5 -translate-y-1/2 z-0">
                 <div className="w-full h-full bg-gray-100 relative rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="absolute inset-y-0 left-0 bg-[#85241F] transition-all duration-300 rounded-full"
                     style={{
                       width: step === "cart" ? "0%" : step === "payment" ? "50%" : "100%"
@@ -577,27 +587,25 @@ export default function CartPage() {
                 { id: "info", th: "จัดส่ง", en: "Delivery", num: 3 },
               ].map((s, idx) => {
                 const isActive = step === s.id;
-                const isCompleted = 
-                  (step === "payment" && idx < 1) || 
+                const isCompleted =
+                  (step === "payment" && idx < 1) ||
                   (step === "info" && idx < 2);
-                
+
                 return (
                   <div key={s.id} className="relative z-10 flex flex-col items-center">
-                    <div 
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-300 ${
-                        isActive 
-                          ? "bg-[#85241F] text-white ring-4 ring-[#85241F]/15 scale-110" 
-                          : isCompleted 
-                            ? "bg-emerald-600 text-white" 
+                    <div
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-300 ${isActive
+                          ? "bg-[#85241F] text-white ring-4 ring-[#85241F]/15 scale-110"
+                          : isCompleted
+                            ? "bg-emerald-600 text-white"
                             : "bg-white border-2 border-gray-200 text-gray-400"
-                      }`}
+                        }`}
                     >
                       {isCompleted ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : s.num}
                     </div>
-                    <span 
-                      className={`mt-1.5 text-[10px] font-bold transition-colors duration-300 ${
-                        isActive ? "text-[#85241F]" : "text-gray-400"
-                      }`}
+                    <span
+                      className={`mt-1.5 text-[10px] font-bold transition-colors duration-300 ${isActive ? "text-[#85241F]" : "text-gray-400"
+                        }`}
                     >
                       {lang === "th" ? s.th : s.en}
                     </span>
@@ -620,11 +628,11 @@ export default function CartPage() {
               <p className="mt-2 text-sm font-semibold text-gray-500">
                 {lang === "th" ? "เราได้รับคำสั่งซื้อของคุณแล้ว" : "We have received your order"}
               </p>
-              
+
               {/* Receipt Wrapper */}
               <div className="receipt-wrapper receipt-animate relative mx-auto mt-8 mb-6 p-6 w-full max-w-[340px] text-left font-mono text-xs text-neutral-800">
                 <div className="receipt-edge-top" />
-                
+
                 {/* Header */}
                 <div className="text-center space-y-1">
                   <h2 className="text-sm font-bold tracking-wider text-neutral-900 uppercase">HLLC STORE</h2>
@@ -718,7 +726,7 @@ export default function CartPage() {
                       <div key={i} className="bg-neutral-800 h-full" style={{ width: `${w}px` }} />
                     ))}
                   </div>
-                  
+
                   <p className="text-[9px] text-neutral-400 tracking-widest font-mono">
                     *{createdOrder.customer?.phone}*
                   </p>
@@ -794,16 +802,15 @@ export default function CartPage() {
               <p className="text-xs font-bold text-gray-500">{t("checkout.payment_amount")}</p>
               <p className="mt-1 text-2xl font-black text-[#85241F]">{money(selectedTotal)}</p>
             </div>
-            <div className={`mb-4 rounded-2xl border p-3 transition-all duration-300 ${
-              copiedAccount 
-                ? "border-emerald-500 bg-emerald-50/70 shadow-sm shadow-emerald-500/5 ring-1 ring-emerald-500/10" 
+            <div className={`mb-4 rounded-2xl border p-3 transition-all duration-300 ${copiedAccount
+                ? "border-emerald-500 bg-emerald-50/70 shadow-sm shadow-emerald-500/5 ring-1 ring-emerald-500/10"
                 : "border-[#1E63B6]/10 bg-[#1E63B6]/5"
-            }`}>
+              }`}>
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-[#1E63B6]/10 relative">
                   <Image
-                    src="/images/image.png"
-                    alt="Krungthai"
+                    src="/images/bangkokBank.jpg"
+                    alt="Bangkok Bank"
                     width={48}
                     height={48}
                     className="h-full w-full object-cover scale-110 transition-transform"
@@ -814,7 +821,7 @@ export default function CartPage() {
                     {lang === "th" ? "บัญชีรับชำระ" : "Payment account"}
                   </p>
                   <p className="mt-0.5 text-sm font-black text-gray-950">
-                    {lang === "th" ? "ธนาคารกรุงไทย" : "Krungthai Bank"}
+                    {lang === "th" ? "ธนาคารกรุงเทพ" : "Bangkok Bank"}
                   </p>
                   <p className="mt-1 truncate text-xs font-bold text-gray-500">
                     {bankAccountName}
@@ -911,6 +918,7 @@ export default function CartPage() {
               </div>
               <Input name="name" placeholder={lang === "th" ? "ชื่อผู้รับ" : "Recipient name"} className="h-11 rounded-xl" />
               <Input name="phone" placeholder={t("checkout.label.phone")} className="h-11 rounded-xl" />
+              <Input name="email" type="email" placeholder={t("checkout.label.email")} className="h-11 rounded-xl" />
               {deliveryMode === "delivery" ? (
                 <>
                   <Textarea name="address" placeholder={t("checkout.label.address")} className="min-h-28 rounded-xl" />

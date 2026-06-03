@@ -181,16 +181,82 @@ export async function writeAuditLog(
   publishSuperAdminDataChanged();
 }
 
+function actionLabel(action: string) {
+  const labels: Record<string, string> = {
+    "admin_user.created": "Created admin account",
+    "admin_user.registered": "Registered admin account",
+    "order.tracking_updated": "Updated tracking number",
+    "order.cancelled": "Cancelled order",
+    "order.note_added": "Added order note",
+    "order.status_updated": "Updated order status",
+    "product.created": "Created product",
+    "product.updated": "Updated product",
+    "product.deleted": "Deleted product",
+    "slip.approved": "Approved payment slip",
+    "slip.rejected": "Rejected payment slip",
+  };
+
+  return labels[action] ?? action;
+}
+
+function textValue(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : "";
+}
+
+function localizedName(value: unknown) {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object") {
+    const text = value as { th?: unknown; en?: unknown };
+    return textValue(text.th) || textValue(text.en);
+  }
+
+  return "";
+}
+
 export async function listAuditLogs() {
   const db = await getDb();
   const docs = await db.collection("admin_audit_logs").find().sort({ createdAt: -1 }).limit(100).toArray();
+  const productIds = docs
+    .map((doc) => textValue(doc.metadata?.productId))
+    .filter((id) => ObjectId.isValid(id))
+    .map((id) => new ObjectId(id));
+  const orderIds = docs
+    .map((doc) => textValue(doc.metadata?.orderId))
+    .filter((id) => ObjectId.isValid(id))
+    .map((id) => new ObjectId(id));
+
+  const [products, orders] = await Promise.all([
+    productIds.length
+      ? db.collection("products").find({ _id: { $in: productIds } }).project({ name: 1, slug: 1 }).toArray()
+      : Promise.resolve([]),
+    orderIds.length
+      ? db.collection("orders").find({ _id: { $in: orderIds } }).project({ customer: 1 }).toArray()
+      : Promise.resolve([]),
+  ]);
+
+  const productNames = new Map(products.map((product) => [
+    product._id.toString(),
+    localizedName(product.name) || textValue(product.slug),
+  ]));
+  const orderLabels = new Map(orders.map((order) => [
+    order._id.toString(),
+    `${textValue(order.customer?.name) || "Customer"} (${order._id.toString().slice(-6).toUpperCase()})`,
+  ]));
 
   return docs.map((doc) => ({
     id: doc._id.toString(),
     actorUsername: doc.actorUsername,
     actorRole: doc.actorRole,
     action: doc.action,
+    actionLabel: actionLabel(doc.action),
     metadata: doc.metadata ?? {},
+    targetLabel:
+      textValue(doc.metadata?.productName) ||
+      textValue(doc.metadata?.customerName) ||
+      (textValue(doc.metadata?.productId) ? productNames.get(textValue(doc.metadata.productId)) : "") ||
+      (textValue(doc.metadata?.orderId) ? orderLabels.get(textValue(doc.metadata.orderId)) : "") ||
+      textValue(doc.metadata?.username) ||
+      "",
     createdAt: doc.createdAt,
   }));
 }

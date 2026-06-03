@@ -46,6 +46,7 @@ export type CartItemInput = {
 export type CustomerInput = {
   name: string;
   phone: string;
+  email: string;
   address: string;
 };
 
