@@ -24,7 +24,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/lib/language-context";
 import type { Order, OrderStatus } from "./types";
 import { STATUS_COLOR } from "./types";
-import { money, timeAgo } from "./utils";
+import { money, timeAgo, isPickupOrder } from "./utils";
+import { ShippingLabel } from "@/components/shop/cart/shipping-label";
 
 export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking, onCancel, t, onViewSlip }: {
   order: Order;
@@ -155,28 +156,42 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
             </Card>
           )}
 
-          {/* 1 — Order Summary */}
+          {/* Shipping Label or Customer Info — hidden during slip review */}
+          {order.status !== "payment_review" && (
+            !isPickupOrder(order) ? (
+              <ShippingLabel
+                name={order.customer.name}
+                address={order.customer.address}
+                phone={order.customer.phone}
+                lang={lang}
+              />
+            ) : (
+              <Card className="rounded-2xl shadow-3xs">
+                <CardContent className="p-4 flex flex-col gap-1.5">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">ข้อมูลผู้รับ</span>
+                  <span className="text-base font-black text-gray-900">{order.customer.name}</span>
+                  <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
+                    <Phone className="w-3.5 h-3.5 shrink-0 text-gray-400" />
+                    <span className="font-mono">{order.customer.phone}</span>
+                  </div>
+                  {order.customer.email ? (
+                    <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
+                      <Mail className="w-3.5 h-3.5 shrink-0 text-gray-400" />
+                      <span className="break-all">{order.customer.email}</span>
+                    </div>
+                  ) : null}
+                  <div className="flex items-start gap-2 text-sm text-gray-600 font-medium">
+                    <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5 text-gray-400" />
+                    <span className="leading-relaxed">{order.customer.address}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          )}
+
+          {/* Items + Total */}
           <Card className="rounded-2xl shadow-3xs">
             <CardContent className="p-4 flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5 pb-3 border-b border-slate-100">
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">ข้อมูลผู้สั่ง</span>
-                <span className="text-base font-black text-gray-900">{order.customer.name}</span>
-                <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
-                  <Phone className="w-3.5 h-3.5 shrink-0 text-gray-400" />
-                  <span className="font-mono">{order.customer.phone}</span>
-                </div>
-                {order.customer.email ? (
-                  <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
-                    <Mail className="w-3.5 h-3.5 shrink-0 text-gray-400" />
-                    <span className="break-all">{order.customer.email}</span>
-                  </div>
-                ) : null}
-                <div className="flex items-start gap-2 text-sm text-gray-600 font-medium">
-                  <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5 text-gray-400" />
-                  <span className="leading-relaxed">{order.customer.address}</span>
-                </div>
-              </div>
-
               <div className="flex flex-col gap-2.5">
                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">รายการสินค้า</span>
                 {order.items.map((item, i) => (
@@ -193,6 +208,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
               </div>
             </CardContent>
           </Card>
+
 
           {/* 3 — Stepper (hidden when cancelled) */}
           {order.status !== "cancelled" && <Card className="rounded-2xl shadow-3xs">
@@ -290,9 +306,15 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
 
                   {/* Next / Prev */}
                   <div className="flex flex-col gap-2">
+                    {!tracking.trim() && !order.trackingNumber && (
+                      <p className="text-[10px] font-bold text-amber-600 flex items-center gap-1">
+                        <span>⚠</span> กรุณากรอกหมายเลขพัสดุก่อนเปลี่ยนสถานะ
+                      </p>
+                    )}
                     <Button
+                      disabled={!tracking.trim() && !order.trackingNumber}
                       onClick={() => onStatusChange(order.id, timelineSteps[currentIdx + 1])}
-                      className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-[#85241F]/15"
+                      className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-[#85241F]/15 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <ArrowRight className="w-4 h-4" />
                       <span className="font-black">{t(`admin.status.${timelineSteps[currentIdx + 1]}`)}</span>
