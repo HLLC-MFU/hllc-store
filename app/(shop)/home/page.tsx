@@ -4,6 +4,7 @@ import { HomeClient } from "@/components/shop/home-client";
 type ProductOption = {
   label: string;
   imageUrl?: string;
+  stock?: number;
 };
 
 type LocalizedText = {
@@ -17,6 +18,8 @@ type ApiProduct = {
   description?: LocalizedText;
   price: number;
   stock: number;
+  shippingFirstItem?: number;
+  shippingAdditionalItem?: number;
   category?: string;
   options?: Array<string | ProductOption>;
   imageUrl?: string;
@@ -29,6 +32,8 @@ type DisplayProduct = {
   description: LocalizedText;
   price: number;
   stock: number;
+  shippingFirstItem: number;
+  shippingAdditionalItem: number;
   category: string;
   options: ProductOption[];
   imageUrl?: string;
@@ -58,6 +63,7 @@ function normalizeOptions(options?: Array<string | ProductOption>) {
       return {
         label: option.label?.trim() ?? "",
         imageUrl: option.imageUrl?.trim() ?? "",
+        stock: option.stock,
       };
     })
     .filter((option) => option.label);
@@ -72,6 +78,8 @@ function apiToDisplay(product: ApiProduct): DisplayProduct {
     description: product.description ?? { th: "" },
     price,
     stock: Number(product.stock ?? 0),
+    shippingFirstItem: Number(product.shippingFirstItem ?? 0),
+    shippingAdditionalItem: Number(product.shippingAdditionalItem ?? 0),
     category: normalizeCategory(product.category),
     options: normalizeOptions(product.options),
     imageUrl: product.imageUrl,

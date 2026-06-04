@@ -12,6 +12,7 @@ import type { Product } from "./types";
 type ProductOptionDraft = {
   label: string;
   imageUrl: string;
+  stock: string;
 };
 
 export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlledOpen, onClose, product }: {
@@ -39,6 +40,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
     (product?.options ?? []).map((option) => ({
       label: option.label,
       imageUrl: option.imageUrl ?? "",
+      stock: option.stock !== undefined ? String(option.stock) : String(product?.stock ?? 0),
     })),
   );
 
@@ -75,7 +77,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
   }
 
   function addOption() {
-    setOptions((current) => [...current, { label: "", imageUrl: "" }]);
+    setOptions((current) => [...current, { label: "", imageUrl: "", stock: String(product?.stock ?? 0) }]);
   }
 
   function removeOption(index: number) {
@@ -98,6 +100,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
       .map((option) => ({
         label: option.label.trim(),
         imageUrl: option.imageUrl.trim(),
+        stock: Math.max(0, Number(option.stock) || 0),
       }))
       .filter((option) => option.label);
   }
@@ -269,11 +272,19 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
               </div>
 
               {options.map((option, index) => (
-                <div key={index} className="grid grid-cols-[minmax(0,1fr)_3.5rem_2.5rem] items-center gap-2">
+                <div key={index} className="grid grid-cols-[minmax(0,1fr)_4.5rem_3.5rem_2.5rem] items-center gap-2">
                   <Input
                     value={option.label}
                     onChange={(event) => updateOption(index, { label: event.target.value })}
                     placeholder="เช่น M, L, สีดำ"
+                    className="h-10 rounded-xl border-gray-200 text-xs"
+                  />
+                  <Input
+                    value={option.stock}
+                    onChange={(event) => updateOption(index, { stock: event.target.value })}
+                    type="number"
+                    min="0"
+                    placeholder="Stock"
                     className="h-10 rounded-xl border-gray-200 text-xs"
                   />
                   <label className="flex h-14 cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-dashed border-gray-200 bg-gray-50">

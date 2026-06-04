@@ -15,6 +15,7 @@ export type LocalizedText = {
 export type ProductOption = {
   label: string;
   imageUrl?: string;
+  stock?: number;
 };
 
 export type ProductDetailProduct = {
@@ -58,10 +59,14 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
   const selectedOption = options.find((option) => option.label === selectedOptionLabel);
+  const selectedOptionStock = selectedOption ? (selectedOption.stock ?? product.stock) : product.stock;
   const displayImages = selectedOption?.imageUrl
     ? [selectedOption.imageUrl, ...images.filter((src) => src !== selectedOption.imageUrl)]
     : images;
-  const outOfStock = product.stock < 1;
+  const outOfStock = options.length > 0
+    ? options.every((option) => (option.stock ?? product.stock) < 1)
+    : product.stock < 1;
+  const selectedOptionOutOfStock = Boolean(selectedOption && selectedOptionStock < 1);
   const mustSelectOption = options.length > 0 && !selectedOption;
 
   const triggerToast = useCallback(() => {
@@ -71,7 +76,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   }, []);
 
   function handleAddToCart() {
-    if (mustSelectOption) {
+    if (mustSelectOption || selectedOptionOutOfStock || outOfStock) {
       triggerToast();
       return false;
     }
@@ -82,7 +87,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         name: product.name,
         description: product.description,
         price: product.price,
-        stock: product.stock,
+        stock: selectedOptionStock,
         shippingFirstItem: product.shippingFirstItem ?? 0,
         shippingAdditionalItem: product.shippingAdditionalItem ?? 0,
         imageUrl: displayImages[0] ?? "",
@@ -114,7 +119,12 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   };
 
   function selectOption(label: string) {
+    const nextOption = options.find((option) => option.label === label);
+    const nextStock = nextOption ? (nextOption.stock ?? product.stock) : product.stock;
+    if (nextStock < 1) return;
+
     setSelectedOptionLabel(label);
+    setQuantity((current) => Math.min(current, nextStock));
     setCurrentIndex(0);
     scrollContainerRef.current?.scrollTo({ left: 0, behavior: "smooth" });
   }
@@ -148,6 +158,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                   key={i}
                   className="w-full h-full shrink-0 snap-center flex items-center justify-center"
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={src}
                     alt={`${product.name[lang] || product.name.th} ${i + 1}`}
@@ -223,16 +234,21 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {options.map((option) => {
                 const selected = option.label === selectedOptionLabel;
+                const optionStock = option.stock ?? product.stock;
+                const optionOutOfStock = optionStock < 1;
 
                 return (
                   <button
                     key={option.label}
                     type="button"
                     onClick={() => selectOption(option.label)}
+                    disabled={optionOutOfStock}
                     className={`flex h-16 min-w-0 items-center gap-2 rounded-xl border px-2 text-left transition-all ${
                       selected
                         ? "border-[#85241F] bg-white text-[#85241F] shadow-sm ring-2 ring-[#85241F]/10"
-                        : "border-gray-200 bg-white text-gray-700 hover:border-[#85241F]/30"
+                        : optionOutOfStock
+                          ? "cursor-not-allowed border-gray-100 bg-gray-100 text-gray-300 opacity-70"
+                          : "border-gray-200 bg-white text-gray-700 hover:border-[#85241F]/30"
                     }`}
                   >
                     {option.imageUrl ? (
@@ -241,7 +257,14 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                     ) : (
                       <span className="h-11 w-11 shrink-0 rounded-lg bg-gray-100" />
                     )}
-                    <span className="min-w-0 truncate text-xs font-black">{option.label}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-black">{option.label}</span>
+                      <span className={`mt-0.5 block truncate text-[10px] font-bold ${optionOutOfStock ? "text-red-400" : "text-gray-400"}`}>
+                        {optionOutOfStock
+                          ? (lang === "th" ? "สินค้าหมด" : "Out of stock")
+                          : (lang === "th" ? `เหลือ ${optionStock}` : `${optionStock} left`)}
+                      </span>
+                    </span>
                   </button>
                 );
               })}
@@ -267,8 +290,9 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
             </span>
             <button
               type="button"
-              onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
-              className="w-8 h-8 rounded-full bg-[#85241F] flex items-center justify-center text-white hover:bg-[#6b1c18] transition-colors text-lg leading-none"
+              onClick={() => setQuantity((q) => Math.min(selectedOptionStock, q + 1))}
+              disabled={mustSelectOption || selectedOptionOutOfStock || quantity >= selectedOptionStock}
+              className="w-8 h-8 rounded-full bg-[#85241F] flex items-center justify-center text-white hover:bg-[#6b1c18] transition-colors text-lg leading-none disabled:bg-gray-200 disabled:text-gray-400"
             >
               +
             </button>
@@ -327,7 +351,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
               ref={addBtnRef}
               type="button"
               onClick={handleAddToCart}
-              disabled={mustSelectOption}
+              disabled={mustSelectOption || selectedOptionOutOfStock}
               className="flex items-center justify-center w-11 h-11 rounded-2xl bg-[#fce8e7] text-[#85241F] active:scale-95 transition-transform shrink-0 disabled:opacity-45 disabled:active:scale-100"
             >
               <ShoppingCart className="h-5 w-5" />
@@ -337,7 +361,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
             <button
               type="button"
               onClick={handleBuyNow}
-              disabled={mustSelectOption}
+              disabled={mustSelectOption || selectedOptionOutOfStock}
               className="flex-1 flex items-center justify-center rounded-2xl bg-[#85241F] h-11 text-sm font-bold text-white active:scale-95 transition-transform disabled:bg-gray-300 disabled:text-gray-500 disabled:active:scale-100"
             >
               {lang === "th" ? "ซื้อเลย" : "Buy Now"}

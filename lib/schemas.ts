@@ -121,6 +121,7 @@ export const localizedTextSchema = z.object({
 export const productOptionSchema = z.object({
   label: z.string().min(1, "Option label is required"),
   imageUrl: z.string().optional(),
+  stock: z.coerce.number().int().min(0, "Option stock must be a non-negative integer").optional(),
 });
 
 export const createProductSchema = z.object({

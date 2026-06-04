@@ -38,6 +38,11 @@ function assertNumber(value: unknown, field: string) {
   return result.data;
 }
 
+function normalizeOptionStock(value: unknown) {
+  if (value === undefined || value === null || value === "") return undefined;
+  return assertNumber(value, "option.stock");
+}
+
 function assertObjectId(id: string) {
   if (!ObjectId.isValid(id)) {
     throw new Error("invalid id");
@@ -55,12 +60,13 @@ function normalizeOptions(value: unknown) {
     return value
       .map((item) => {
         if (typeof item === "string") {
-          const [label = "", imageUrl = ""] = item.split("|").map((part) => part.trim());
-          return label ? { label, imageUrl } : null;
+          const [label = "", imageUrl = "", stock = ""] = item.split("|").map((part) => part.trim());
+          const optionStock = normalizeOptionStock(stock);
+          return label ? { label, imageUrl, ...(optionStock !== undefined ? { stock: optionStock } : {}) } : null;
         }
 
         if (item && typeof item === "object") {
-          const option = item as { label?: unknown; name?: unknown; value?: unknown; imageUrl?: unknown; image?: unknown };
+          const option = item as { label?: unknown; name?: unknown; value?: unknown; imageUrl?: unknown; image?: unknown; stock?: unknown };
           const label =
             typeof option.label === "string"
               ? option.label.trim()
@@ -76,12 +82,14 @@ function normalizeOptions(value: unknown) {
                 ? option.image.trim()
                 : "";
 
-          return label ? { label, imageUrl } : null;
+          const optionStock = normalizeOptionStock(option.stock);
+
+          return label ? { label, imageUrl, ...(optionStock !== undefined ? { stock: optionStock } : {}) } : null;
         }
 
         return null;
       })
-      .filter((item): item is { label: string; imageUrl: string } => Boolean(item));
+      .filter((item): item is { label: string; imageUrl: string; stock?: number } => Boolean(item));
   }
 
   if (typeof value === "string") {
@@ -90,8 +98,9 @@ function normalizeOptions(value: unknown) {
       .map((item) => item.trim())
       .filter(Boolean)
       .map((item) => {
-        const [label = "", imageUrl = ""] = item.split("|").map((part) => part.trim());
-        return { label, imageUrl };
+        const [label = "", imageUrl = "", stock = ""] = item.split("|").map((part) => part.trim());
+        const optionStock = normalizeOptionStock(stock);
+        return { label, imageUrl, ...(optionStock !== undefined ? { stock: optionStock } : {}) };
       });
   }
 
@@ -168,6 +177,9 @@ function toOrder(doc: Document): Order {
       price: product?.price ?? 0,
       quantity: item.quantity,
       subtotal: (product?.price ?? 0) * item.quantity,
+      selectedOption: typeof item.selectedOption === "string" && item.selectedOption.trim()
+        ? item.selectedOption.trim()
+        : undefined,
     };
   });
   const subtotal = Number(doc.subtotal ?? items.reduce((sum, item) => sum + item.subtotal, 0));
@@ -301,9 +313,25 @@ export async function createOrder(input: CreateOrderInput) {
       throw new Error(`not enough stock: ${product.name}`);
     }
 
+    const productOptions = normalizeOptions(product.options);
+    const selectedOption = item.selectedOption.trim();
+    const matchedOption = selectedOption
+      ? productOptions.find((option) => option.label === selectedOption)
+      : undefined;
+
+    if (productOptions.length > 0 && !matchedOption) {
+      throw new Error(`please select a valid option: ${product.name}`);
+    }
+
+    const optionStock = matchedOption?.stock ?? product.stock;
+    if (matchedOption && item.quantity > optionStock) {
+      throw new Error(`not enough option stock: ${matchedOption.label}`);
+    }
+
     return {
       productId: product._id,
       quantity: item.quantity,
+      selectedOption,
       _price: product.price,
       _shippingFirstItem: Number(product.shippingFirstItem ?? product.shipping ?? 0),
       _shippingAdditionalItem: Number(product.shippingAdditionalItem ?? 0),
@@ -324,7 +352,11 @@ export async function createOrder(input: CreateOrderInput) {
   const timestamp = now();
   const order = {
     customer,
-    items: storedItems.map(({ productId, quantity }) => ({ productId, quantity })),
+    items: storedItems.map(({ productId, quantity, selectedOption }) => ({
+      productId,
+      quantity,
+      selectedOption,
+    })),
     subtotal,
     shippingFee,
     deliveryMode,
@@ -455,12 +487,21 @@ export async function reviewPaymentSlip(orderId: string, input: ReviewSlipInput)
 
   if (input.approved) {
     await Promise.all(
-      order.items.map((item) =>
-        db.collection("products").updateOne(
+      order.items.map((item) => {
+        const inc: Document = { stock: -item.quantity };
+        const options: Document = {};
+
+        if (item.selectedOption) {
+          inc["options.$[option].stock"] = -item.quantity;
+          options.arrayFilters = [{ "option.label": item.selectedOption, "option.stock": { $exists: true } }];
+        }
+
+        return db.collection("products").updateOne(
           { _id: assertObjectId(item.productId) },
-          { $inc: { stock: -item.quantity }, $set: { updatedAt: timestamp } },
-        ),
-      ),
+          { $inc: inc, $set: { updatedAt: timestamp } },
+          options,
+        );
+      }),
     );
   }
 
@@ -470,10 +511,11 @@ export async function reviewPaymentSlip(orderId: string, input: ReviewSlipInput)
 export async function updateOrderStatus(
   orderId: string,
   status?: OrderStatus,
-  trackingNumber?: string,
+  _trackingNumber?: string,
 ) {
   const db = await getDb();
   const timestamp = now();
+  void _trackingNumber;
   const updateFields: Document = { status, updatedAt: timestamp };
 
   if (status === "payment_review") {
@@ -543,12 +585,21 @@ export async function cancelOrder(orderId: string, reason: string, cancelledBy: 
   // คืน stock เฉพาะ order ที่อนุมัติสลิปแล้ว (stock เคยถูกลดไป)
   if (order.slip.status === "approved") {
     await Promise.all(
-      order.items.map((item) =>
-        db.collection("products").updateOne(
+      order.items.map((item) => {
+        const inc: Document = { stock: item.quantity };
+        const options: Document = {};
+
+        if (item.selectedOption) {
+          inc["options.$[option].stock"] = item.quantity;
+          options.arrayFilters = [{ "option.label": item.selectedOption, "option.stock": { $exists: true } }];
+        }
+
+        return db.collection("products").updateOne(
           { _id: assertObjectId(item.productId) },
-          { $inc: { stock: item.quantity }, $set: { updatedAt: timestamp } },
-        ),
-      ),
+          { $inc: inc, $set: { updatedAt: timestamp } },
+          options,
+        );
+      }),
     );
   }
 

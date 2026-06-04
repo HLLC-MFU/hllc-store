@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, CheckCircle2, Clock, FileCheck2, MapPin, Package, Truck, XCircle } from "lucide-react";
+import { Check, CheckCircle2, Clock, FileCheck2, Package, Truck, XCircle } from "lucide-react";
 
 type OrderStatus =
   | "pending_payment"

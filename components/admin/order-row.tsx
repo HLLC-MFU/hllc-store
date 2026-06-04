@@ -86,6 +86,14 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
           <p className="text-xs text-gray-400 mt-1 font-medium truncate">
             {order.items.map((i) => `${i.name[lang] || i.name.th} ×${i.quantity}`).join(", ")}
           </p>
+          {order.items.some((item) => item.selectedOption) ? (
+            <p className="mt-1 truncate text-[10px] font-black text-[#85241F]">
+              {order.items
+                .filter((item) => item.selectedOption)
+                .map((item) => item.selectedOption)
+                .join(", ")}
+            </p>
+          ) : null}
         </div>
 
         <div className="text-right shrink-0 mr-1">
@@ -204,7 +212,14 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                 {order.items.map((item, i) => (
                   <div key={i} className="flex items-center justify-between">
                     <span className="text-sm text-gray-800 font-semibold truncate">{item.name[lang] || item.name.th} <span className="text-gray-400 font-medium">×{item.quantity}</span></span>
-                    <span className="text-sm font-black text-gray-900 shrink-0 ml-3">{money(item.subtotal)}</span>
+                    <div className="flex shrink-0 flex-col items-end gap-1 ml-3">
+                      <span className="text-sm font-black text-gray-900">{money(item.subtotal)}</span>
+                      {item.selectedOption ? (
+                        <span className="max-w-32 truncate rounded-md bg-[#85241F]/5 px-2 py-0.5 text-[10px] font-black text-[#85241F]">
+                          {item.selectedOption}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                 ))}
               </div>

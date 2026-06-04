@@ -25,12 +25,20 @@ export type Product = {
 export type ProductOption = {
   label: string;
   imageUrl?: string;
+  stock?: number;
 };
 
 export type Order = {
   id: string;
   customer: { name: string; phone: string; email?: string; address: string };
-  items: { productId: string; name: LocalizedText; price: number; quantity: number; subtotal: number }[];
+  items: {
+    productId: string;
+    name: LocalizedText;
+    price: number;
+    quantity: number;
+    subtotal: number;
+    selectedOption?: string;
+  }[];
   subtotal?: number;
   shippingFee?: number;
   deliveryMode?: "delivery" | "pickup";

@@ -21,6 +21,7 @@ type Order = {
     price: number;
     quantity: number;
     subtotal: number;
+    selectedOption?: string;
   }[];
   total: number;
   status: OrderStatus;
@@ -48,7 +49,7 @@ const STATUS_LABEL: Record<string, { th: string; en: string; badge: string; bar:
   pending_payment: { th: "รอชำระเงิน",      en: "Pending payment",       badge: "text-gray-500 bg-gray-100",    bar: "bg-gray-300"    },
 };
 
-function OrderCard({ order, lang, t }: { order: Order; lang: "th" | "en"; t: (k: string) => string }) {
+function OrderCard({ order, lang }: { order: Order; lang: "th" | "en" }) {
   const [open, setOpen] = useState(false);
   const [itemsOpen, setItemsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -140,10 +141,15 @@ function OrderCard({ order, lang, t }: { order: Order; lang: "th" | "en"; t: (k:
             {itemsOpen && (
               <div className="border-t border-gray-100 px-4 py-3 flex flex-col gap-2">
                 {order.items.map((item) => (
-                  <div key={`${order.id}-${item.productId}`} className="flex items-center justify-between gap-3">
+                  <div key={`${order.id}-${item.productId}-${item.selectedOption ?? ""}`} className="flex items-center justify-between gap-3">
                     <span className="text-sm font-semibold text-gray-700 truncate">
                       {itemName(item.name, lang)}<span className="ml-1 text-gray-400 font-medium">×{item.quantity}</span>
                     </span>
+                    {item.selectedOption ? (
+                      <span className="max-w-24 truncate rounded-md bg-[#85241F]/5 px-2 py-0.5 text-[10px] font-black text-[#85241F]">
+                        {item.selectedOption}
+                      </span>
+                    ) : null}
                     <span className="text-sm font-bold text-gray-600 shrink-0">{money(item.subtotal)}</span>
                   </div>
                 ))}
@@ -168,21 +174,13 @@ function OrderCard({ order, lang, t }: { order: Order; lang: "th" | "en"; t: (k:
 }
 
 function ProfileContent() {
-  const { lang, t } = useLanguage();
+  const { lang } = useLanguage();
   const searchParams = useSearchParams();
   const customerPhone = searchParams.get("customerPhone") ?? "";
   const [phone, setPhone] = useState("");
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    if (customerPhone) { setPhone(customerPhone); void loadOrders(customerPhone); return; }
-    try {
-      const stored = localStorage.getItem("shop-last-phone");
-      if (stored) { setPhone(stored); void loadOrders(stored); }
-    } catch { }
-  }, [customerPhone]);
 
   async function loadOrders(nextPhone = phone) {
     const normalized = nextPhone.replace(/\D/g, "");
@@ -207,6 +205,25 @@ function ProfileContent() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      if (customerPhone) {
+        setPhone(customerPhone);
+        void loadOrders(customerPhone);
+        return;
+      }
+
+      try {
+        const stored = localStorage.getItem("shop-last-phone");
+        if (stored) {
+          setPhone(stored);
+          void loadOrders(stored);
+        }
+      } catch { }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerPhone]);
 
   return (
     <main className="min-h-screen bg-[#f8fafc] px-4 py-6 pb-24">
@@ -246,7 +263,7 @@ function ProfileContent() {
 
         <div className="flex flex-col gap-4">
           {orders.map((order) => (
-            <OrderCard key={order.id} order={order} lang={lang} t={t} />
+            <OrderCard key={order.id} order={order} lang={lang} />
           ))}
         </div>
       </div>
@@ -265,3 +282,59 @@ export default function ProfilePage() {
     </Suspense>
   );
 }
+
+/*
+            <article key={order.id} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+              <div className="border-b border-gray-100 pb-4">
+                <h2 className="text-base font-black text-gray-900">{order.customer.name}</h2>
+                <p className="mt-1 text-xs font-semibold text-gray-500">
+                  {new Date(order.createdAt).toLocaleString(lang === "th" ? "th-TH" : "en-US")}
+                </p>
+              </div>
+
+              <LogisticsProgress order={order} lang={lang} />
+
+              {canShowTrackingNumber(order) && (
+                <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border border-emerald-100 bg-emerald-50 p-3">
+                  <div className="flex items-center gap-2 text-emerald-700">
+                    <Truck className="h-4 w-4 shrink-0" />
+                    <span className="text-xs font-black">
+                      {lang === "th" ? "เลขพัสดุ" : "Tracking number"}
+                    </span>
+                  </div>
+                  <span className="font-mono text-sm font-black tracking-wide text-gray-900">
+                    {order.trackingNumber}
+                  </span>
+                </div>
+              )}
+
+              <div className="rounded-xl bg-gray-50 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-black text-gray-500">
+                    {t("admin.order.item")}
+                  </span>
+                  <span className="text-sm font-black text-[#85241F]">
+                    {money(order.total)}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {order.items.map((item) => (
+                    <div key={`${order.id}-${item.productId}-${item.selectedOption ?? ""}`} className="flex items-center justify-between gap-3 text-xs">
+                      <div className="min-w-0">
+                        <span className="block truncate font-semibold text-gray-700">
+                          {typeof item.name === "object" ? (item.name[lang] || item.name.th) : item.name} x {item.quantity}
+                        </span>
+                        {item.selectedOption ? (
+                          <span className="mt-0.5 block truncate text-[10px] font-black text-[#85241F]">
+                            {item.selectedOption}
+                          </span>
+                        ) : null}
+                      </div>
+                      <span className="font-bold text-gray-500">{money(item.subtotal)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </article>
+*/

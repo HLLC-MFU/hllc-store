@@ -35,6 +35,7 @@ export type Product = {
 export type ProductOption = {
   label: string;
   imageUrl?: string;
+  stock?: number;
 };
 
 export type ProductOptionInput = string | ProductOption;

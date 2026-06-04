@@ -3,13 +3,16 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { Image as ImageIcon, Truck } from "lucide-react";
+import { Image as ImageIcon, ShoppingCart, Truck } from "lucide-react";
+import { useCart } from "@/lib/cart";
+import { useCartFly } from "@/lib/cart-fly";
 import { useLanguage } from "@/lib/language-context";
 import { LanguageChip } from "@/components/shared/language-chip";
 
 type ProductOption = {
   label: string;
   imageUrl?: string;
+  stock?: number;
 };
 
 type LocalizedText = {
@@ -23,6 +26,8 @@ type DisplayProduct = {
   description: LocalizedText;
   price: number;
   stock: number;
+  shippingFirstItem: number;
+  shippingAdditionalItem: number;
   category: string;
   options: ProductOption[];
   imageUrl?: string;
@@ -45,6 +50,47 @@ function money(value: number) {
 export function HomeClient({ products }: HomeClientProps) {
   const { lang, t } = useLanguage();
   const router = useRouter();
+  const { addItem } = useCart();
+  const { flyToCart } = useCartFly();
+
+  const goToProduct = React.useCallback((productId: string) => {
+    router.push(`/products/${productId}`);
+  }, [router]);
+
+  const addProductToCart = React.useCallback((product: DisplayProduct, sourceEl?: HTMLElement) => {
+    if (product.stock < 1) return false;
+
+    if (product.options.length > 0) {
+      goToProduct(product.id);
+      return false;
+    }
+
+    addItem({
+      productId: product.id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      stock: product.stock,
+      shippingFirstItem: product.shippingFirstItem,
+      shippingAdditionalItem: product.shippingAdditionalItem,
+      imageUrl: product.imageUrl ?? "",
+      selectedOption: "",
+    });
+
+    if (sourceEl) flyToCart(sourceEl, product.imageUrl);
+    return true;
+  }, [addItem, flyToCart, goToProduct]);
+
+  const buyProductNow = React.useCallback((product: DisplayProduct, sourceEl?: HTMLElement) => {
+    if (product.stock < 1) return;
+    if (product.options.length > 0) {
+      goToProduct(product.id);
+      return;
+    }
+
+    addProductToCart(product, sourceEl);
+    router.push("/cart");
+  }, [addProductToCart, goToProduct, router]);
 
   const trackingEntry = (
     <Link
@@ -77,13 +123,16 @@ export function HomeClient({ products }: HomeClientProps) {
       ) : (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
           {products.map((p) => {
-            const isOutOfStock = p.stock < 1;
+            const isOutOfStock = p.options.length > 0
+              ? p.options.every((option) => (option.stock ?? p.stock) < 1)
+              : p.stock < 1;
+            const needsOption = p.options.length > 0;
             const cardContent = (
               <>
                 {/* Image — full width, no frame */}
                 <div className="relative aspect-square bg-[#f5f5f5] overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   {p.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={p.imageUrl}
                       alt={p.name[lang] || p.name.th}
@@ -110,6 +159,58 @@ export function HomeClient({ products }: HomeClientProps) {
               </>
             );
 
+            if (!isOutOfStock && needsOption) {
+              return (
+                <div
+                  key={p.id}
+                  className="group relative rounded-3xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.13)] transition-all duration-300 overflow-hidden active:scale-[0.98]"
+                >
+                  <Link href={`/products/${p.id}`} className="block">
+                    {cardContent}
+                  </Link>
+                  <div className="px-3 pb-3">
+                    <button
+                      type="button"
+                      onClick={() => goToProduct(p.id)}
+                      className="flex h-10 w-full items-center justify-center rounded-2xl bg-[#85241F] px-3 text-xs font-black text-white transition-transform active:scale-[0.98]"
+                    >
+                      <span className="truncate">{lang === "th" ? "เลือกซื้อ" : "Choose"}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
+            const actions = !isOutOfStock ? (
+              <div className="flex items-center gap-2 px-3 pb-3">
+                <button
+                  type="button"
+                  onClick={(event) => addProductToCart(p, event.currentTarget)}
+                  aria-label={needsOption ? (lang === "th" ? "เลือกตัวเลือกสินค้า" : "Choose product option") : (lang === "th" ? "ใส่ตะกร้า" : "Add to cart")}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#fce8e7] text-[#85241F] transition-transform active:scale-95"
+                >
+                  <ShoppingCart className="h-4.5 w-4.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(event) => buyProductNow(p, event.currentTarget)}
+                  className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-2xl bg-[#85241F] px-3 text-xs font-black text-white transition-transform active:scale-[0.98]"
+                >
+                  <span className="truncate">
+                    {needsOption
+                      ? (lang === "th" ? "เลือกก่อน" : "Choose")
+                      : (lang === "th" ? "ซื้อเลย" : "Buy Now")}
+                  </span>
+                </button>
+              </div>
+            ) : (
+              <div className="px-3 pb-3">
+                <div className="flex h-10 items-center justify-center rounded-2xl bg-gray-100 text-xs font-black text-gray-400">
+                  {t("shop.out_of_stock")}
+                </div>
+              </div>
+            );
+
             if (isOutOfStock) {
               return (
                 <div
@@ -117,31 +218,36 @@ export function HomeClient({ products }: HomeClientProps) {
                   className="group rounded-3xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] overflow-hidden opacity-60 cursor-not-allowed"
                 >
                   {cardContent}
+                  {actions}
                 </div>
               );
             }
 
             return (
-              <Link
+              <div
                 key={p.id}
-                href={`/products/${p.id}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  const card = e.currentTarget;
-                  const rect = card.getBoundingClientRect();
-                  const x = e.clientX - rect.left;
-                  const y = e.clientY - rect.top;
-                  const size = Math.max(rect.width, rect.height);
-                  const ripple = document.createElement("span");
-                  ripple.className = "ripple";
-                  ripple.style.cssText = `width:${size}px;height:${size}px;left:${x - size / 2}px;top:${y - size / 2}px`;
-                  card.appendChild(ripple);
-                  setTimeout(() => { ripple.remove(); router.push(`/products/${p.id}`); }, 280);
-                }}
                 className="group relative rounded-3xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.13)] transition-all duration-300 overflow-hidden active:scale-[0.98]"
               >
-                {cardContent}
-              </Link>
+                <Link
+                  href={`/products/${p.id}`}
+                  onClick={(e) => {
+                    const card = e.currentTarget;
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const size = Math.max(rect.width, rect.height);
+                    const ripple = document.createElement("span");
+                    ripple.className = "ripple";
+                    ripple.style.cssText = `width:${size}px;height:${size}px;left:${x - size / 2}px;top:${y - size / 2}px`;
+                    card.appendChild(ripple);
+                    setTimeout(() => ripple.remove(), 280);
+                  }}
+                  className="block"
+                >
+                  {cardContent}
+                </Link>
+                {actions}
+              </div>
             );
           })}
         </div>

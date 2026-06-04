@@ -26,6 +26,11 @@ function normalizeOptionImageValue(value: unknown) {
   return normalizeImageValue(value);
 }
 
+function normalizeOptionStock(value: unknown) {
+  if (value === undefined || value === null || value === "") return undefined;
+  return assertNumber(value, "option.stock");
+}
+
 function assertNumber(value: unknown, field: string) {
   const result = z.coerce.number().finite().min(0, { message: `${field} must be a positive number` }).safeParse(value);
   if (!result.success) {
@@ -59,12 +64,15 @@ function normalizeOptions(value: unknown) {
     return value
       .map((item) => {
         if (typeof item === "string") {
-          const [label = "", imageUrl = ""] = item.split("|").map((part) => part.trim());
-          return label ? { label, imageUrl: normalizeOptionImageValue(imageUrl) } : null;
+          const [label = "", imageUrl = "", stock = ""] = item.split("|").map((part) => part.trim());
+          const optionStock = normalizeOptionStock(stock);
+          return label
+            ? { label, imageUrl: normalizeOptionImageValue(imageUrl), ...(optionStock !== undefined ? { stock: optionStock } : {}) }
+            : null;
         }
 
         if (item && typeof item === "object") {
-          const option = item as { label?: unknown; name?: unknown; value?: unknown; imageUrl?: unknown; image?: unknown };
+          const option = item as { label?: unknown; name?: unknown; value?: unknown; imageUrl?: unknown; image?: unknown; stock?: unknown };
           const label =
             typeof option.label === "string"
               ? option.label.trim()
@@ -80,12 +88,16 @@ function normalizeOptions(value: unknown) {
                 ? option.image.trim()
                 : "";
 
-          return label ? { label, imageUrl: normalizeOptionImageValue(imageUrl) } : null;
+          const optionStock = normalizeOptionStock(option.stock);
+
+          return label
+            ? { label, imageUrl: normalizeOptionImageValue(imageUrl), ...(optionStock !== undefined ? { stock: optionStock } : {}) }
+            : null;
         }
 
         return null;
       })
-      .filter((item): item is { label: string; imageUrl: string } => Boolean(item));
+      .filter((item): item is { label: string; imageUrl: string; stock?: number } => Boolean(item));
   }
 
   if (typeof value === "string") {
@@ -94,8 +106,9 @@ function normalizeOptions(value: unknown) {
       .map((item) => item.trim())
       .filter(Boolean)
       .map((item) => {
-        const [label = "", imageUrl = ""] = item.split("|").map((part) => part.trim());
-        return { label, imageUrl: normalizeOptionImageValue(imageUrl) };
+        const [label = "", imageUrl = "", stock = ""] = item.split("|").map((part) => part.trim());
+        const optionStock = normalizeOptionStock(stock);
+        return { label, imageUrl: normalizeOptionImageValue(imageUrl), ...(optionStock !== undefined ? { stock: optionStock } : {}) };
       });
   }
 
