@@ -77,6 +77,7 @@ export const createOrderSchema = z.object({
     address: z.string().min(1, "Address is required"),
   }),
   items: z.array(cartItemInputSchema).min(1, "At least one item is required"),
+  deliveryMode: z.enum(["delivery", "pickup"]).optional(),
 });
 
 /* ================================================================
@@ -128,6 +129,8 @@ export const createProductSchema = z.object({
   description: localizedTextSchema.optional(),
   price: z.coerce.number().finite().min(0, "Price must be a positive number"),
   stock: z.coerce.number().int().min(0, "Stock must be a non-negative integer"),
+  shippingFirstItem: z.coerce.number().finite().min(0, "Shipping first item must be a positive number").optional(),
+  shippingAdditionalItem: z.coerce.number().finite().min(0, "Shipping additional item must be a positive number").optional(),
   category: z.string().optional(),
   options: z.array(z.union([z.string(), productOptionSchema])).optional(),
   imageUrl: z.string().optional(),

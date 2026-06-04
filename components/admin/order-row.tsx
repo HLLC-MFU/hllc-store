@@ -52,6 +52,13 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
   ];
 
   const currentIdx = timelineSteps.indexOf(order.status);
+  const statusButtonLabel = (status?: OrderStatus) => {
+    if (!status) return "";
+    if (status === "payment_review") {
+      return lang === "th" ? "ขออัปโหลดสลิปใหม่" : "Request new slip";
+    }
+    return t(`admin.status.${status}`);
+  };
 
   return (
     <Card className={`rounded-3xl shadow-2xs overflow-hidden transition-all duration-200 ${open ? "border-slate-200/80 ring-3 ring-slate-100" : "border-slate-100 hover:border-slate-200"}`}>
@@ -303,7 +310,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       className="w-full h-auto py-2.5 text-xs font-bold gap-2"
                     >
                       <ArrowLeft className="w-4 h-4" />
-                      <span>{t(`admin.status.${timelineSteps[currentIdx - 1]}`)}</span>
+                      <span>{statusButtonLabel(timelineSteps[currentIdx - 1])}</span>
                     </Button>
                   </div>
                 </div>
@@ -325,7 +332,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       className="w-full h-auto py-2.5 text-xs font-bold gap-2"
                     >
                       <ArrowLeft className="w-4 h-4" />
-                      <span>{t(`admin.status.${timelineSteps[currentIdx - 1]}`)}</span>
+                      <span>{statusButtonLabel(timelineSteps[currentIdx - 1])}</span>
                     </Button>
                   )}
                 </div>
@@ -347,7 +354,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       className="w-full h-auto py-2.5 text-xs font-bold gap-2"
                     >
                       <ArrowLeft className="w-4 h-4" />
-                      <span>{t(`admin.status.${timelineSteps[currentIdx - 1]}`)}</span>
+                      <span>{statusButtonLabel(timelineSteps[currentIdx - 1])}</span>
                     </Button>
                   )}
                 </div>

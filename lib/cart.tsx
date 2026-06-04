@@ -13,6 +13,8 @@ export type CartItem = {
   description?: LocalizedText;
   price: number;
   stock?: number;
+  shippingFirstItem?: number;
+  shippingAdditionalItem?: number;
   imageUrl?: string;
   selectedOption?: string;
   quantity: number;
@@ -43,11 +45,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("shop-cart");
-      if (stored) setItems(JSON.parse(stored) as CartItem[]);
-    } catch {}
-    setReady(true);
+    queueMicrotask(() => {
+      try {
+        const stored = localStorage.getItem("shop-cart");
+        if (stored) setItems(JSON.parse(stored) as CartItem[]);
+      } catch {}
+      setReady(true);
+    });
   }, []);
 
   useEffect(() => {

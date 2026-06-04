@@ -38,6 +38,9 @@ type DeliveryMode = "delivery" | "pickup";
 
 type Order = {
   id: string;
+  subtotal?: number;
+  shippingFee?: number;
+  deliveryMode?: DeliveryMode;
   total: number;
   status: string;
   customer?: {
@@ -61,6 +64,14 @@ function saveOrderLookup(orderId: string, phone: string) {
 
 const bankAccountName = "นันทเดช วงศ์ไชยา";
 const bankAccountNumber = "6621540027";
+
+function itemShippingFee(item: CartItem) {
+  if (item.quantity <= 0) return 0;
+  return (
+    (item.shippingFirstItem ?? 0) +
+    (item.shippingAdditionalItem ?? 0) * Math.max(0, item.quantity - 1)
+  );
+}
 
 export default function CartPage() {
   const { items, updateQty, removeItem, clearCart } = useCart();
@@ -111,6 +122,12 @@ export default function CartPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const selectedShippingFee = useMemo(() => {
+    if (deliveryMode === "pickup") return 0;
+    return selectedItems.reduce((sum, item) => sum + itemShippingFee(item), 0);
+  }, [deliveryMode, selectedItems]);
+  const selectedPayableTotal = selectedTotal + selectedShippingFee;
 
   const confirmRemoveText = useMemo(() => {
     return lang === "th" ? "ต้องการลบสินค้านี้ออกจากตะกร้าใช่ไหม?" : "Remove this item from cart?";
@@ -243,6 +260,7 @@ export default function CartPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customer: { name, phone, email, address: fullAddress },
+          deliveryMode,
           items: selectedItems.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
@@ -432,8 +450,44 @@ export default function CartPage() {
                   </span>
                 </div>
                 <div className="mb-4 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-500">{t("checkout.total")}</span>
+                  <span className="text-sm font-semibold text-gray-500">{lang === "th" ? "ค่าสินค้า" : "Subtotal"}</span>
                   <span className="text-xl font-black text-[#85241F]">{money(selectedTotal)}</span>
+                </div>
+                <div className="mb-4 grid grid-cols-2 rounded-xl bg-gray-100 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryMode("delivery")}
+                    className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-black transition-colors ${deliveryMode === "delivery"
+                      ? "bg-white text-[#85241F] shadow-sm"
+                      : "text-gray-500"
+                    }`}
+                  >
+                    <Truck className="h-4 w-4" />
+                    {lang === "th" ? "จัดส่ง" : "Delivery"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryMode("pickup")}
+                    className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-black transition-colors ${deliveryMode === "pickup"
+                      ? "bg-white text-[#85241F] shadow-sm"
+                      : "text-gray-500"
+                    }`}
+                  >
+                    <Store className="h-4 w-4" />
+                    {lang === "th" ? "รับเอง" : "Pickup"}
+                  </button>
+                </div>
+                <div className="mb-4 space-y-2 rounded-xl bg-gray-50 p-3 text-sm font-bold">
+                  <div className="flex justify-between text-gray-500">
+                    <span>{t("checkout.shipping")}</span>
+                    <span className={selectedShippingFee > 0 ? "text-gray-800" : "text-emerald-600"}>
+                      {selectedShippingFee > 0 ? money(selectedShippingFee) : t("checkout.shipping.free")}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-gray-200 pt-2 text-gray-900">
+                    <span>{t("checkout.total")}</span>
+                    <span className="text-[#85241F]">{money(selectedPayableTotal)}</span>
+                  </div>
                 </div>
                 <Button
                   onClick={goPayment}
@@ -457,7 +511,13 @@ export default function CartPage() {
             </button>
             <div className="mb-4 rounded-2xl bg-[#85241F]/5 p-4 text-center">
               <p className="text-xs font-bold text-gray-500">{t("checkout.payment_amount")}</p>
-              <p className="mt-1 text-2xl font-black text-[#85241F]">{money(selectedTotal)}</p>
+              <p className="mt-1 text-2xl font-black text-[#85241F]">{money(selectedPayableTotal)}</p>
+              {selectedShippingFee > 0 ? (
+                <p className="mt-1 text-xs font-bold text-gray-500">
+                  {lang === "th" ? "รวมค่าส่ง " : "Includes shipping "}
+                  {money(selectedShippingFee)}
+                </p>
+              ) : null}
             </div>
             <div className={`mb-4 rounded-2xl border p-3 transition-all duration-300 ${copiedAccount
                 ? "border-emerald-500 bg-emerald-50/70 shadow-sm shadow-emerald-500/5 ring-1 ring-emerald-500/10"
@@ -551,10 +611,10 @@ export default function CartPage() {
               {lang === "th" ? "กลับไปชำระเงิน" : "Back to payment"}
             </button>
             <form onSubmit={handleCheckout} className="space-y-3">
-              <div className="grid grid-cols-2 rounded-xl bg-gray-100 p-1">
+              <div className="hidden">
                 <button
                   type="button"
-                  onClick={() => setDeliveryMode("delivery")}
+                  disabled
                   className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-black transition-colors ${deliveryMode === "delivery"
                     ? "bg-white text-[#85241F] shadow-sm"
                     : "text-gray-500"
@@ -565,7 +625,7 @@ export default function CartPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setDeliveryMode("pickup")}
+                  disabled
                   className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-black transition-colors ${deliveryMode === "pickup"
                     ? "bg-white text-[#85241F] shadow-sm"
                     : "text-gray-500"
@@ -574,6 +634,17 @@ export default function CartPage() {
                   <Store className="h-4 w-4" />
                   {lang === "th" ? "รับเอง" : "Pickup"}
                 </button>
+              </div>
+              <div className="flex items-center justify-between rounded-xl bg-gray-50 p-3 text-sm font-bold">
+                <span className="flex items-center gap-2 text-gray-500">
+                  {deliveryMode === "delivery" ? <Truck className="h-4 w-4" /> : <Store className="h-4 w-4" />}
+                  {lang === "th" ? "วิธีรับสินค้า" : "Fulfillment"}
+                </span>
+                <span className="text-[#85241F]">
+                  {deliveryMode === "delivery"
+                    ? lang === "th" ? "จัดส่ง" : "Delivery"
+                    : lang === "th" ? "รับเอง" : "Pickup"}
+                </span>
               </div>
               <div className="relative">
                 <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -595,6 +666,11 @@ export default function CartPage() {
                 placeholder={t("checkout.label.email")}
                 className="h-11 rounded-xl"
               />
+              <p className="-mt-1 px-1 text-[11px] font-semibold text-gray-400">
+                {lang === "th"
+                  ? "ใช้อีเมลนี้เพื่อรับการแจ้งเตือนสถานะคำสั่งซื้อและการจัดส่ง"
+                  : "We use this email for order status and delivery notifications."}
+              </p>
               {deliveryMode === "delivery" ? (
                 <>
                   <div className="relative">
@@ -632,6 +708,14 @@ export default function CartPage() {
                   <span>{selectedCount} {t("shop.items_count")}</span>
                   <span className="text-[#85241F]">{money(selectedTotal)}</span>
                 </div>
+                <div className="mt-1 flex justify-between">
+                  <span>{t("checkout.shipping")}</span>
+                  <span>{selectedShippingFee > 0 ? money(selectedShippingFee) : t("checkout.shipping.free")}</span>
+                </div>
+                <div className="mt-2 flex justify-between border-t border-gray-200 pt-2 text-sm text-gray-900">
+                  <span>{t("checkout.total")}</span>
+                  <span className="text-[#85241F]">{money(selectedPayableTotal)}</span>
+                </div>
               </div>
               <Button
                 disabled={loading || !items.length}
@@ -662,7 +746,12 @@ export default function CartPage() {
               <p className="text-xs font-bold text-gray-500">
                 {selectedCount} {t("shop.items_count")}
               </p>
-              <p className="mt-0.5 text-xl font-black text-[#85241F]">{money(selectedTotal)}</p>
+              <p className="mt-0.5 text-xl font-black text-[#85241F]">{money(selectedPayableTotal)}</p>
+              {selectedShippingFee > 0 ? (
+                <p className="mt-1 text-[11px] font-bold text-gray-500">
+                  {t("checkout.shipping")}: {money(selectedShippingFee)}
+                </p>
+              ) : null}
             </div>
             <div className="mt-5 grid grid-cols-2 gap-2">
               <Button

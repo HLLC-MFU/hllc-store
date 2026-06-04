@@ -299,11 +299,31 @@ export function trackingNumberEmail(
   };
 }
 
-export function slipResetEmail(customerName: string, orderId: string, note?: string, to = ""): EmailPayload {
+export function slipResetEmail(customerName: string, orderId: string, note?: string, to = "", customerPhone?: string): EmailPayload {
+  const orderCode = orderId.slice(-6).toUpperCase();
+  const reason = note?.trim() || "ทีมงานไม่สามารถตรวจสอบรายละเอียดในสลิปเดิมได้ครบถ้วน";
+
   return {
     to,
-    subject: "Please resend your payment slip",
-    text: `Hello ${customerName}, our team needs to review the payment slip for order #${orderId.slice(-6).toUpperCase()} again.${note ? ` Reason: ${note}` : ""} Please upload a new payment slip.`,
+    subject: "HLLC Store - กรุณาอัปโหลดสลิปใหม่",
+    text: `สวัสดีคุณ ${customerName}, สลิปชำระเงินของคำสั่งซื้อ #${orderCode} ต้องตรวจสอบใหม่ เนื่องจาก${reason} กรุณาอัปโหลดสลิปใหม่อีกครั้งผ่านหน้าติดตามคำสั่งซื้อ`,
+    html: statusEmailHtml({
+      badge: "Slip Needs Review",
+      badgeBg: "#fef3c7",
+      badgeColor: "#92400e",
+      buttonColor: "#85241F",
+      customerName,
+      description: `สลิปชำระเงินของคุณยังตรวจสอบไม่สำเร็จ เนื่องจาก <b>${escapeHtml(reason)}</b> กรุณาอัปโหลดสลิปใหม่อีกครั้งเพื่อให้ทีมงานดำเนินการต่อ`,
+      detailRows: [
+        { label: "สถานะสลิป", value: "รออัปโหลดสลิปใหม่", color: "#92400e" },
+        { label: "เหตุผล", value: reason },
+        { label: "ประเภท", value: "Payment Slip" },
+      ],
+      headline: "สลิปชำระเงินต้องตรวจสอบใหม่",
+      orderId,
+      subtitle: "Payment Slip Review Notice",
+      customerPhone,
+    }),
   };
 }
 

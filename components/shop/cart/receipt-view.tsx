@@ -15,6 +15,9 @@ type OrderCustomer = {
 
 type Order = {
   id: string;
+  subtotal?: number;
+  shippingFee?: number;
+  deliveryMode?: "delivery" | "pickup";
   total: number;
   status: string;
   customer?: OrderCustomer;
@@ -27,6 +30,9 @@ interface ReceiptViewProps {
 }
 
 export function ReceiptView({ lang, createdOrder, receiptItems }: ReceiptViewProps) {
+  const shippingFee = createdOrder.shippingFee ?? 0;
+  const subtotal = createdOrder.subtotal ?? Math.max(0, createdOrder.total - shippingFee);
+
   return (
     <div className="flex min-h-[80vh] flex-col items-center justify-center py-10 text-center">
       <div className="w-full max-w-sm">
@@ -97,7 +103,11 @@ export function ReceiptView({ lang, createdOrder, receiptItems }: ReceiptViewPro
           <div className="space-y-1.5">
             <div className="flex justify-between text-neutral-600">
               <span>{lang === "th" ? "ยอดรวม" : "Subtotal"}</span>
-              <span>{money(createdOrder.total)}</span>
+              <span>{money(subtotal)}</span>
+            </div>
+            <div className="flex justify-between text-neutral-600">
+              <span>{lang === "th" ? "ค่าส่ง" : "Shipping"}</span>
+              <span>{shippingFee > 0 ? money(shippingFee) : lang === "th" ? "ฟรี" : "FREE"}</span>
             </div>
             <div className="flex justify-between text-neutral-600">
               <span>{lang === "th" ? "วิธีชำระเงิน" : "Payment"}</span>
