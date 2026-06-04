@@ -1,6 +1,7 @@
 "use client";
 
-import { ClipboardList, LayoutDashboard, Mail, Package, User } from "lucide-react";
+import Link from "next/link";
+import { ClipboardList, LayoutDashboard, LogOut, Mail, Package, User } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 import { LanguageChip } from "@/components/shared/language-chip";
 
@@ -11,9 +12,10 @@ type Props = {
   orderCount: number;
   productCount: number;
   isSuperAdmin?: boolean;
+  onLogout?: () => void;
 };
 
-export function AdminSidebar({
+export function AdminSidebar({ onLogout,
   activeTab,
   setActiveTab,
   pendingCount,
@@ -69,10 +71,10 @@ export function AdminSidebar({
     <aside className="hidden lg:flex fixed left-0 top-0 h-full w-56 xl:w-64 bg-white border-r border-gray-100 flex-col z-40 shadow-sm">
 
       {/* Brand */}
-      <div className="flex justify-center px-6 py-6 border-b border-gray-100">
+      <Link href="/admin" className="flex justify-center px-6 py-6 border-b border-gray-100 hover:opacity-80 transition-opacity">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/images/HLLCLOGO.png" alt="HLLC" className="h-14 w-auto object-contain" />
-      </div>
+      </Link>
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
@@ -113,14 +115,26 @@ export function AdminSidebar({
       <div className="px-4 py-4 border-t border-gray-100 flex flex-col gap-3">
         <LanguageChip />
 
-        <div className="flex items-center gap-2.5 px-1">
-          <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-            <LayoutDashboard className="w-3.5 h-3.5 text-gray-500" />
+        <div className="flex items-center justify-between gap-2 px-1">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+              <LayoutDashboard className="w-3.5 h-3.5 text-gray-500" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-gray-700">Admin</p>
+              <p className="text-[10px] text-gray-400 truncate">หลังบ้าน HLLC</p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-xs font-bold text-gray-700">Admin</p>
-            <p className="text-[10px] text-gray-400 truncate">หลังบ้าน HLLC</p>
-          </div>
+          {onLogout && (
+            <button
+              type="button"
+              onClick={onLogout}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer"
+              title="Logout"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
     </aside>

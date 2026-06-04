@@ -1,11 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useRef, useCallback } from "react";
-import { ShoppingCart } from "lucide-react";
+import { useState, useRef, useCallback, type RefObject } from "react";
+import { ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
 import { useCart } from "@/lib/cart";
+import { useCartFly } from "@/lib/cart-fly";
 import { useLanguage } from "@/lib/language-context";
-import { PageHeader } from "@/components/shop/page-header";
 
 export type LocalizedText = {
   th: string;
@@ -42,7 +42,9 @@ function money(value: number) {
 export function ProductDetailView({ product }: { product: ProductDetailProduct }) {
   const router = useRouter();
   const { addItem } = useCart();
+  const { flyToCart } = useCartFly();
   const { lang } = useLanguage();
+  const addBtnRef = useRef<HTMLButtonElement>(null);
 
   const images = product.imageUrls ?? [];
   const options = product.options ?? [];
@@ -87,6 +89,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         selectedOption: selectedOption?.label ?? "",
       });
     }
+    if (addBtnRef.current) flyToCart(addBtnRef.current, displayImages[0]);
     triggerToast();
     return true;
   }
@@ -94,6 +97,12 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   function handleBuyNow() {
     if (!handleAddToCart()) return;
     router.push("/cart");
+  }
+
+  function scrollTo(index: number, ref: RefObject<HTMLDivElement | null>) {
+    if (!ref.current) return;
+    ref.current.scrollTo({ left: index * ref.current.clientWidth, behavior: "smooth" });
+    setCurrentIndex(index);
   }
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -115,20 +124,16 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
     : "";
 
   return (
-    <div className="min-h-screen bg-white px-5 py-6 pb-24 flex flex-col">
+    <div className="min-h-screen bg-white px-5 py-6 pb-24 flex flex-col animate-in fade-in slide-in-from-bottom-3 duration-300">
       {/* Toast */}
       <div className={`fixed inset-0 z-50 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${showToast ? "opacity-100" : "opacity-0"}`}>
         <div className="flex items-center gap-3 bg-gray-900/90 text-white px-6 py-4 rounded-2xl shadow-xl">
           <ShoppingCart className="h-5 w-5 text-green-400 shrink-0" />
           <span className="text-sm font-semibold">
-            {mustSelectOption
-              ? lang === "th" ? "กรุณาเลือกตัวเลือกสินค้าก่อน" : "Please choose an option first"
-              : lang === "th" ? `เพิ่มลงตะกร้าแล้ว ${quantity} ชิ้น` : `Added ${quantity} item${quantity > 1 ? "s" : ""} to cart`}
+            {lang === "th" ? `เพิ่มลงตะกร้าแล้ว ${quantity} ชิ้น` : `Added ${quantity} item${quantity > 1 ? "s" : ""} to cart`}
           </span>
         </div>
       </div>
-      <PageHeader title={lang === "th" ? "รายละเอียดสินค้า" : "Product Details"} backHref="/home" />
-
       {/* Image Card */}
       <div className="rounded-2xl bg-gray-100 overflow-hidden">
         {displayImages.length > 0 ? (
@@ -152,9 +157,39 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
               ))}
             </div>
             {displayImages.length > 1 && (
-              <div className="absolute bottom-3 right-3 bg-black/40 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
-                {currentIndex + 1}/{displayImages.length}
-              </div>
+              <>
+                {/* Prev */}
+                {currentIndex > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => scrollTo(currentIndex - 1, scrollContainerRef)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm shadow-md flex items-center justify-center text-gray-700 hover:bg-white active:scale-90 transition-all"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                )}
+                {/* Next */}
+                {currentIndex < displayImages.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => scrollTo(currentIndex + 1, scrollContainerRef)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm shadow-md flex items-center justify-center text-gray-700 hover:bg-white active:scale-90 transition-all"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                )}
+                {/* Dots */}
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+                  {displayImages.map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => scrollTo(i, scrollContainerRef)}
+                      className={`rounded-full transition-all ${i === currentIndex ? "w-4 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50"}`}
+                    />
+                  ))}
+                </div>
+              </>
             )}
           </div>
         ) : (
@@ -289,6 +324,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
 
             {/* Add to cart */}
             <button
+              ref={addBtnRef}
               type="button"
               onClick={handleAddToCart}
               disabled={mustSelectOption}

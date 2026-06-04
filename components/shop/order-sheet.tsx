@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { CheckCircle2, ChevronLeft, Minus, Plus, Upload, X, Search } from "lucide-react";
+import { CheckCircle2, ChevronLeft, Minus, Plus, Upload, X } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 import { EmailInput } from "@/components/shared/email-input";
 import { PhoneInput } from "@/components/shared/phone-input";
@@ -31,101 +31,6 @@ type OrderStatus =
   | "completed"
   | "cancelled";
 
-const PROVINCES = [
-  "กรุงเทพมหานคร","กระบี่","กาญจนบุรี","กาฬสินธุ์","กำแพงเพชร","ขอนแก่น",
-  "จันทบุรี","ฉะเชิงเทรา","ชลบุรี","ชัยนาท","ชัยภูมิ","ชุมพร","เชียงราย","เชียงใหม่",
-  "ตรัง","ตราด","ตาก","นครนายก","นครปฐม","นครพนม","นครราชสีมา","นครศรีธรรมราช",
-  "นครสวรรค์","นนทบุรี","นราธิวาส","น่าน","บึงกาฬ","บุรีรัมย์","ปทุมธานี",
-  "ประจวบคีรีขันธ์","ปราจีนบุรี","ปัตตานี","พระนครศรีอยุธยา","พะเยา","พังงา",
-  "พัทลุง","พิจิตร","พิษณุโลก","เพชรบุรี","เพชรบูรณ์","แพร่","ภูเก็ต","มหาสารคาม",
-  "มุกดาหาร","แม่ฮ่องสอน","ยโสธร","ยะลา","ร้อยเอ็ด","ระนอง","ระยอง","ราชบุรี",
-  "ลพบุรี","ลำปาง","ลำพูน","เลย","ศรีสะเกษ","สกลนคร","สงขลา","สตูล",
-  "สมุทรปราการ","สมุทรสงคราม","สมุทรสาคร","สระแก้ว","สระบุรี","สิงห์บุรี",
-  "สุโขทัย","สุพรรณบุรี","สุราษฎร์ธานี","สุรินทร์","หนองคาย","หนองบัวลำภู",
-  "อ่างทอง","อำนาจเจริญ","อุดรธานี","อุตรดิตถ์","อุทัยธานี","อุบลราชธานี",
-];
-
-function ProvinceSelect({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
-  const { t } = useLanguage();
-
-  const filtered = PROVINCES.filter((p) =>
-    p.toLowerCase().includes(query.toLowerCase())
-  );
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-        setQuery("");
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => { setOpen((o) => !o); setQuery(""); }}
-        className="w-full flex items-center justify-between border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:border-[#85241F] outline-none transition-colors cursor-pointer"
-      >
-        <span className={value ? "text-gray-900" : "text-gray-400"}>
-          {value || t("checkout.select_province")}
-        </span>
-        <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {open && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-100 rounded-2xl shadow-lg overflow-hidden">
-          {/* Search input */}
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100">
-            <Search className="w-4 h-4 text-gray-400 shrink-0" />
-            <input
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t("checkout.search_province")}
-              className="flex-1 text-sm outline-none bg-transparent placeholder:text-gray-400"
-            />
-          </div>
-          {/* List */}
-          <div className="max-h-52 overflow-y-auto py-1">
-            {filtered.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-4">{t("checkout.no_province")}</p>
-            )}
-            {filtered.map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => { onChange(p); setOpen(false); setQuery(""); }}
-                className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between cursor-pointer ${
-                  value === p
-                    ? "bg-[#85241F]/8 text-[#85241F] font-medium"
-                    : "hover:bg-gray-50 text-gray-700"
-                }`}
-              >
-                {p}
-                {value === p && <span className="text-[#85241F] text-xs">✓</span>}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function formatPhone(raw: string) {
   const d = raw.replace(/\D/g, "").slice(0, 10);
@@ -281,7 +186,6 @@ export function OrderSheet({
   const [lastName, setLastName] = useState("");
   const [streetAddress, setStreetAddress] = useState("");
   const [district, setDistrict] = useState("");
-  const [province, setProvince] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -327,8 +231,7 @@ export function OrderSheet({
       setQty(1);
       setDeliveryMode("delivery");
       setFirstName(""); setLastName("");
-      setStreetAddress(""); setDistrict("");
-      setProvince(""); setPostalCode("");
+      setStreetAddress(""); setDistrict(""); setPostalCode("");
       setPhone("");
       setEmail("");
       setPickupName(""); setPickupTime(""); setPickupPhone("");
@@ -368,7 +271,6 @@ export function OrderSheet({
           lastName,
           streetAddress,
           district,
-          province,
           postalCode,
           phone: normalizePhone(phone),
           email: normalizeEmail(email),
@@ -388,7 +290,7 @@ export function OrderSheet({
     const normalizedEmail = normalizeEmail(email);
     const fullAddress = isPickup
       ? `รับเองที่ D1 — เวลา ${pickupTime.trim()}`
-      : `${streetAddress.trim()}, ${district.trim()}, ${province} ${postalCode.trim()}`;
+      : `${streetAddress.trim()}, ${district.trim()}, ${postalCode.trim()}`;
     try {
       const res = await fetch("/api/backend/orders", {
         method: "POST",
@@ -686,10 +588,7 @@ export function OrderSheet({
                     placeholder={lang === "th" ? "เขต/อำเภอ" : "District / Amphoe"}
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#85241F] transition-colors" />
                 </div>
-                <div>
-                  <label className="text-xs text-gray-400 mb-1 block font-semibold">{t("checkout.label.province")}</label>
-                  <ProvinceSelect value={province} onChange={setProvince} />
-                </div>
+
                 <div>
                   <label className="text-xs text-gray-400 mb-1 block font-semibold">{t("checkout.label.postal")}</label>
                   <input value={postalCode} onChange={(e) => setPostalCode(e.target.value.replace(/\D/g, "").slice(0, 5))}
@@ -829,7 +728,7 @@ export function OrderSheet({
                     <p className="text-gray-800 leading-relaxed border-l-2 border-amber-300 pl-2">
                       {deliveryMode === "pickup" 
                         ? `รับเองที่ D1 — เวลา ${pickupTime.trim()}`
-                        : `${streetAddress.trim()}, ${district.trim()}, ${province} ${postalCode.trim()}`}
+                        : `${streetAddress.trim()}, ${district.trim()}, ${postalCode.trim()}`}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 mt-2 border-t border-amber-200/10 pt-2">

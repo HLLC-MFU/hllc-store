@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/lib/language-context";
 import type { Order, OrderStatus } from "./types";
-import { ORDER_STATUSES, STATUS_COLOR } from "./types";
+import { STATUS_COLOR } from "./types";
 import { money, timeAgo } from "./utils";
 
 export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking, onCancel, t, onViewSlip }: {
@@ -201,8 +201,8 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
             </CardContent>
           </Card>
 
-          {/* 3 — Stepper */}
-          <Card className="rounded-2xl shadow-3xs">
+          {/* 3 — Stepper (hidden when cancelled) */}
+          {order.status !== "cancelled" && <Card className="rounded-2xl shadow-3xs">
             <CardContent className="p-4">
               <div className="flex items-center justify-between relative">
                 <div className="absolute top-3.5 left-6 right-6 h-0.5 bg-gray-100 z-0" />
@@ -236,7 +236,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                 })}
               </div>
             </CardContent>
-          </Card>
+          </Card>}
 
           {/* 4 — Status changer / Approve+Reject if pending slip / Cancel */}
           <Card className="rounded-2xl shadow-3xs">
