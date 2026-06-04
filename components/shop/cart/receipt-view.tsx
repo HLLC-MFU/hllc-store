@@ -4,7 +4,6 @@ import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { CartItem } from "@/lib/cart";
-import { ShippingLabel } from "./shipping-label";
 import { money } from "./swipeable-cart-item";
 
 type OrderCustomer = {
@@ -155,16 +154,6 @@ export function ReceiptView({ lang, createdOrder, receiptItems }: ReceiptViewPro
 
           <div className="receipt-edge-bottom" />
         </div>
-        {/* Shipping Label — delivery only */}
-        {createdOrder.customer?.address && !createdOrder.customer.address.startsWith("รับเองที่") && (
-          <ShippingLabel
-            name={createdOrder.customer.name}
-            address={createdOrder.customer.address}
-            phone={createdOrder.customer.phone}
-            lang={lang}
-          />
-        )}
-
         <Button
           asChild
           className="mt-6 h-13 w-full rounded-2xl bg-emerald-600 text-sm font-black hover:bg-emerald-700"
