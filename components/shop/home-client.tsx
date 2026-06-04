@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Image as ImageIcon, Truck } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
@@ -43,6 +44,7 @@ function money(value: number) {
 
 export function HomeClient({ products }: HomeClientProps) {
   const { lang, t } = useLanguage();
+  const router = useRouter();
 
   const trackingEntry = (
     <Link
@@ -123,7 +125,20 @@ export function HomeClient({ products }: HomeClientProps) {
               <Link
                 key={p.id}
                 href={`/products/${p.id}`}
-                className="group rounded-3xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.13)] transition-all duration-300 overflow-hidden active:scale-[0.98]"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const card = e.currentTarget;
+                  const rect = card.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const y = e.clientY - rect.top;
+                  const size = Math.max(rect.width, rect.height);
+                  const ripple = document.createElement("span");
+                  ripple.className = "ripple";
+                  ripple.style.cssText = `width:${size}px;height:${size}px;left:${x - size / 2}px;top:${y - size / 2}px`;
+                  card.appendChild(ripple);
+                  setTimeout(() => { ripple.remove(); router.push(`/products/${p.id}`); }, 280);
+                }}
+                className="group relative rounded-3xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.13)] transition-all duration-300 overflow-hidden active:scale-[0.98]"
               >
                 {cardContent}
               </Link>

@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useRef, useCallback } from "react";
-import { ShoppingCart } from "lucide-react";
+import { useState, useRef, useCallback, type RefObject } from "react";
+import { ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
 import { useCart } from "@/lib/cart";
+import { useCartFly } from "@/lib/cart-fly";
 import { useLanguage } from "@/lib/language-context";
 
 export type LocalizedText = {
@@ -34,7 +35,9 @@ function money(value: number) {
 export function ProductDetailView({ product }: { product: ProductDetailProduct }) {
   const router = useRouter();
   const { addItem } = useCart();
+  const { flyToCart } = useCartFly();
   const { lang } = useLanguage();
+  const addBtnRef = useRef<HTMLButtonElement>(null);
 
   const images = product.imageUrls ?? [];
 
@@ -65,12 +68,19 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         selectedOption: "",
       });
     }
+    if (addBtnRef.current) flyToCart(addBtnRef.current, images[0]);
     triggerToast();
   }
 
   function handleBuyNow() {
     handleAddToCart();
     router.push("/cart");
+  }
+
+  function scrollTo(index: number, ref: RefObject<HTMLDivElement | null>) {
+    if (!ref.current) return;
+    ref.current.scrollTo({ left: index * ref.current.clientWidth, behavior: "smooth" });
+    setCurrentIndex(index);
   }
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -86,7 +96,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
     : "";
 
   return (
-    <div className="min-h-screen bg-white px-5 py-6 pb-24 flex flex-col">
+    <div className="min-h-screen bg-white px-5 py-6 pb-24 flex flex-col animate-in fade-in slide-in-from-bottom-3 duration-300">
       {/* Toast */}
       <div className={`fixed inset-0 z-50 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${showToast ? "opacity-100" : "opacity-0"}`}>
         <div className="flex items-center gap-3 bg-gray-900/90 text-white px-6 py-4 rounded-2xl shadow-xl">
@@ -119,9 +129,39 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
               ))}
             </div>
             {images.length > 1 && (
-              <div className="absolute bottom-3 right-3 bg-black/40 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
-                {currentIndex + 1}/{images.length}
-              </div>
+              <>
+                {/* Prev */}
+                {currentIndex > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => scrollTo(currentIndex - 1, scrollContainerRef)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm shadow-md flex items-center justify-center text-gray-700 hover:bg-white active:scale-90 transition-all"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                )}
+                {/* Next */}
+                {currentIndex < images.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => scrollTo(currentIndex + 1, scrollContainerRef)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm shadow-md flex items-center justify-center text-gray-700 hover:bg-white active:scale-90 transition-all"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                )}
+                {/* Dots */}
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+                  {images.map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => scrollTo(i, scrollContainerRef)}
+                      className={`rounded-full transition-all ${i === currentIndex ? "w-4 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50"}`}
+                    />
+                  ))}
+                </div>
+              </>
             )}
           </div>
         ) : (
@@ -217,6 +257,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
 
             {/* Add to cart */}
             <button
+              ref={addBtnRef}
               type="button"
               onClick={handleAddToCart}
               className="flex items-center justify-center w-11 h-11 rounded-2xl bg-[#fce8e7] text-[#85241F] active:scale-95 transition-transform shrink-0"

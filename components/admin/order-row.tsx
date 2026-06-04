@@ -71,13 +71,45 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-extrabold text-sm text-gray-900 leading-none">{order.customer.name}</span>
-            <Badge className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md border ${STATUS_COLOR[order.status]}`}>
-              {t(`admin.status.${order.status}`)}
-            </Badge>
+            {order.status === "cancelled" && (
+              <Badge className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md border ${STATUS_COLOR[order.status]}`}>
+                {t(`admin.status.${order.status}`)}
+              </Badge>
+            )}
           </div>
           <p className="text-xs text-gray-400 mt-1 font-medium truncate">
             {order.items.map((i) => `${i.name[lang] || i.name.th} ×${i.quantity}`).join(", ")}
           </p>
+
+          {/* Mini stepper */}
+          {order.status !== "cancelled" && (
+            <div className="mt-2 flex items-center gap-1">
+              {timelineSteps.map((s, idx) => {
+                const done = idx < currentIdx || order.status === "completed";
+                const active = idx === currentIdx;
+                const StepIcon = s === "payment_review" ? FileCheck2
+                  : s === "packing" ? Package
+                  : s === "shipped" ? Truck
+                  : Check;
+                return (
+                  <React.Fragment key={s}>
+                    <div className={`flex items-center justify-center w-5 h-5 rounded-full shrink-0 transition-all ${
+                      done    ? "bg-emerald-500 text-white" :
+                      active  ? "bg-[#85241F] text-white ring-2 ring-[#85241F]/20" :
+                                "bg-gray-100 text-gray-300"
+                    }`}>
+                      {done
+                        ? <Check className="w-2.5 h-2.5" strokeWidth={3} />
+                        : <StepIcon className="w-2.5 h-2.5" />}
+                    </div>
+                    {idx < timelineSteps.length - 1 && (
+                      <div className={`flex-1 h-0.5 rounded-full ${idx < currentIdx ? "bg-emerald-400" : "bg-gray-100"}`} />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="text-right shrink-0 mr-1">
@@ -194,8 +226,8 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
             </CardContent>
           </Card>
 
-          {/* 3 — Stepper */}
-          <Card className="rounded-2xl shadow-3xs">
+          {/* 3 — Stepper (hidden when cancelled) */}
+          {order.status !== "cancelled" && <Card className="rounded-2xl shadow-3xs">
             <CardContent className="p-4">
               <div className="flex items-center justify-between relative">
                 <div className="absolute top-3.5 left-6 right-6 h-0.5 bg-gray-100 z-0" />
@@ -229,7 +261,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                 })}
               </div>
             </CardContent>
-          </Card>
+          </Card>}
 
           {/* 4 — Status changer / Approve+Reject if pending slip / Cancel */}
           <Card className="rounded-2xl shadow-3xs">

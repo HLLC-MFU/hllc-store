@@ -136,35 +136,35 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
 
         {/* Details */}
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 break-words text-sm font-black text-gray-900 leading-snug">
+          <p className="line-clamp-2 wrap-break-word text-base font-black text-gray-900 leading-snug">
             {item.name[lang] || item.name.th}
           </p>
           {item.selectedOption && (
             <p className="mt-0.5 text-[10px] font-bold text-gray-400">{item.selectedOption}</p>
           )}
-          <p className="mt-1 text-sm font-black text-[#85241F]">{money(item.price)}</p>
+          <p className="mt-1.5 text-lg font-black text-[#85241F]">{money(item.price)}</p>
+        </div>
 
-          {/* Qty controls */}
-          <div className="mt-2 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              onClick={() => onDecrease(item)}
-              className="h-10 w-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 cursor-pointer"
-              aria-label={lang === "th" ? "ลดจำนวน" : "Decrease quantity"}
-            >
-              <Minus className="h-4 w-4" />
-            </button>
-            <span className="w-6 text-center text-sm font-black text-gray-900">{item.quantity}</span>
-            <button
-              type="button"
-              onClick={() => onIncrease(item)}
-              disabled={item.stock !== undefined && item.quantity >= item.stock}
-              className="h-10 w-10 rounded-full bg-[#85241F] flex items-center justify-center text-white disabled:opacity-30 cursor-pointer"
-              aria-label={lang === "th" ? "เพิ่มจำนวน" : "Increase quantity"}
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
+        {/* Qty controls — far right */}
+        <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            onClick={() => onDecrease(item)}
+            className="h-9 w-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 cursor-pointer"
+            aria-label={lang === "th" ? "ลดจำนวน" : "Decrease quantity"}
+          >
+            <Minus className="h-3.5 w-3.5" />
+          </button>
+          <span className="w-6 text-center text-sm font-black text-gray-900">{item.quantity}</span>
+          <button
+            type="button"
+            onClick={() => onIncrease(item)}
+            disabled={item.stock !== undefined && item.quantity >= item.stock}
+            className="h-9 w-9 rounded-full bg-[#85241F] flex items-center justify-center text-white disabled:opacity-30 cursor-pointer"
+            aria-label={lang === "th" ? "เพิ่มจำนวน" : "Increase quantity"}
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
     </div>

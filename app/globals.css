@@ -261,3 +261,27 @@ select {
 .success-pop {
   animation: pop-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
+
+@keyframes cart-bump {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.38); }
+  65%  { transform: scale(0.88); }
+  100% { transform: scale(1); }
+}
+.cart-bump {
+  animation: cart-bump 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Ripple animation */
+@keyframes ripple-expand {
+  0%   { transform: scale(0); opacity: 0.35; }
+  100% { transform: scale(4); opacity: 0; }
+}
+
+.ripple {
+  position: absolute;
+  border-radius: 9999px;
+  background: rgba(133, 36, 31, 0.18);
+  pointer-events: none;
+  animation: ripple-expand 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}

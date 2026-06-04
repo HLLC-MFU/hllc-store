@@ -96,15 +96,9 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
             <AlertCircle className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-red-400" />
           )}
         </div>
-        {/* Reserve space so error appearance does not shift layout */}
-        <p
-          className={cn(
-            "mt-2 text-xs font-semibold text-red-500 transition-opacity",
-            hasError ? "opacity-100" : "opacity-0"
-          )}
-        >
-          {visibleError || "\u00A0"}
-        </p>
+        {hasError && (
+          <p className="mt-1.5 text-xs font-semibold text-red-500">{visibleError}</p>
+        )}
       </div>
     );
   }

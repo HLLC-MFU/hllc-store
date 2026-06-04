@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ClipboardList, LayoutDashboard, Mail, Package, User } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 import { LanguageChip } from "@/components/shared/language-chip";
@@ -69,10 +70,10 @@ export function AdminSidebar({
     <aside className="hidden lg:flex fixed left-0 top-0 h-full w-56 xl:w-64 bg-white border-r border-gray-100 flex-col z-40 shadow-sm">
 
       {/* Brand */}
-      <div className="flex justify-center px-6 py-6 border-b border-gray-100">
+      <Link href="/admin" className="flex justify-center px-6 py-6 border-b border-gray-100 hover:opacity-80 transition-opacity">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/images/HLLCLOGO.png" alt="HLLC" className="h-14 w-auto object-contain" />
-      </div>
+      </Link>
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1">

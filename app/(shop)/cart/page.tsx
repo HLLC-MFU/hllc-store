@@ -1,23 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Check,
   ClipboardList,
   Copy,
-  Building2,
-  Hash,
-  Home,
-  MapPin,
   ShoppingCart,
   Store,
   Trash2,
   Truck,
   Upload,
-  User,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,7 +21,9 @@ import { useCart, type CartItem } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
 import { EmailInput } from "@/components/shared/email-input";
 import { PhoneInput } from "@/components/shared/phone-input";
+import { ProvinceSelect } from "@/components/shared/province-select";
 import { safeParseWithLang, checkoutFormSchema, normalizePhone, normalizeEmail } from "@/lib/schemas-i18n";
+import { isPostalValidForProvince } from "@/lib/thai-provinces";
 import type { Lang } from "@/lib/schemas-i18n";
 import { SwipeableCartItem, itemKey, money } from "@/components/shop/cart/swipeable-cart-item";
 import { ReceiptView } from "@/components/shop/cart/receipt-view";
@@ -109,6 +105,10 @@ export default function CartPage() {
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [province, setProvince] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [postalError, setPostalError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
 
   const confirmRemoveText = useMemo(() => {
@@ -186,6 +186,7 @@ export default function CartPage() {
     if (!items.length) return;
 
     setMessage("");
+    setFieldErrors({});
     const formData = new FormData(event.currentTarget);
     const raw = Object.fromEntries(formData.entries());
 
@@ -201,17 +202,35 @@ export default function CartPage() {
       pickupTime: String(raw.pickupTime ?? "").trim(),
     };
 
-    const result = safeParseWithLang(checkoutFormSchema(lang as Lang), payload, lang as Lang);
+    const errs: Record<string, string> = {};
 
+    // Pickup time required
+    if (deliveryMode === "pickup" && !payload.pickupTime) {
+      errs.pickupTime = lang === "th" ? "กรุณาเลือกเวลารับสินค้า" : "Please select a pickup time";
+    }
+
+    // Postal code matches province
+    if (deliveryMode === "delivery" && postalCode && province && !isPostalValidForProvince(postalCode, province)) {
+      errs.postalCode = lang === "th" ? "รหัสไปรษณีย์ไม่ตรงกับจังหวัดที่เลือก" : "Postal code does not match the selected province";
+    }
+
+    const result = safeParseWithLang(checkoutFormSchema(lang as Lang), payload, lang as Lang);
     if (!result.success) {
-      const errors = Object.values(result.fieldErrors ?? {});
-      setMessage(errors.join(" • "));
+      Object.assign(errs, result.fieldErrors ?? {});
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      // scroll to first error field
+      setTimeout(() => {
+        document.querySelector("[data-field-error]")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
       return;
     }
 
     pendingFormRef.current = formData;
     setShowConfirmModal(true);
-  }, [loading, items.length, deliveryMode, lang, phone, email]);
+  }, [loading, items.length, deliveryMode, lang, phone, email, postalCode, province]);
 
   const submitOrder = useCallback(async () => {
     if (loading) return;
@@ -349,55 +368,6 @@ export default function CartPage() {
   return (
     <main className="min-h-screen bg-white px-5 py-6 pb-24 lg:px-10">
       <div className="mx-auto max-w-5xl">
-        {step !== "success" && (
-          <>
-            {/* Step Indicator */}
-            <div className="mb-8 flex items-center justify-between max-w-xs mx-auto relative px-6 select-none">
-              {/* Line Container */}
-              <div className="absolute top-3.5 left-[38px] right-[38px] h-0.5 -translate-y-1/2 z-0">
-                <div className="w-full h-full bg-gray-100 relative rounded-full overflow-hidden">
-                  <div
-                    className="absolute inset-y-0 left-0 bg-[#85241F] transition-all duration-300 rounded-full"
-                    style={{
-                      width: step === "cart" ? "0%" : step === "payment" ? "50%" : "100%"
-                    }}
-                  />
-                </div>
-              </div>
-              {[
-                { id: "cart", th: "รถเข็น", en: "Cart", num: 1 },
-                { id: "payment", th: "ชำระเงิน", en: "Payment", num: 2 },
-                { id: "info", th: "จัดส่ง", en: "Delivery", num: 3 },
-              ].map((s, idx) => {
-                const isActive = step === s.id;
-                const isCompleted =
-                  (step === "payment" && idx < 1) ||
-                  (step === "info" && idx < 2);
-
-                return (
-                  <div key={s.id} className="relative z-10 flex flex-col items-center">
-                    <div
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-300 ${isActive
-                          ? "bg-[#85241F] text-white ring-4 ring-[#85241F]/15 scale-110"
-                          : isCompleted
-                            ? "bg-emerald-600 text-white"
-                            : "bg-white border-2 border-gray-200 text-gray-400"
-                        }`}
-                    >
-                      {isCompleted ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : s.num}
-                    </div>
-                    <span
-                      className={`mt-1.5 text-[10px] font-bold transition-colors duration-300 ${isActive ? "text-[#85241F]" : "text-gray-400"
-                        }`}
-                    >
-                      {lang === "th" ? s.th : s.en}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
 
         {step === "success" && createdOrder ? (
           <ReceiptView lang={lang} createdOrder={createdOrder} receiptItems={receiptItems} />
@@ -456,11 +426,10 @@ export default function CartPage() {
               }`}>
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-[#1E63B6]/10 relative">
-                  <Image
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
                     src="/images/bangkokBank.jpg"
                     alt="Bangkok Bank"
-                    width={48}
-                    height={48}
                     className="h-full w-full object-cover scale-110 transition-transform"
                   />
                 </div>
@@ -494,12 +463,10 @@ export default function CartPage() {
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleSlipFile} />
               {slipPreview ? (
                 <div className="relative">
-                  <Image
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
                     src={slipPreview}
                     alt="payment slip"
-                    width={400}
-                    height={224}
-                    unoptimized
                     className="max-h-56 w-full rounded-lg object-contain"
                   />
                   <button
@@ -533,100 +500,143 @@ export default function CartPage() {
         ) : null}
 
         {step === "info" ? (
-          <section className="mx-auto max-w-xl rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+          <section className="mx-auto max-w-xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+
             <button
               onClick={() => setStep("payment")}
-              className="mb-4 inline-flex items-center gap-2 text-xs font-bold text-gray-500"
+              className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-gray-700 transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
-              {lang === "th" ? "กลับไปชำระเงิน" : "Back to payment"}
+              {lang === "th" ? "กลับ" : "Back"}
             </button>
-            <form onSubmit={handleCheckout} className="space-y-3">
-              <div className="grid grid-cols-2 rounded-xl bg-gray-100 p-1">
-                <button
-                  type="button"
-                  onClick={() => setDeliveryMode("delivery")}
-                  className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-black transition-colors ${deliveryMode === "delivery"
-                    ? "bg-white text-[#85241F] shadow-sm"
-                    : "text-gray-500"
+
+            <form onSubmit={handleCheckout} className="flex flex-col gap-4">
+
+              {/* Delivery toggle */}
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { mode: "delivery", icon: Truck, label: lang === "th" ? "จัดส่ง" : "Delivery" },
+                  { mode: "pickup",   icon: Store, label: lang === "th" ? "รับเอง" : "Pickup"   },
+                ] as const).map(({ mode, icon: Icon, label }) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setDeliveryMode(mode)}
+                    className={`flex h-12 items-center justify-center gap-2 rounded-2xl border-2 text-sm font-black transition-all ${
+                      deliveryMode === mode
+                        ? "border-[#85241F] bg-[#85241F]/5 text-[#85241F]"
+                        : "border-gray-200 bg-white text-gray-400 hover:border-gray-300"
                     }`}
-                >
-                  <Truck className="h-4 w-4" />
-                  {lang === "th" ? "จัดส่ง" : "Delivery"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDeliveryMode("pickup")}
-                  className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-black transition-colors ${deliveryMode === "pickup"
-                    ? "bg-white text-[#85241F] shadow-sm"
-                    : "text-gray-500"
-                    }`}
-                >
-                  <Store className="h-4 w-4" />
-                  {lang === "th" ? "รับเอง" : "Pickup"}
-                </button>
+                  >
+                    <Icon className="h-4 w-4" />
+                    {label}
+                  </button>
+                ))}
               </div>
-              <div className="relative">
-                <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <Input name="name" placeholder={lang === "th" ? "ชื่อผู้รับ" : "Recipient name"} className="h-11 rounded-xl pl-10" />
+
+              {/* Recipient */}
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-black text-gray-400 uppercase tracking-wider px-1">
+                  {lang === "th" ? "ข้อมูลผู้รับ" : "Recipient"}
+                </p>
+                <Input
+                  name="name"
+                  placeholder={lang === "th" ? "ชื่อ-นามสกุล *" : "Full name *"}
+                  className="h-12 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus-visible:border-[#85241F] focus-visible:ring-1 focus-visible:ring-[#85241F]/20"
+                />
+                <PhoneInput
+                  name="phone"
+                  value={phone}
+                  onChange={setPhone}
+                  lang={lang}
+                  placeholder={t("checkout.label.phone")}
+                  className="h-12 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus:border-[#85241F]"
+                />
+                <EmailInput
+                  name="email"
+                  value={email}
+                  onChange={setEmail}
+                  lang={lang}
+                  placeholder={t("checkout.label.email")}
+                  className="h-12 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus:border-[#85241F]"
+                />
               </div>
-              <PhoneInput
-                name="phone"
-                value={phone}
-                onChange={setPhone}
-                lang={lang}
-                placeholder={t("checkout.label.phone")}
-                className="h-11 rounded-xl"
-              />
-              <EmailInput
-                name="email"
-                value={email}
-                onChange={setEmail}
-                lang={lang}
-                placeholder={t("checkout.label.email")}
-                className="h-11 rounded-xl"
-              />
+
+              {/* Address or Pickup */}
               {deliveryMode === "delivery" ? (
-                <>
-                  <div className="relative">
-                    <Home className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
-                    <Textarea name="address" placeholder={t("checkout.label.address")} className="min-h-28 rounded-xl pl-10" />
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <div className="relative">
-                      <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                      <Input name="district" placeholder={lang === "th" ? "เขต/อำเภอ" : "District"} className="h-11 rounded-xl pl-10" />
-                    </div>
-                    <div className="relative">
-                      <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                      <Input name="province" placeholder={lang === "th" ? "จังหวัด" : "Province"} className="h-11 rounded-xl pl-10" />
-                    </div>
-                    <div className="relative">
-                      <Hash className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                      <Input name="postalCode" placeholder={lang === "th" ? "รหัสไปรษณีย์" : "Postal code"} className="h-11 rounded-xl pl-10" />
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="rounded-2xl border border-[#85241F]/10 bg-[#85241F]/5 p-3">
-                  <p className="text-sm font-black text-[#85241F]">
-                    {lang === "th" ? "รับสินค้าเองที่ D1" : "Pickup at D1"}
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-black text-gray-400 uppercase tracking-wider px-1">
+                    {lang === "th" ? "ที่อยู่จัดส่ง" : "Shipping address"}
                   </p>
-                  <p className="mt-1 text-xs font-semibold text-gray-500">
-                    {lang === "th" ? "กรุณาระบุเวลาที่สะดวกมารับสินค้า" : "Please enter your preferred pickup time."}
+                  <Textarea
+                    name="address"
+                    placeholder={lang === "th" ? "บ้านเลขที่, อาคาร, หมู่, ถนน, แขวง/ตำบล *" : "House no., building, street, subdistrict *"}
+                    className="min-h-24 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus-visible:border-[#85241F] focus-visible:ring-1 focus-visible:ring-[#85241F]/20 resize-none"
+                  />
+                  <Input
+                    name="district"
+                    placeholder={lang === "th" ? "เขต/อำเภอ" : "District"}
+                    className="h-12 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus-visible:border-[#85241F] focus-visible:ring-1 focus-visible:ring-[#85241F]/20"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex flex-col gap-1">
+                      <input type="hidden" name="province" value={province} />
+                      <ProvinceSelect value={province} onChange={(v) => {
+                        setProvince(v);
+                        if (postalCode.length === 5) {
+                          setPostalError(isPostalValidForProvince(postalCode, v) ? "" :
+                            lang === "th" ? "รหัสไปรษณีย์ไม่ตรงกับจังหวัด" : "Postal code mismatch");
+                        }
+                      }} lang={lang} error={undefined} />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Input
+                        name="postalCode"
+                        value={postalCode}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/\D/g, "").slice(0, 5);
+                          setPostalCode(v);
+                          if (v.length === 5) {
+                            setPostalError(isPostalValidForProvince(v, province) ? "" :
+                              lang === "th" ? "รหัสไปรษณีย์ไม่ตรงกับจังหวัด" : "Postal code mismatch");
+                          } else setPostalError("");
+                        }}
+                        placeholder={lang === "th" ? "รหัสไปรษณีย์" : "Postal code"}
+                        className={`h-12 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus-visible:ring-1 ${postalError ? "border-red-300 focus-visible:border-red-400 focus-visible:ring-red-400/20" : "focus-visible:border-[#85241F] focus-visible:ring-[#85241F]/20"}`}
+                        inputMode="numeric"
+                        maxLength={5}
+                      />
+                      {postalError && <p className="text-xs font-semibold text-red-500 px-1">{postalError}</p>}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-2xl border-2 border-[#85241F]/15 bg-[#85241F]/5 p-4 flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <Store className="h-4 w-4 text-[#85241F]" />
+                    <p className="text-sm font-black text-[#85241F]">
+                      {lang === "th" ? "รับสินค้าเองที่ D1" : "Pickup at D1"}
+                    </p>
+                  </div>
+                  <p className="text-xs font-semibold text-gray-400">
+                    {lang === "th" ? "กรุณาระบุเวลาที่สะดวกมารับสินค้า" : "Please select your preferred pickup time."}
                   </p>
                   <TimeSelect name="pickupTime" />
+                  {fieldErrors.pickupTime && (
+                    <p className="mt-1.5 text-xs font-semibold text-red-500">{fieldErrors.pickupTime}</p>
+                  )}
                 </div>
               )}
-              <div className="rounded-xl bg-gray-50 p-3 text-xs font-bold text-gray-500">
-                <div className="flex justify-between">
-                  <span>{selectedCount} {t("shop.items_count")}</span>
-                  <span className="text-[#85241F]">{money(selectedTotal)}</span>
-                </div>
+
+              {/* Summary + Submit */}
+              <div className="mt-2 rounded-2xl bg-gray-50 px-4 py-3 flex items-center justify-between">
+                <span className="text-sm font-bold text-gray-500">{selectedCount} {t("shop.items_count")}</span>
+                <span className="text-base font-black text-[#85241F]">{money(selectedTotal)}</span>
               </div>
+
               <Button
                 disabled={loading || !items.length}
-                className="h-12 w-full rounded-xl bg-[#85241F] text-sm font-black hover:bg-[#B72D2A]"
+                className="h-13 w-full rounded-2xl bg-[#85241F] text-sm font-black hover:bg-[#B72D2A] shadow-lg shadow-[#85241F]/20"
                 type="submit"
               >
                 <ClipboardList className="h-4 w-4" />
