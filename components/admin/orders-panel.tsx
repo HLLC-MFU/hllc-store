@@ -20,8 +20,6 @@ type OrdersPanelProps = {
   t: (key: string) => string;
 };
 
-const HIDDEN_FROM_ALL: OrderStatus[] = ["completed"];
-
 export function OrdersPanel({
   orders,
   onStatusChange,
@@ -37,9 +35,7 @@ export function OrdersPanel({
 
   const filteredOrders = React.useMemo(() => {
     return orders.filter((o) => {
-      const matchStatus = statusFilter === "all"
-        ? !HIDDEN_FROM_ALL.includes(o.status)
-        : o.status === statusFilter;
+      const matchStatus = statusFilter === "all" || o.status === statusFilter;
 
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q ||

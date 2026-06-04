@@ -1,11 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Package } from "lucide-react";
+import { Lock, User } from "lucide-react";
 import { LanguageChip } from "@/components/shared/language-chip";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/lib/language-context";
 import { safeParseWithLang, loginSchema } from "@/lib/schemas-i18n";
 import type { Lang } from "@/lib/schemas-i18n";
@@ -43,74 +41,94 @@ export function AdminLogin({ onLogin, loading = false }: AdminLoginProps) {
   }
 
   return (
-    <main
-      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-sans"
-      style={{ background: "radial-gradient(circle, #5c1613 0%, #240a08 50%, #0d0303 100%)" }}
-    >
-      {/* Floating background glowing orbs */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-red-900/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-amber-900/10 blur-[120px] pointer-events-none" />
+    <main className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4">
+      {/* Language chip top-right */}
+      <div className="absolute top-5 right-5">
+        <LanguageChip />
+      </div>
 
-      {/* Card Container with glassmorphism */}
-      <div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-4xl p-8 shadow-2xl flex flex-col gap-6 relative z-10 animate-in fade-in zoom-in-95 duration-500">
-
-        {/* Floating Language Switcher */}
-        <div className="absolute top-4 right-4">
-          <LanguageChip />
+      <div className="w-full max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-300">
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-8">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/HLLCLOGO.png" alt="HLLC" className="h-16 w-auto object-contain mb-4" />
+          <h1 className="text-xl font-black text-gray-900">{t("admin.login.title")}</h1>
+          <p className="mt-1 text-xs font-semibold text-gray-400">{t("admin.login.subtitle")}</p>
         </div>
 
-        <div className="flex flex-col items-center text-center mt-4">
-          <div className="w-14 h-14 rounded-2xl bg-linear-to-tr from-[#85241F] to-[#b8332b] flex items-center justify-center shadow-lg shadow-[#85241F]/35 mb-4 animate-pulse">
-            <Package className="w-7 h-7 text-white" />
-          </div>
-          <h1 className="text-lg font-black text-white tracking-tight leading-none block">{t("admin.login.title")}</h1>
-          <p className="text-[10px] text-white/55 mt-2 leading-relaxed max-w-xs block">{t("admin.login.subtitle")}</p>
-        </div>
+        {/* Card */}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-100/80 p-6 flex flex-col gap-4">
+          <form onSubmit={handleLogin} className="flex flex-col gap-4">
 
-        <form onSubmit={handleLogin} className="flex flex-col gap-4 mt-2">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-[9px] text-white/50 font-bold uppercase tracking-wider pl-1">{t("admin.login.username")}</Label>
-            <Input
-              name="username"
-              type="text"
-              required
-            defaultValue="adminae"
-              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#85241F] focus:ring-1 focus:ring-[#85241F] transition-all"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-[9px] text-white/50 font-bold uppercase tracking-wider pl-1">{t("admin.login.password")}</Label>
-            <Input
-              name="password"
-              type="password"
-              required
-            defaultValue="admin12315"
-              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#85241F] focus:ring-1 focus:ring-[#85241F] transition-all"
-            />
-          </div>
-
-          {loginError && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold py-2.5 px-3 rounded-2xl text-center">
-              {loginError}
+            {/* Username */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-black text-gray-500 uppercase tracking-wider">
+                {t("admin.login.username")}
+              </label>
+              <div className="relative">
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300 pointer-events-none" />
+                <input
+                  name="username"
+                  type="text"
+                  required
+                  autoComplete="username"
+                  placeholder="username"
+                  className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-4 text-sm font-semibold text-gray-900 placeholder:text-gray-300 outline-none focus:border-[#85241F] focus:ring-2 focus:ring-[#85241F]/10 transition-all"
+                />
+              </div>
             </div>
-          )}
 
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-linear-to-r from-[#85241F] to-[#b8332b] hover:opacity-95 text-white font-black py-3.5 px-4 rounded-2xl text-xs shadow-lg shadow-[#85241F]/20 active:scale-98 transition-all cursor-pointer mt-2"
+            {/* Password */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-black text-gray-500 uppercase tracking-wider">
+                {t("admin.login.password")}
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300 pointer-events-none" />
+                <input
+                  name="password"
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-4 text-sm font-semibold text-gray-900 placeholder:text-gray-300 outline-none focus:border-[#85241F] focus:ring-2 focus:ring-[#85241F]/10 transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Error */}
+            {loginError && (
+              <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 text-xs font-bold py-2.5 px-3.5 rounded-xl">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                {loginError}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 bg-[#85241F] hover:bg-[#B72D2A] text-white font-black rounded-2xl text-sm shadow-md shadow-[#85241F]/20 active:scale-[0.98] transition-all cursor-pointer mt-1"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  {lang === "th" ? "กำลังเข้าสู่ระบบ..." : "Signing in..."}
+                </span>
+              ) : t("admin.login.button")}
+            </Button>
+          </form>
+
+          <a
+            href="/admin/register"
+            className="text-center text-xs font-semibold text-gray-400 hover:text-[#85241F] transition-colors"
           >
-            {loading ? "Loading..." : t("admin.login.button")}
-          </Button>
-          <a href="/admin/register" className="text-center text-[10px] font-bold text-white/50 hover:text-white">
-            Set password for created admin account
+            {lang === "th" ? "ตั้งรหัสผ่านสำหรับบัญชีใหม่" : "Set password for new account"}
           </a>
-        </form>
-
-        <div className="text-center text-[9px] text-white/35 border-t border-white/5 pt-4 mt-2">
-          {t("admin.login.desc")}
         </div>
+
+        <p className="text-center text-[10px] font-semibold text-gray-400 mt-6">
+          {t("admin.login.desc")}
+        </p>
       </div>
     </main>
   );

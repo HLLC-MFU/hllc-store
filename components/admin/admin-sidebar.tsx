@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ClipboardList, LayoutDashboard, Mail, Package, User } from "lucide-react";
+import { ClipboardList, LayoutDashboard, LogOut, Mail, Package, User } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 import { LanguageChip } from "@/components/shared/language-chip";
 
@@ -12,9 +12,10 @@ type Props = {
   orderCount: number;
   productCount: number;
   isSuperAdmin?: boolean;
+  onLogout?: () => void;
 };
 
-export function AdminSidebar({
+export function AdminSidebar({ onLogout,
   activeTab,
   setActiveTab,
   pendingCount,
@@ -114,14 +115,26 @@ export function AdminSidebar({
       <div className="px-4 py-4 border-t border-gray-100 flex flex-col gap-3">
         <LanguageChip />
 
-        <div className="flex items-center gap-2.5 px-1">
-          <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-            <LayoutDashboard className="w-3.5 h-3.5 text-gray-500" />
+        <div className="flex items-center justify-between gap-2 px-1">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+              <LayoutDashboard className="w-3.5 h-3.5 text-gray-500" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-gray-700">Admin</p>
+              <p className="text-[10px] text-gray-400 truncate">หลังบ้าน HLLC</p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-xs font-bold text-gray-700">Admin</p>
-            <p className="text-[10px] text-gray-400 truncate">หลังบ้าน HLLC</p>
-          </div>
+          {onLogout && (
+            <button
+              type="button"
+              onClick={onLogout}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer"
+              title="Logout"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
     </aside>

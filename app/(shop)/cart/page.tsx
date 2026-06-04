@@ -21,9 +21,8 @@ import { useCart, type CartItem } from "@/lib/cart";
 import { useLanguage } from "@/lib/language-context";
 import { EmailInput } from "@/components/shared/email-input";
 import { PhoneInput } from "@/components/shared/phone-input";
-import { ProvinceSelect } from "@/components/shared/province-select";
 import { safeParseWithLang, checkoutFormSchema, normalizePhone, normalizeEmail } from "@/lib/schemas-i18n";
-import { isPostalValidForProvince } from "@/lib/thai-provinces";
+import { ProvinceSelect } from "@/components/shared/province-select";
 import type { Lang } from "@/lib/schemas-i18n";
 import { SwipeableCartItem, itemKey, money } from "@/components/shop/cart/swipeable-cart-item";
 import { ReceiptView } from "@/components/shop/cart/receipt-view";
@@ -107,7 +106,6 @@ export default function CartPage() {
   const [phone, setPhone] = useState("");
   const [province, setProvince] = useState("");
   const [postalCode, setPostalCode] = useState("");
-  const [postalError, setPostalError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -197,7 +195,6 @@ export default function CartPage() {
       email: normalizeEmail(email),
       address: String(raw.address ?? "").trim(),
       district: String(raw.district ?? "").trim(),
-      province: String(raw.province ?? "").trim(),
       postalCode: String(raw.postalCode ?? "").trim(),
       pickupTime: String(raw.pickupTime ?? "").trim(),
     };
@@ -209,28 +206,21 @@ export default function CartPage() {
       errs.pickupTime = lang === "th" ? "กรุณาเลือกเวลารับสินค้า" : "Please select a pickup time";
     }
 
-    // Postal code matches province
-    if (deliveryMode === "delivery" && postalCode && province && !isPostalValidForProvince(postalCode, province)) {
-      errs.postalCode = lang === "th" ? "รหัสไปรษณีย์ไม่ตรงกับจังหวัดที่เลือก" : "Postal code does not match the selected province";
-    }
-
-    const result = safeParseWithLang(checkoutFormSchema(lang as Lang), payload, lang as Lang);
+const result = safeParseWithLang(checkoutFormSchema(lang as Lang), payload, lang as Lang);
     if (!result.success) {
       Object.assign(errs, result.fieldErrors ?? {});
     }
 
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
-      // scroll to first error field
-      setTimeout(() => {
-        document.querySelector("[data-field-error]")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 50);
+      const firstErr = Object.values(errs)[0] ?? (lang === "th" ? "กรุณากรอกข้อมูลให้ครบถ้วน" : "Please fill in all required fields");
+      setMessage(firstErr);
       return;
     }
 
     pendingFormRef.current = formData;
     setShowConfirmModal(true);
-  }, [loading, items.length, deliveryMode, lang, phone, email, postalCode, province]);
+  }, [loading, items.length, deliveryMode, lang, phone, email]);
 
   const submitOrder = useCallback(async () => {
     if (loading) return;
@@ -246,7 +236,6 @@ export default function CartPage() {
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const address = String(formData.get("address") ?? "").trim();
     const district = String(formData.get("district") ?? "").trim();
-    const province = String(formData.get("province") ?? "").trim();
     const postalCode = String(formData.get("postalCode") ?? "").trim();
     const pickupTime = String(formData.get("pickupTime") ?? "").trim();
 
@@ -298,7 +287,7 @@ export default function CartPage() {
     } finally {
       setLoading(false);
     }
-  }, [loading, selectedItems, deliveryMode, slipImage, clearCart]);
+  }, [loading, selectedItems, deliveryMode, slipImage, clearCart, province]);
 
   const itemList = (
     <section className="space-y-3">
@@ -578,37 +567,17 @@ export default function CartPage() {
                     placeholder={lang === "th" ? "เขต/อำเภอ" : "District"}
                     className="h-12 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus-visible:border-[#85241F] focus-visible:ring-1 focus-visible:ring-[#85241F]/20"
                   />
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="flex flex-col gap-1">
-                      <input type="hidden" name="province" value={province} />
-                      <ProvinceSelect value={province} onChange={(v) => {
-                        setProvince(v);
-                        if (postalCode.length === 5) {
-                          setPostalError(isPostalValidForProvince(postalCode, v) ? "" :
-                            lang === "th" ? "รหัสไปรษณีย์ไม่ตรงกับจังหวัด" : "Postal code mismatch");
-                        }
-                      }} lang={lang} error={undefined} />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <Input
-                        name="postalCode"
-                        value={postalCode}
-                        onChange={(e) => {
-                          const v = e.target.value.replace(/\D/g, "").slice(0, 5);
-                          setPostalCode(v);
-                          if (v.length === 5) {
-                            setPostalError(isPostalValidForProvince(v, province) ? "" :
-                              lang === "th" ? "รหัสไปรษณีย์ไม่ตรงกับจังหวัด" : "Postal code mismatch");
-                          } else setPostalError("");
-                        }}
-                        placeholder={lang === "th" ? "รหัสไปรษณีย์" : "Postal code"}
-                        className={`h-12 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus-visible:ring-1 ${postalError ? "border-red-300 focus-visible:border-red-400 focus-visible:ring-red-400/20" : "focus-visible:border-[#85241F] focus-visible:ring-[#85241F]/20"}`}
-                        inputMode="numeric"
-                        maxLength={5}
-                      />
-                      {postalError && <p className="text-xs font-semibold text-red-500 px-1">{postalError}</p>}
-                    </div>
-                  </div>
+                  <input type="hidden" name="province" value={province} />
+                  <ProvinceSelect value={province} onChange={setProvince} lang={lang as "th" | "en"} />
+                  <Input
+                    name="postalCode"
+                    value={postalCode}
+                    onChange={(e) => setPostalCode(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                    placeholder={lang === "th" ? "รหัสไปรษณีย์" : "Postal code"}
+                    className="h-12 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus-visible:border-[#85241F] focus-visible:ring-1 focus-visible:ring-[#85241F]/20"
+                    inputMode="numeric"
+                    maxLength={5}
+                  />
                 </div>
               ) : (
                 <div className="rounded-2xl border-2 border-[#85241F]/15 bg-[#85241F]/5 p-4 flex flex-col gap-2">

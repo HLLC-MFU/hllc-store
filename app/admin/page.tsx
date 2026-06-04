@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   ClipboardList,
   LayoutDashboard,
+  LogOut,
   Mail,
   Package,
   PackagePlus,
@@ -106,6 +107,12 @@ export default function AdminPage() {
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [currentUser, setCurrentUser] = React.useState<CurrentAdmin | null>(null);
   const [loginLoading, setLoginLoading] = React.useState(false);
+
+  async function handleLogout() {
+    await api("/api/backend/admin/auth", { method: "DELETE" });
+    setIsLoggedIn(false);
+    setCurrentUser(null);
+  }
 
   const notify = (msg: string) => {
     setToast(msg);
@@ -438,12 +445,14 @@ export default function AdminPage() {
         orderCount={orders.length}
         productCount={products.length}
         isSuperAdmin={currentUser?.role === "superAdmin"}
+        onLogout={handleLogout}
       />
 
       <div className="lg:hidden">
         <AppHeader
           showCart={false}
           logoHref="/admin"
+          onLogoClick={() => setActiveTab("dashboard")}
           navItems={[
             { label: t("admin.tab.dashboard"), icon: LayoutDashboard, onClick: () => setActiveTab("dashboard") },
             { label: t("admin.tab.orders"),    icon: ClipboardList,   onClick: () => setActiveTab("orders"),   badge: pendingSlips.length },
@@ -452,6 +461,7 @@ export default function AdminPage() {
             ...(currentUser?.role === "superAdmin"
               ? [{ label: "SuperAdmin", icon: LayoutDashboard, onClick: () => setActiveTab("superAdmin") } as NavItem]
               : []),
+            { label: "Logout", icon: LogOut, onClick: handleLogout },
           ]}
         />
       </div>

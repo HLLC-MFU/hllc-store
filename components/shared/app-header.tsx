@@ -88,9 +88,10 @@ type AppHeaderProps = {
   navItems?: NavItem[];
   showCart?: boolean;
   logoHref?: string;
+  onLogoClick?: () => void;
 };
 
-export function AppHeader({ navItems = SHOP_NAV, showCart = true, logoHref = "/home" }: AppHeaderProps) {
+export function AppHeader({ navItems = SHOP_NAV, showCart = true, logoHref = "/home", onLogoClick }: AppHeaderProps) {
   const [open, setOpen] = React.useState(false);
   const { count } = useCart();
   const { t } = useLanguage();
@@ -111,7 +112,7 @@ export function AppHeader({ navItems = SHOP_NAV, showCart = true, logoHref = "/h
         </div>
 
         {/* Center — logo */}
-        <Link href={logoHref} className="absolute left-1/2 -translate-x-1/2">
+        <Link href={logoHref} onClick={onLogoClick} className="absolute left-1/2 -translate-x-1/2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/images/HLLCLOGO.png" alt="HLLC" className="h-8 w-auto object-contain" />
         </Link>
