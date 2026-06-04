@@ -181,35 +181,13 @@ export function HomeClient({ products }: HomeClientProps) {
               );
             }
 
-            const actions = !isOutOfStock ? (
-              <div className="flex items-center gap-2 px-3 pb-3">
-                <button
-                  type="button"
-                  onClick={(event) => addProductToCart(p, event.currentTarget)}
-                  aria-label={needsOption ? (lang === "th" ? "เลือกตัวเลือกสินค้า" : "Choose product option") : (lang === "th" ? "ใส่ตะกร้า" : "Add to cart")}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#fce8e7] text-[#85241F] transition-transform active:scale-95"
-                >
-                  <ShoppingCart className="h-4.5 w-4.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={(event) => buyProductNow(p, event.currentTarget)}
-                  className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-2xl bg-[#85241F] px-3 text-xs font-black text-white transition-transform active:scale-[0.98]"
-                >
-                  <span className="truncate">
-                    {needsOption
-                      ? (lang === "th" ? "เลือกก่อน" : "Choose")
-                      : (lang === "th" ? "ซื้อเลย" : "Buy Now")}
-                  </span>
-                </button>
-              </div>
-            ) : (
+            const actions = isOutOfStock ? (
               <div className="px-3 pb-3">
                 <div className="flex h-10 items-center justify-center rounded-2xl bg-gray-100 text-xs font-black text-gray-400">
                   {t("shop.out_of_stock")}
                 </div>
               </div>
-            );
+            ) : null;
 
             if (isOutOfStock) {
               return (

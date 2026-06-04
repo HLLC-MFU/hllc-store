@@ -80,17 +80,14 @@ function OrderCard({ order, lang }: { order: Order; lang: "th" | "en" }) {
 
         <div className="flex flex-1 items-center gap-3 px-4 py-4 min-w-0">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-black text-gray-900 truncate">{order.customer.name}</span>
-            </div>
+            <span className="text-sm font-black text-gray-900 truncate block">{order.customer.name}</span>
             <p className="mt-0.5 text-xs text-gray-400 font-medium truncate">{preview}</p>
-            <span className={`mt-1.5 inline-block text-[10px] font-black px-2 py-0.5 rounded-full ${statusMeta.badge}`}>
+            <p className="mt-0.5 text-[10px] text-gray-300">{money(order.total)} · {dateStr}</p>
+          </div>
+          <div className="shrink-0 text-right">
+            <span className={`inline-block text-xs font-black px-3 py-1 rounded-full ${statusMeta.badge}`}>
               {lang === "th" ? statusMeta.th : statusMeta.en}
             </span>
-          </div>
-          <div className="text-right shrink-0">
-            <p className="text-sm font-black text-gray-900">{money(order.total)}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">{dateStr}</p>
           </div>
           {open ? <ChevronUp className="h-4 w-4 text-gray-300 shrink-0" /> : <ChevronDown className="h-4 w-4 text-gray-300 shrink-0" />}
         </div>

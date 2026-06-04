@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useRef, useCallback, type RefObject } from "react";
-import { ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShoppingCart, Plus } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useCartFly } from "@/lib/cart-fly";
 import { useLanguage } from "@/lib/language-context";
@@ -354,7 +354,10 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
               disabled={mustSelectOption || selectedOptionOutOfStock}
               className="flex items-center justify-center w-11 h-11 rounded-2xl bg-[#fce8e7] text-[#85241F] active:scale-95 transition-transform shrink-0 disabled:opacity-45 disabled:active:scale-100"
             >
-              <ShoppingCart className="h-5 w-5" />
+              <span className="relative">
+                <ShoppingCart className="h-5 w-5" />
+                <Plus className="absolute -top-1.5 -right-1.5 h-3 w-3 stroke-3" />
+              </span>
             </button>
 
             {/* Buy now */}
