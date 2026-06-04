@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Lock, User } from "lucide-react";
+import { Lock, User, Eye, EyeOff } from "lucide-react";
 import { LanguageChip } from "@/components/shared/language-chip";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/language-context";
@@ -15,6 +15,7 @@ type AdminLoginProps = {
 
 export function AdminLogin({ onLogin, loading = false }: AdminLoginProps) {
   const [loginError, setLoginError] = React.useState("");
+  const [showPassword, setShowPassword] = React.useState(false);
   const { t, lang } = useLanguage();
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
@@ -87,12 +88,15 @@ export function AdminLogin({ onLogin, loading = false }: AdminLoginProps) {
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300 pointer-events-none" />
                 <input
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   autoComplete="current-password"
                   placeholder="••••••••"
-                  className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-4 text-sm font-semibold text-gray-900 placeholder:text-gray-300 outline-none focus:border-[#85241F] focus:ring-2 focus:ring-[#85241F]/10 transition-all"
+                  className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-10 text-sm font-semibold text-gray-900 placeholder:text-gray-300 outline-none focus:border-[#85241F] focus:ring-2 focus:ring-[#85241F]/10 transition-all"
                 />
+                <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer">
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
 
@@ -120,7 +124,7 @@ export function AdminLogin({ onLogin, loading = false }: AdminLoginProps) {
 
           <a
             href="/admin/register"
-            className="text-center text-xs font-semibold text-gray-400 hover:text-[#85241F] transition-colors"
+            className="flex items-center justify-center h-12 w-full rounded-2xl border-2 border-[#85241F] text-[#85241F] text-sm font-black hover:bg-[#85241F]/5 transition-colors"
           >
             {lang === "th" ? "ตั้งรหัสผ่านสำหรับบัญชีใหม่" : "Set password for new account"}
           </a>
