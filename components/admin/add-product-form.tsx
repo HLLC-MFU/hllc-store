@@ -123,6 +123,8 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
         },
         price: Number(fd.get("price")) || product.price,
         stock: Number(fd.get("stock")) ?? product.stock,
+        shippingFirstItem: Number(fd.get("shippingFirstItem")) || 0,
+        shippingAdditionalItem: Number(fd.get("shippingAdditionalItem")) || 0,
         description: {
           th: String(fd.get("description") ?? product.description?.th ?? "").trim(),
           en: String(fd.get("descriptionEn") ?? product.description?.en ?? "").trim() || undefined,
@@ -226,6 +228,18 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
               <div>
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.stock")}</Label>
                 <Input name="stock" type="number" min="0" required defaultValue={product?.stock ?? ""} placeholder={t("admin.products.placeholder.stock")} className="rounded-xl border-gray-200 text-xs h-10" />
+              </div>
+              <div>
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">
+                  {lang === "th" ? "ค่าส่งชิ้นแรก" : "First item shipping"}
+                </Label>
+                <Input name="shippingFirstItem" type="number" min="0" defaultValue={product?.shippingFirstItem ?? 0} placeholder="0" className="rounded-xl border-gray-200 text-xs h-10" />
+              </div>
+              <div>
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">
+                  {lang === "th" ? "ค่าส่งชิ้นถัดไป" : "Additional item shipping"}
+                </Label>
+                <Input name="shippingAdditionalItem" type="number" min="0" defaultValue={product?.shippingAdditionalItem ?? 0} placeholder="0" className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
               <div className="col-span-2">
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">หมวดหมู่</Label>

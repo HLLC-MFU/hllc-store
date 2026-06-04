@@ -144,6 +144,8 @@ function toProduct(doc: Document): Product {
     description: descObj,
     price: doc.price,
     stock: doc.stock,
+    shippingFirstItem: Number(doc.shippingFirstItem ?? doc.shipping ?? 0),
+    shippingAdditionalItem: Number(doc.shippingAdditionalItem ?? 0),
     category: doc.category ?? "",
     options: normalizeOptions(doc.options),
     imageUrl: doc.imageUrl ?? imageUrls[0] ?? "",
@@ -168,11 +170,16 @@ function toOrder(doc: Document): Order {
       subtotal: (product?.price ?? 0) * item.quantity,
     };
   });
+  const subtotal = Number(doc.subtotal ?? items.reduce((sum, item) => sum + item.subtotal, 0));
+  const shippingFee = Number(doc.shippingFee ?? 0);
 
   return {
     id: doc._id.toString(),
     customer: doc.customer,
     items,
+    subtotal,
+    shippingFee,
+    deliveryMode: doc.deliveryMode === "pickup" ? "pickup" : "delivery",
     total: doc.total,
     status: doc.status,
     slip: doc.slip,
@@ -234,6 +241,8 @@ export async function createProduct(input: CreateProductInput) {
     },
     price: assertNumber(input.price, "price"),
     stock: assertNumber(input.stock, "stock"),
+    shippingFirstItem: assertNumber(input.shippingFirstItem ?? 0, "shippingFirstItem"),
+    shippingAdditionalItem: assertNumber(input.shippingAdditionalItem ?? 0, "shippingAdditionalItem"),
     category: typeof input.category === "string" ? input.category.trim() : "",
     options: normalizeOptions(input.options),
     imageUrl: typeof input.imageUrl === "string" ? input.imageUrl.trim() : "",
@@ -296,15 +305,29 @@ export async function createOrder(input: CreateOrderInput) {
       productId: product._id,
       quantity: item.quantity,
       _price: product.price,
+      _shippingFirstItem: Number(product.shippingFirstItem ?? product.shipping ?? 0),
+      _shippingAdditionalItem: Number(product.shippingAdditionalItem ?? 0),
     };
   });
 
-  const total = storedItems.reduce((sum, item) => sum + item._price * item.quantity, 0);
+  const subtotal = storedItems.reduce((sum, item) => sum + item._price * item.quantity, 0);
+  const deliveryMode = parsed.deliveryMode ?? "delivery";
+  const shippingFee = deliveryMode === "pickup"
+    ? 0
+    : storedItems.reduce(
+      (sum, item) =>
+        sum + item._shippingFirstItem + item._shippingAdditionalItem * Math.max(0, item.quantity - 1),
+      0,
+    );
+  const total = subtotal + shippingFee;
 
   const timestamp = now();
   const order = {
     customer,
     items: storedItems.map(({ productId, quantity }) => ({ productId, quantity })),
+    subtotal,
+    shippingFee,
+    deliveryMode,
     total,
     status: "pending_payment" satisfies OrderStatus,
     slip: {
@@ -576,7 +599,7 @@ export async function updateProduct(productId: string, input: Partial<CreateProd
   const db = await getDb();
   const timestamp = now();
   
-  const updateData: any = {};
+  const updateData: Document = {};
   
   if (input.name !== undefined) {
     if (input.name.th !== undefined) {
@@ -605,6 +628,14 @@ export async function updateProduct(productId: string, input: Partial<CreateProd
   
   if (input.stock !== undefined) {
     updateData.stock = assertNumber(input.stock, "stock");
+  }
+
+  if (input.shippingFirstItem !== undefined) {
+    updateData.shippingFirstItem = assertNumber(input.shippingFirstItem, "shippingFirstItem");
+  }
+
+  if (input.shippingAdditionalItem !== undefined) {
+    updateData.shippingAdditionalItem = assertNumber(input.shippingAdditionalItem, "shippingAdditionalItem");
   }
 
   if (input.category !== undefined) {

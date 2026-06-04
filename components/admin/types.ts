@@ -12,6 +12,8 @@ export type LocalizedText = {
 export type Product = {
   id: string; name: LocalizedText; slug: string;
   description?: LocalizedText; price: number; stock: number;
+  shippingFirstItem: number;
+  shippingAdditionalItem: number;
   discount?: number; // percent 0-100
   category?: string;
   options?: ProductOption[];
@@ -29,6 +31,9 @@ export type Order = {
   id: string;
   customer: { name: string; phone: string; email?: string; address: string };
   items: { productId: string; name: LocalizedText; price: number; quantity: number; subtotal: number }[];
+  subtotal?: number;
+  shippingFee?: number;
+  deliveryMode?: "delivery" | "pickup";
   total: number;
   status: OrderStatus;
   slip: { imageUrl?: string; status: SlipStatus; paidAt?: string };

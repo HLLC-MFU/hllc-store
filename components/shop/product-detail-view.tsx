@@ -12,14 +12,21 @@ export type LocalizedText = {
   en?: string;
 };
 
+export type ProductOption = {
+  label: string;
+  imageUrl?: string;
+};
+
 export type ProductDetailProduct = {
   id: string;
   name: LocalizedText;
   description?: LocalizedText;
   price: number;
   stock: number;
+  options?: ProductOption[];
   imageUrls?: string[];
-  shipping?: number;
+  shippingFirstItem?: number;
+  shippingAdditionalItem?: number;
 };
 
 const currencyFormatter = new Intl.NumberFormat("th-TH", {
@@ -40,15 +47,22 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   const addBtnRef = useRef<HTMLButtonElement>(null);
 
   const images = product.imageUrls ?? [];
+  const options = product.options ?? [];
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [selectedOptionLabel, setSelectedOptionLabel] = useState("");
   const [expanded, setExpanded] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
+  const selectedOption = options.find((option) => option.label === selectedOptionLabel);
+  const displayImages = selectedOption?.imageUrl
+    ? [selectedOption.imageUrl, ...images.filter((src) => src !== selectedOption.imageUrl)]
+    : images;
   const outOfStock = product.stock < 1;
+  const mustSelectOption = options.length > 0 && !selectedOption;
 
   const triggerToast = useCallback(() => {
     setShowToast(true);
@@ -57,6 +71,11 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   }, []);
 
   function handleAddToCart() {
+    if (mustSelectOption) {
+      triggerToast();
+      return false;
+    }
+
     for (let i = 0; i < quantity; i++) {
       addItem({
         productId: product.id,
@@ -64,16 +83,19 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         description: product.description,
         price: product.price,
         stock: product.stock,
-        imageUrl: images[0] ?? "",
-        selectedOption: "",
+        shippingFirstItem: product.shippingFirstItem ?? 0,
+        shippingAdditionalItem: product.shippingAdditionalItem ?? 0,
+        imageUrl: displayImages[0] ?? "",
+        selectedOption: selectedOption?.label ?? "",
       });
     }
-    if (addBtnRef.current) flyToCart(addBtnRef.current, images[0]);
+    if (addBtnRef.current) flyToCart(addBtnRef.current, displayImages[0]);
     triggerToast();
+    return true;
   }
 
   function handleBuyNow() {
-    handleAddToCart();
+    if (!handleAddToCart()) return;
     router.push("/cart");
   }
 
@@ -86,10 +108,16 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const container = e.currentTarget;
     const index = Math.round(container.scrollLeft / container.clientWidth);
-    if (index !== currentIndex && index >= 0 && index < images.length) {
+    if (index !== currentIndex && index >= 0 && index < displayImages.length) {
       setCurrentIndex(index);
     }
   };
+
+  function selectOption(label: string) {
+    setSelectedOptionLabel(label);
+    setCurrentIndex(0);
+    scrollContainerRef.current?.scrollTo({ left: 0, behavior: "smooth" });
+  }
 
   const descriptionText = product.description
     ? product.description[lang] || product.description.th
@@ -108,14 +136,14 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
       </div>
       {/* Image Card */}
       <div className="rounded-2xl bg-gray-100 overflow-hidden">
-        {images.length > 0 ? (
+        {displayImages.length > 0 ? (
           <div className="relative aspect-square">
             <div
               ref={scrollContainerRef}
               onScroll={handleScroll}
               className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none"
             >
-              {images.map((src, i) => (
+              {displayImages.map((src, i) => (
                 <div
                   key={i}
                   className="w-full h-full shrink-0 snap-center flex items-center justify-center"
@@ -128,7 +156,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                 </div>
               ))}
             </div>
-            {images.length > 1 && (
+            {displayImages.length > 1 && (
               <>
                 {/* Prev */}
                 {currentIndex > 0 && (
@@ -141,7 +169,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                   </button>
                 )}
                 {/* Next */}
-                {currentIndex < images.length - 1 && (
+                {currentIndex < displayImages.length - 1 && (
                   <button
                     type="button"
                     onClick={() => scrollTo(currentIndex + 1, scrollContainerRef)}
@@ -152,7 +180,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                 )}
                 {/* Dots */}
                 <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
-                  {images.map((_, i) => (
+                  {displayImages.map((_, i) => (
                     <button
                       key={i}
                       type="button"
@@ -181,6 +209,45 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
             {money(product.price)}
           </p>
         </div>
+
+        {options.length > 0 && (
+          <div className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100">
+            <p className="mb-3 text-sm font-bold text-gray-900">
+              {lang === "th" ? "ตัวเลือกสินค้า" : "Options"}
+            </p>
+            {mustSelectOption ? (
+              <p className="mb-3 text-xs font-bold text-[#85241F]">
+                {lang === "th" ? "กรุณาเลือกก่อนสั่งซื้อ" : "Please choose before checkout"}
+              </p>
+            ) : null}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {options.map((option) => {
+                const selected = option.label === selectedOptionLabel;
+
+                return (
+                  <button
+                    key={option.label}
+                    type="button"
+                    onClick={() => selectOption(option.label)}
+                    className={`flex h-16 min-w-0 items-center gap-2 rounded-xl border px-2 text-left transition-all ${
+                      selected
+                        ? "border-[#85241F] bg-white text-[#85241F] shadow-sm ring-2 ring-[#85241F]/10"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-[#85241F]/30"
+                    }`}
+                  >
+                    {option.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={option.imageUrl} alt={option.label} className="h-11 w-11 shrink-0 rounded-lg object-cover" />
+                    ) : (
+                      <span className="h-11 w-11 shrink-0 rounded-lg bg-gray-100" />
+                    )}
+                    <span className="min-w-0 truncate text-xs font-black">{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Card: Quantity */}
         <div className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100 flex items-center justify-between">
@@ -260,7 +327,8 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
               ref={addBtnRef}
               type="button"
               onClick={handleAddToCart}
-              className="flex items-center justify-center w-11 h-11 rounded-2xl bg-[#fce8e7] text-[#85241F] active:scale-95 transition-transform shrink-0"
+              disabled={mustSelectOption}
+              className="flex items-center justify-center w-11 h-11 rounded-2xl bg-[#fce8e7] text-[#85241F] active:scale-95 transition-transform shrink-0 disabled:opacity-45 disabled:active:scale-100"
             >
               <ShoppingCart className="h-5 w-5" />
             </button>
@@ -269,7 +337,8 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
             <button
               type="button"
               onClick={handleBuyNow}
-              className="flex-1 flex items-center justify-center rounded-2xl bg-[#85241F] h-11 text-sm font-bold text-white active:scale-95 transition-transform"
+              disabled={mustSelectOption}
+              className="flex-1 flex items-center justify-center rounded-2xl bg-[#85241F] h-11 text-sm font-bold text-white active:scale-95 transition-transform disabled:bg-gray-300 disabled:text-gray-500 disabled:active:scale-100"
             >
               {lang === "th" ? "ซื้อเลย" : "Buy Now"}
             </button>

@@ -32,6 +32,9 @@ type DeliveryMode = "delivery" | "pickup";
 
 type Order = {
   id: string;
+  subtotal?: number;
+  shippingFee?: number;
+  deliveryMode?: DeliveryMode;
   total: number;
   status: string;
   customer?: {
@@ -55,6 +58,14 @@ function saveOrderLookup(orderId: string, phone: string) {
 
 const bankAccountName = "นันทเดช วงศ์ไชยา";
 const bankAccountNumber = "6621540027";
+
+function itemShippingFee(item: CartItem) {
+  if (item.quantity <= 0) return 0;
+  return (
+    (item.shippingFirstItem ?? 0) +
+    (item.shippingAdditionalItem ?? 0) * Math.max(0, item.quantity - 1)
+  );
+}
 
 export default function CartPage() {
   const { items, updateQty, removeItem, clearCart } = useCart();
@@ -108,6 +119,12 @@ export default function CartPage() {
   const [postalCode, setPostalCode] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const selectedShippingFee = useMemo(() => {
+    if (deliveryMode === "pickup") return 0;
+    return selectedItems.reduce((sum, item) => sum + itemShippingFee(item), 0);
+  }, [deliveryMode, selectedItems]);
+  const selectedPayableTotal = selectedTotal + selectedShippingFee;
 
   const confirmRemoveText = useMemo(() => {
     return lang === "th" ? "ต้องการลบสินค้านี้ออกจากตะกร้าใช่ไหม?" : "Remove this item from cart?";
@@ -195,6 +212,7 @@ export default function CartPage() {
       email: normalizeEmail(email),
       address: String(raw.address ?? "").trim(),
       district: String(raw.district ?? "").trim(),
+      province,
       postalCode: String(raw.postalCode ?? "").trim(),
       pickupTime: String(raw.pickupTime ?? "").trim(),
     };
@@ -220,7 +238,7 @@ const result = safeParseWithLang(checkoutFormSchema(lang as Lang), payload, lang
 
     pendingFormRef.current = formData;
     setShowConfirmModal(true);
-  }, [loading, items.length, deliveryMode, lang, phone, email]);
+  }, [loading, items.length, deliveryMode, lang, phone, email, province]);
 
   const submitOrder = useCallback(async () => {
     if (loading) return;
@@ -245,11 +263,12 @@ const result = safeParseWithLang(checkoutFormSchema(lang as Lang), payload, lang
         : [address, district, province, postalCode].filter(Boolean).join(" ");
 
     try {
-      const orderResponse = await fetch("/api/backend/orders", {
+    const orderResponse = await fetch("/api/backend/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customer: { name, phone, email, address: fullAddress },
+          deliveryMode,
           items: selectedItems.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
@@ -382,8 +401,44 @@ const result = safeParseWithLang(checkoutFormSchema(lang as Lang), payload, lang
                   </span>
                 </div>
                 <div className="mb-4 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-500">{t("checkout.total")}</span>
+                  <span className="text-sm font-semibold text-gray-500">{lang === "th" ? "ค่าสินค้า" : "Subtotal"}</span>
                   <span className="text-xl font-black text-[#85241F]">{money(selectedTotal)}</span>
+                </div>
+                <div className="mb-4 grid grid-cols-2 rounded-xl bg-gray-100 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryMode("delivery")}
+                    className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-black transition-colors ${deliveryMode === "delivery"
+                      ? "bg-white text-[#85241F] shadow-sm"
+                      : "text-gray-500"
+                    }`}
+                  >
+                    <Truck className="h-4 w-4" />
+                    {lang === "th" ? "จัดส่ง" : "Delivery"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryMode("pickup")}
+                    className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-black transition-colors ${deliveryMode === "pickup"
+                      ? "bg-white text-[#85241F] shadow-sm"
+                      : "text-gray-500"
+                    }`}
+                  >
+                    <Store className="h-4 w-4" />
+                    {lang === "th" ? "รับเอง" : "Pickup"}
+                  </button>
+                </div>
+                <div className="mb-4 space-y-2 rounded-xl bg-gray-50 p-3 text-sm font-bold">
+                  <div className="flex justify-between text-gray-500">
+                    <span>{t("checkout.shipping")}</span>
+                    <span className={selectedShippingFee > 0 ? "text-gray-800" : "text-emerald-600"}>
+                      {selectedShippingFee > 0 ? money(selectedShippingFee) : t("checkout.shipping.free")}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-gray-200 pt-2 text-gray-900">
+                    <span>{t("checkout.total")}</span>
+                    <span className="text-[#85241F]">{money(selectedPayableTotal)}</span>
+                  </div>
                 </div>
                 <Button
                   onClick={goPayment}
@@ -407,7 +462,13 @@ const result = safeParseWithLang(checkoutFormSchema(lang as Lang), payload, lang
             </button>
             <div className="mb-4 rounded-2xl bg-[#85241F]/5 p-4 text-center">
               <p className="text-xs font-bold text-gray-500">{t("checkout.payment_amount")}</p>
-              <p className="mt-1 text-2xl font-black text-[#85241F]">{money(selectedTotal)}</p>
+              <p className="mt-1 text-2xl font-black text-[#85241F]">{money(selectedPayableTotal)}</p>
+              {selectedShippingFee > 0 ? (
+                <p className="mt-1 text-xs font-bold text-gray-500">
+                  {lang === "th" ? "รวมค่าส่ง " : "Includes shipping "}
+                  {money(selectedShippingFee)}
+                </p>
+              ) : null}
             </div>
             <div className={`mb-4 rounded-2xl border p-3 transition-all duration-300 ${copiedAccount
                 ? "border-emerald-500 bg-emerald-50/70 shadow-sm shadow-emerald-500/5 ring-1 ring-emerald-500/10"
@@ -501,26 +562,16 @@ const result = safeParseWithLang(checkoutFormSchema(lang as Lang), payload, lang
 
             <form onSubmit={handleCheckout} className="flex flex-col gap-4">
 
-              {/* Delivery toggle */}
-              <div className="grid grid-cols-2 gap-2">
-                {([
-                  { mode: "delivery", icon: Truck, label: lang === "th" ? "จัดส่ง" : "Delivery" },
-                  { mode: "pickup",   icon: Store, label: lang === "th" ? "รับเอง" : "Pickup"   },
-                ] as const).map(({ mode, icon: Icon, label }) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => setDeliveryMode(mode)}
-                    className={`flex h-12 items-center justify-center gap-2 rounded-2xl border-2 text-sm font-black transition-all ${
-                      deliveryMode === mode
-                        ? "border-[#85241F] bg-[#85241F]/5 text-[#85241F]"
-                        : "border-gray-200 bg-white text-gray-400 hover:border-gray-300"
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {label}
-                  </button>
-                ))}
+              <div className="flex items-center justify-between rounded-2xl bg-gray-50 px-4 py-3 text-sm font-bold">
+                <span className="flex items-center gap-2 text-gray-500">
+                  {deliveryMode === "delivery" ? <Truck className="h-4 w-4" /> : <Store className="h-4 w-4" />}
+                  {lang === "th" ? "วิธีรับสินค้า" : "Fulfillment"}
+                </span>
+                <span className="text-[#85241F]">
+                  {deliveryMode === "delivery"
+                    ? lang === "th" ? "จัดส่ง" : "Delivery"
+                    : lang === "th" ? "รับเอง" : "Pickup"}
+                </span>
               </div>
 
               {/* Recipient */}
@@ -549,6 +600,11 @@ const result = safeParseWithLang(checkoutFormSchema(lang as Lang), payload, lang
                   placeholder={t("checkout.label.email")}
                   className="h-12 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus:border-[#85241F]"
                 />
+                <p className="-mt-1 px-1 text-[11px] font-semibold text-gray-400">
+                  {lang === "th"
+                    ? "ใช้อีเมลนี้เพื่อรับการแจ้งเตือนสถานะคำสั่งซื้อและการจัดส่ง"
+                    : "We use this email for order status and delivery notifications."}
+                </p>
               </div>
 
               {/* Address or Pickup */}
@@ -598,9 +654,19 @@ const result = safeParseWithLang(checkoutFormSchema(lang as Lang), payload, lang
               )}
 
               {/* Summary + Submit */}
-              <div className="mt-2 rounded-2xl bg-gray-50 px-4 py-3 flex items-center justify-between">
-                <span className="text-sm font-bold text-gray-500">{selectedCount} {t("shop.items_count")}</span>
-                <span className="text-base font-black text-[#85241F]">{money(selectedTotal)}</span>
+              <div className="mt-2 space-y-2 rounded-2xl bg-gray-50 px-4 py-3 text-sm font-bold">
+                <div className="flex items-center justify-between text-gray-500">
+                  <span>{selectedCount} {t("shop.items_count")}</span>
+                  <span className="text-[#85241F]">{money(selectedTotal)}</span>
+                </div>
+                <div className="flex items-center justify-between text-gray-500">
+                  <span>{t("checkout.shipping")}</span>
+                  <span>{selectedShippingFee > 0 ? money(selectedShippingFee) : t("checkout.shipping.free")}</span>
+                </div>
+                <div className="flex items-center justify-between border-t border-gray-200 pt-2 text-gray-900">
+                  <span>{t("checkout.total")}</span>
+                  <span className="text-[#85241F]">{money(selectedPayableTotal)}</span>
+                </div>
               </div>
 
               <Button
@@ -632,7 +698,12 @@ const result = safeParseWithLang(checkoutFormSchema(lang as Lang), payload, lang
               <p className="text-xs font-bold text-gray-500">
                 {selectedCount} {t("shop.items_count")}
               </p>
-              <p className="mt-0.5 text-xl font-black text-[#85241F]">{money(selectedTotal)}</p>
+              <p className="mt-0.5 text-xl font-black text-[#85241F]">{money(selectedPayableTotal)}</p>
+              {selectedShippingFee > 0 ? (
+                <p className="mt-1 text-[11px] font-bold text-gray-500">
+                  {t("checkout.shipping")}: {money(selectedShippingFee)}
+                </p>
+              ) : null}
             </div>
             <div className="mt-5 grid grid-cols-2 gap-2">
               <Button

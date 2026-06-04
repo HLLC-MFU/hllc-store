@@ -21,6 +21,8 @@ export type Product = {
   description?: LocalizedText;
   price: number;
   stock: number;
+  shippingFirstItem: number;
+  shippingAdditionalItem: number;
   category?: string;
   options?: ProductOption[];
   imageUrl?: string;
@@ -79,6 +81,9 @@ export type Order = {
   id: string;
   customer: CustomerInput;
   items: OrderItem[];
+  subtotal: number;
+  shippingFee: number;
+  deliveryMode: "delivery" | "pickup";
   total: number;
   status: OrderStatus;
   slip: PaymentSlip;
@@ -92,6 +97,7 @@ export type Order = {
 export type CreateOrderInput = {
   customer: CustomerInput;
   items: CartItemInput[];
+  deliveryMode?: "delivery" | "pickup";
 };
 
 export type CreateProductInput = {
@@ -100,6 +106,8 @@ export type CreateProductInput = {
   description?: LocalizedText;
   price: number;
   stock: number;
+  shippingFirstItem?: number;
+  shippingAdditionalItem?: number;
   category?: string;
   options?: ProductOptionInput[] | string;
   imageUrl?: string;

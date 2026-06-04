@@ -9,7 +9,7 @@ export function CartFab() {
   const { count } = useCart();
   const pathname = usePathname();
 
-  if (pathname.startsWith("/products/")) return null;
+  if (pathname === "/cart" || pathname.startsWith("/products/")) return null;
 
   return (
     <Link

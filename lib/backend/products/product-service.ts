@@ -140,6 +140,8 @@ export function toProduct(doc: Document): Product {
     description: descObj,
     price: Number(doc.price ?? 0),
     stock: Number(doc.stock ?? 0),
+    shippingFirstItem: Number(doc.shippingFirstItem ?? doc.shipping ?? 0),
+    shippingAdditionalItem: Number(doc.shippingAdditionalItem ?? 0),
     category: doc.category ?? "",
     options: normalizeOptions(doc.options),
     imageUrl: doc.imageUrl || imageUrls[0] || "",
@@ -168,6 +170,8 @@ function buildCreateProduct(input: CreateProductInput) {
     },
     price: parsed.price,
     stock: parsed.stock,
+    shippingFirstItem: parsed.shippingFirstItem ?? 0,
+    shippingAdditionalItem: parsed.shippingAdditionalItem ?? 0,
     category: parsed.category ?? "",
     options: normalizeOptions(input.options),
     imageUrl: normalizeImageValue(input.imageUrl),
@@ -240,6 +244,14 @@ export async function updateProduct(
 
   if (input.stock !== undefined) {
     updateData.stock = assertNumber(input.stock, "stock");
+  }
+
+  if (input.shippingFirstItem !== undefined) {
+    updateData.shippingFirstItem = assertNumber(input.shippingFirstItem, "shippingFirstItem");
+  }
+
+  if (input.shippingAdditionalItem !== undefined) {
+    updateData.shippingAdditionalItem = assertNumber(input.shippingAdditionalItem, "shippingAdditionalItem");
   }
 
   if (input.category !== undefined) {

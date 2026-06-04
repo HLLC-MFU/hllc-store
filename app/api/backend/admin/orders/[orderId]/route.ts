@@ -94,7 +94,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (actor) await writeAuditLog(actor, "order.status_updated", { orderId, customerName: updated.customer.name, status: body.status });
 
     if (body.status === "payment_review") {
-      const emailPayload = slipResetEmail(updated.customer.name, updated.id, undefined, updated.customer.email);
+      const emailPayload = slipResetEmail(
+        updated.customer.name,
+        updated.id,
+        undefined,
+        updated.customer.email,
+        updated.customer.phone,
+      );
       if (emailPayload.to) {
         void sendEmail(emailPayload).catch((error) => {
           console.error("[EMAIL_ERROR]", error instanceof Error ? error.message : "failed to send email");
