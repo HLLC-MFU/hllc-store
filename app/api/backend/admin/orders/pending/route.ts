@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/backend/admin-auth";
 import { badRequest, ok } from "@/lib/backend/http";
-import { countPendingOrders } from "@/lib/backend/ecom-service";
+import { countPendingOrders } from "@/lib/backend/order-service";
 
 export async function GET(request: NextRequest) {
   const authError = requireAdmin(request);

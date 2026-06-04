@@ -4,9 +4,9 @@ import * as React from "react";
 import { Lock, User, Eye, EyeOff } from "lucide-react";
 import { LanguageChip } from "@/components/shared/language-chip";
 import { Button } from "@/components/ui/button";
-import { useLanguage } from "@/lib/language-context";
-import { safeParseWithLang, loginSchema } from "@/lib/schemas-i18n";
-import type { Lang } from "@/lib/schemas-i18n";
+import { useLanguage } from "@/lib/client/language-context";
+import { safeParseWithLang, loginSchema } from "@/lib/validation/schemas-i18n";
+import type { Lang } from "@/lib/validation/schemas-i18n";
 
 type AdminLoginProps = {
   onLogin: (form: HTMLFormElement) => Promise<boolean>;

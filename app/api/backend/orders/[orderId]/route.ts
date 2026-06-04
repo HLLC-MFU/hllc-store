@@ -4,7 +4,8 @@ import { readLimitedJson } from "@/lib/backend/request-utils";
 import {
   attachPaymentSlip,
   getOrder,
-} from "@/lib/backend/ecom-service";
+  toPublicOrder,
+} from "@/lib/backend/order-service";
 import type { PaymentSlipInput } from "@/lib/backend/types";
 
 type RouteContext = {
@@ -21,7 +22,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return notFound("order not found");
   }
 
-  return ok(order);
+  return ok(toPublicOrder(order));
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
@@ -30,7 +31,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const body = await readLimitedJson<PaymentSlipInput>(request);
     const order = await attachPaymentSlip(orderId, body);
 
-    return ok(order);
+    return ok(toPublicOrder(order));
   } catch (error) {
     return badRequest(error);
   }

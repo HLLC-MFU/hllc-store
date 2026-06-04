@@ -88,7 +88,7 @@ function getEmailTransporter(): nodemailer.Transporter<SMTPTransport.SentMessage
   throw new Error("Email provider is not configured. Set GMAIL_OAUTH_* values, SMTP_* values, or GMAIL_USER/GMAIL_APP_PASSWORD.");
 }
 
-import { emailPayloadSchema, parseOrThrow } from "@/lib/schemas";
+import { emailPayloadSchema, parseOrThrow } from "@/lib/validation/schemas";
 
 export function validateEmailPayload(payload: EmailPayload) {
   parseOrThrow(emailPayloadSchema, payload);

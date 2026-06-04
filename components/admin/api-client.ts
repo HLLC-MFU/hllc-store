@@ -29,6 +29,12 @@ function readCookie(name: string) {
     ?.split("=")[1] ?? "";
 }
 
+/** CSRF header for admin mutating requests made with a raw fetch (not the api() helper). */
+export function csrfHeaders(): Record<string, string> {
+  const token = readCookie("hllc_admin_csrf");
+  return token ? { "x-admin-csrf": decodeURIComponent(token) } : {};
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<{ data?: T; error?: string }> {
   try {
     const headers = new Headers(init?.headers);

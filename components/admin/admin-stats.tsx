@@ -9,9 +9,8 @@ import {
   Truck,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import type { Order } from "@/components/admin/types";
-import { money } from "@/components/admin/utils";
+import { money } from "@/components/admin/api-client";
 
 type AdminStatsProps = {
   orders: Order[];
@@ -20,7 +19,7 @@ type AdminStatsProps = {
   t: (key: string, replacements?: Record<string, string | number>) => string;
 };
 
-export function AdminStats({ orders, pendingSlips, setActiveTab, t }: AdminStatsProps) {
+export function AdminStats({ orders, pendingSlips, t }: AdminStatsProps) {
   // Stats dashboard data aggregates
   const statsRevenue = orders.reduce((sum, o) =>
     ["packing", "shipped", "completed"].includes(o.status) ? sum + o.total : sum, 0

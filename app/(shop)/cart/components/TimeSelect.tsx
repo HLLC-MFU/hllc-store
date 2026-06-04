@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Check, ChevronDown, Clock3 } from "lucide-react";
-import { useLanguage } from "@/lib/language-context";
+import { useLanguage } from "@/lib/client/language-context";
 
 type TimeSelectProps = {
   name: string;

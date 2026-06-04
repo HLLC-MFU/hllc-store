@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { Order, OrderStatus } from "@/components/admin/types";
 import { ORDER_STATUSES } from "@/components/admin/types";
-import { isPickupOrder } from "@/components/admin/utils";
+import { isPickupOrder } from "@/components/admin/api-client";
 import OrderRow from "@/components/admin/order-row";
 
 type OrdersPanelProps = {

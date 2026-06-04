@@ -3,10 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { Image as ImageIcon, ShoppingCart, Truck } from "lucide-react";
-import { useCart } from "@/lib/cart";
-import { useCartFly } from "@/lib/cart-fly";
-import { useLanguage } from "@/lib/language-context";
+import { Image as ImageIcon, Truck } from "lucide-react";
+import { useLanguage } from "@/lib/client/language-context";
 import { LanguageChip } from "@/components/shared/language-chip";
 
 type ProductOption = {
@@ -50,47 +48,10 @@ function money(value: number) {
 export function HomeClient({ products }: HomeClientProps) {
   const { lang, t } = useLanguage();
   const router = useRouter();
-  const { addItem } = useCart();
-  const { flyToCart } = useCartFly();
 
   const goToProduct = React.useCallback((productId: string) => {
     router.push(`/products/${productId}`);
   }, [router]);
-
-  const addProductToCart = React.useCallback((product: DisplayProduct, sourceEl?: HTMLElement) => {
-    if (product.stock < 1) return false;
-
-    if (product.options.length > 0) {
-      goToProduct(product.id);
-      return false;
-    }
-
-    addItem({
-      productId: product.id,
-      name: product.name,
-      description: product.description,
-      price: product.price,
-      stock: product.stock,
-      shippingFirstItem: product.shippingFirstItem,
-      shippingAdditionalItem: product.shippingAdditionalItem,
-      imageUrl: product.imageUrl ?? "",
-      selectedOption: "",
-    });
-
-    if (sourceEl) flyToCart(sourceEl, product.imageUrl);
-    return true;
-  }, [addItem, flyToCart, goToProduct]);
-
-  const buyProductNow = React.useCallback((product: DisplayProduct, sourceEl?: HTMLElement) => {
-    if (product.stock < 1) return;
-    if (product.options.length > 0) {
-      goToProduct(product.id);
-      return;
-    }
-
-    addProductToCart(product, sourceEl);
-    router.push("/cart");
-  }, [addProductToCart, goToProduct, router]);
 
   const trackingEntry = (
     <Link

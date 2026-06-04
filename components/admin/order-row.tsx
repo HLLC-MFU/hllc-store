@@ -21,10 +21,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useLanguage } from "@/lib/language-context";
+import { useLanguage } from "@/lib/client/language-context";
 import type { Order, OrderStatus } from "./types";
 import { STATUS_COLOR } from "./types";
-import { money, timeAgo, isPickupOrder } from "./utils";
+import { money, timeAgo, isPickupOrder } from "./api-client";
 import { ShippingLabel } from "@/components/shop/cart/shipping-label";
 
 export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking, onCancel, t, onViewSlip }: {

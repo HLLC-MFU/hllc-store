@@ -3,9 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { type LucideIcon, ClipboardList, Home, LayoutDashboard, Mail, Menu, Package, ShoppingCart, User } from "lucide-react";
-import { useCart } from "@/lib/cart";
-import { useCartFly } from "@/lib/cart-fly";
-import { useLanguage } from "@/lib/language-context";
+import { useCart } from "@/lib/client/cart";
+import { useCartFly } from "@/lib/client/cart-fly";
+import { useLanguage } from "@/lib/client/language-context";
 
 export type NavItem = {
   href?: string;

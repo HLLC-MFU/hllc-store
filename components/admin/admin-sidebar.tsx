@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ClipboardList, LayoutDashboard, LogOut, Mail, Package, User } from "lucide-react";
-import { useLanguage } from "@/lib/language-context";
+import { useLanguage } from "@/lib/client/language-context";
 import { LanguageChip } from "@/components/shared/language-chip";
 
 type Props = {

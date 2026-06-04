@@ -9,7 +9,7 @@ import {
   isOrderStatus,
   updateOrderStatus,
   updateTrackingNumber,
-} from "@/lib/backend/ecom-service";
+} from "@/lib/backend/order-service";
 import { sendEmail, slipResetEmail, trackingNumberEmail } from "@/lib/backend/email-service";
 import { readLimitedJson } from "@/lib/backend/request-utils";
 

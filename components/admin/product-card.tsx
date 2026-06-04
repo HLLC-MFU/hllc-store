@@ -5,7 +5,7 @@ import { Image as ImageIcon, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Product } from "./types";
-import { money } from "./utils";
+import { money } from "./api-client";
 import { ProductDetailModal } from "./product-detail-modal";
 
 export function ProductCard({ product, onUpdate, onDelete, onEdit, t }: {
@@ -30,6 +30,7 @@ export function ProductCard({ product, onUpdate, onDelete, onEdit, t }: {
       >
         <div className="relative aspect-square bg-gray-50 overflow-hidden">
           {product.imageUrls && product.imageUrls[0]
+            // eslint-disable-next-line @next/next/no-img-element
             ? <img src={product.imageUrls[0]} alt={product.name.th} className="w-full h-full object-cover" />
             : <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-8 h-8 text-gray-300" /></div>}
           {product.discount ? (

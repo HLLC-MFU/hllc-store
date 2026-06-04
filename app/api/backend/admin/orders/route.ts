@@ -4,7 +4,7 @@ import { badRequest, ok } from "@/lib/backend/http";
 import {
   isOrderStatus,
   listOrders,
-} from "@/lib/backend/ecom-service";
+} from "@/lib/backend/order-service";
 
 export async function GET(request: NextRequest) {
   const authError = requireAdmin(request);

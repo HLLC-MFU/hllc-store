@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { THAI_PROVINCES } from "@/lib/thai-provinces";
+import { THAI_PROVINCES } from "@/lib/data/thai-provinces";
 import {
   Combobox,
   ComboboxContent,

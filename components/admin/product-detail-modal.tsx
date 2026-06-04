@@ -4,9 +4,9 @@ import * as React from "react";
 import { Image as ImageIcon, Package, Pencil, Trash2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useLanguage } from "@/lib/language-context";
+import { useLanguage } from "@/lib/client/language-context";
 import type { Product } from "./types";
-import { money } from "./utils";
+import { money } from "./api-client";
 
 export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
   product: Product;

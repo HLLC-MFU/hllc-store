@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState, useRef, useCallback, type RefObject } from "react";
 import { ChevronLeft, ChevronRight, ShoppingCart, Plus } from "lucide-react";
-import { useCart } from "@/lib/cart";
-import { useCartFly } from "@/lib/cart-fly";
-import { useLanguage } from "@/lib/language-context";
+import { useCart } from "@/lib/client/cart";
+import { useCartFly } from "@/lib/client/cart-fly";
+import { useLanguage } from "@/lib/client/language-context";
 
 export type LocalizedText = {
   th: string;

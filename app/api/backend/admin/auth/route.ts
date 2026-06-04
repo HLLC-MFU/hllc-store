@@ -1,39 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import {
   clearAdminSessionCookie,
   getAdminIdentity,
   setAdminSessionCookie,
 } from "@/lib/backend/admin-auth";
-import { ok, unauthorized } from "@/lib/backend/http";
+import { ok, tooManyRequests, unauthorized } from "@/lib/backend/http";
+import { rateLimit } from "@/lib/backend/rate-limit";
 import { verifyAdminUser } from "@/lib/backend/admin-user-service";
 import { readLimitedJson } from "@/lib/backend/request-utils";
-import { loginSchema, parseOrThrow } from "@/lib/schemas";
-
-const attempts = new Map<string, { count: number; resetAt: number }>();
-const WINDOW_MS = 60_000;
-const MAX_ATTEMPTS = 8;
-
-function clientKey(request: NextRequest) {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "local"
-  );
-}
-
-function rateLimit(request: NextRequest) {
-  const key = clientKey(request);
-  const now = Date.now();
-  const record = attempts.get(key);
-
-  if (!record || record.resetAt <= now) {
-    attempts.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return false;
-  }
-
-  record.count += 1;
-  return record.count > MAX_ATTEMPTS;
-}
+import { loginSchema, parseOrThrow } from "@/lib/validation/schemas";
 
 export async function GET(request: NextRequest) {
   const user = getAdminIdentity(request);
@@ -41,11 +16,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (rateLimit(request)) {
-    return NextResponse.json(
-      { error: "too many login attempts" },
-      { status: 429 },
-    );
+  const limit = rateLimit(request, { bucket: "admin-login", windowMs: 60_000, max: 8 });
+  if (limit.limited) {
+    return tooManyRequests(limit.retryAfterSeconds, "too many login attempts");
   }
 
   const body = (await readLimitedJson<{

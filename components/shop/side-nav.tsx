@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, ShoppingCart, User } from "lucide-react";
-import { useCart } from "@/lib/cart";
-import { useLanguage } from "@/lib/language-context";
+import { useCart } from "@/lib/client/cart";
+import { useLanguage } from "@/lib/client/language-context";
 import { LanguageChip } from "@/components/shared/language-chip";
 
 const tabs = [

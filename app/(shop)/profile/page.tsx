@@ -2,10 +2,10 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronUp, Copy, Check, RefreshCw, Search, Truck, MapPin } from "lucide-react";
+import { ChevronDown, ChevronUp, Copy, Check, RefreshCw, Search, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useLanguage } from "@/lib/language-context";
+import { useLanguage } from "@/lib/client/language-context";
 import { LogisticsProgress } from "@/components/shop/logistics-progress";
 
 type OrderStatus =
@@ -14,7 +14,8 @@ type OrderStatus =
 
 type Order = {
   id: string;
-  customer: { name: string; phone: string; email?: string; address: string };
+  customer: { name: string; phone: string };
+  deliveryMode: "delivery" | "pickup";
   items: {
     productId: string;
     name: string | { th: string; en?: string };
@@ -157,13 +158,6 @@ function OrderCard({ order, lang }: { order: Order; lang: "th" | "en" }) {
               </div>
             )}
           </div>
-
-          {order.customer.address && !order.customer.address.startsWith("รับเองที่") && (
-            <div className="flex items-start gap-2.5 rounded-2xl border border-gray-100 px-4 py-3">
-              <MapPin className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
-              <p className="text-xs font-semibold text-gray-500 leading-relaxed">{order.customer.address}</p>
-            </div>
-          )}
         </div>
       )}
     </article>

@@ -233,16 +233,16 @@ const LanguageContext = createContext<LanguageContextType | null>(null);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Language>("th");
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Sync from localStorage after mount to avoid SSR/client hydration mismatch.
     try {
       const stored = localStorage.getItem("app-lang");
       if (stored === "th" || stored === "en") {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLangState(stored);
       }
     } catch {}
-    setMounted(true);
   }, []);
 
   const setLang = (newLang: Language) => {

@@ -5,7 +5,8 @@ import {
   createOrder,
   isOrderStatus,
   listOrders,
-} from "@/lib/backend/ecom-service";
+  toPublicOrder,
+} from "@/lib/backend/order-service";
 import type { CreateOrderInput } from "@/lib/backend/types";
 
 export async function GET(request: NextRequest) {
@@ -17,12 +18,12 @@ export async function GET(request: NextRequest) {
       throw new Error("customerPhone is required");
     }
 
-    return ok(
-      await listOrders({
-        customerPhone,
-        status: status && isOrderStatus(status) ? status : undefined,
-      }),
-    );
+    const orders = await listOrders({
+      customerPhone,
+      status: status && isOrderStatus(status) ? status : undefined,
+    });
+
+    return ok(orders.map(toPublicOrder));
   } catch (error) {
     return badRequest(error);
   }

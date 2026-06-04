@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { LanguageProvider } from "@/lib/language-context";
-import { CartProvider } from "@/lib/cart";
-import { CartFlyProvider } from "@/lib/cart-fly";
+import { LanguageProvider } from "@/lib/client/language-context";
+import { CartProvider } from "@/lib/client/cart";
+import { CartFlyProvider } from "@/lib/client/cart-fly";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (

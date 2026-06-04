@@ -1,18 +1,35 @@
 import { ObjectId, type Document } from "mongodb";
 import { getDb } from "./mongodb";
 import { z } from "zod";
-import { createOrderSchema, imageUrlSchema, parseOrThrow } from "@/lib/schemas";
+import { createOrderSchema, imageUrlSchema, parseOrThrow } from "@/lib/validation/schemas";
 import type {
   CreateOrderInput,
-  CreateProductInput,
   Order,
   OrderItem,
   OrderStatus,
   PaymentSlipInput,
-  Product,
+  PublicOrder,
   ReviewSlipInput,
-  LocalizedText,
 } from "./types";
+
+/** Strip PII + internal fields before returning an order to an anonymous customer. */
+export function toPublicOrder(order: Order): PublicOrder {
+  return {
+    id: order.id,
+    customer: { name: order.customer.name, phone: order.customer.phone },
+    items: order.items,
+    subtotal: order.subtotal,
+    shippingFee: order.shippingFee,
+    deliveryMode: order.deliveryMode,
+    total: order.total,
+    status: order.status,
+    slip: { status: order.slip.status, imageUrl: order.slip.imageUrl },
+    trackingNumber: order.trackingNumber,
+    cancellationReason: order.cancellationReason,
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
+  };
+}
 
 function assertText(value: unknown, field: string) {
   const result = z.string().min(1, { message: `${field} is required` }).safeParse(value);
@@ -107,64 +124,6 @@ function normalizeOptions(value: unknown) {
   return [];
 }
 
-function createSlug(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
-
-function toProduct(doc: Document): Product {
-  const imageUrls: string[] = Array.isArray(doc.imageUrls)
-    ? doc.imageUrls.filter((u: unknown) => typeof u === "string" && u)
-    : [];
-
-  let nameObj: LocalizedText = { th: "" };
-  if (doc.name && typeof doc.name === "object") {
-    nameObj = {
-      th: doc.name.th || "",
-      en: doc.name.en || undefined,
-    };
-  } else {
-    nameObj = {
-      th: typeof doc.name === "string" ? doc.name : "",
-      en: typeof doc.nameEn === "string" ? doc.nameEn : undefined,
-    };
-  }
-
-  let descObj: LocalizedText = { th: "" };
-  if (doc.description && typeof doc.description === "object") {
-    descObj = {
-      th: doc.description.th || "",
-      en: doc.description.en || undefined,
-    };
-  } else {
-    descObj = {
-      th: typeof doc.description === "string" ? doc.description : "",
-      en: typeof doc.descriptionEn === "string" ? doc.descriptionEn : undefined,
-    };
-  }
-
-  return {
-    id: doc._id.toString(),
-    name: nameObj,
-    slug: doc.slug,
-    description: descObj,
-    price: doc.price,
-    stock: doc.stock,
-    shippingFirstItem: Number(doc.shippingFirstItem ?? doc.shipping ?? 0),
-    shippingAdditionalItem: Number(doc.shippingAdditionalItem ?? 0),
-    category: doc.category ?? "",
-    options: normalizeOptions(doc.options),
-    imageUrl: doc.imageUrl ?? imageUrls[0] ?? "",
-    imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
-    active: doc.active,
-    createdAt: doc.createdAt,
-    updatedAt: doc.updatedAt,
-  };
-}
-
 function toOrder(doc: Document): Order {
   const products: Document[] = doc._products ?? [];
   const items: OrderItem[] = (doc.items as Document[]).map((item) => {
@@ -213,70 +172,6 @@ const ORDERS_LOOKUP_PIPELINE: Document[] = [
     },
   },
 ];
-
-export async function listProducts() {
-  const db = await getDb();
-  const products = await db
-    .collection("products")
-    .find({ active: true })
-    .sort({ createdAt: -1 })
-    .toArray();
-
-  return products.map(toProduct);
-}
-
-export async function listAdminProducts() {
-  const db = await getDb();
-  const products = await db
-    .collection("products")
-    .find()
-    .sort({ createdAt: -1 })
-    .toArray();
-
-  return products.map(toProduct);
-}
-
-export async function createProduct(input: CreateProductInput) {
-  const db = await getDb();
-  const timestamp = now();
-  const nameTh = assertText(input.name.th, "name.th");
-  const slug = createSlug(input.slug || nameTh);
-  const product = {
-    name: {
-      th: nameTh,
-      en: typeof input.name.en === "string" ? input.name.en.trim() : "",
-    },
-    slug,
-    description: {
-      th: typeof input.description?.th === "string" ? input.description.th.trim() : "",
-      en: typeof input.description?.en === "string" ? input.description.en.trim() : "",
-    },
-    price: assertNumber(input.price, "price"),
-    stock: assertNumber(input.stock, "stock"),
-    shippingFirstItem: assertNumber(input.shippingFirstItem ?? 0, "shippingFirstItem"),
-    shippingAdditionalItem: assertNumber(input.shippingAdditionalItem ?? 0, "shippingAdditionalItem"),
-    category: typeof input.category === "string" ? input.category.trim() : "",
-    options: normalizeOptions(input.options),
-    imageUrl: typeof input.imageUrl === "string" ? input.imageUrl.trim() : "",
-    imageUrls: Array.isArray(input.imageUrls) ? input.imageUrls.filter((u) => typeof u === "string" && u) : [],
-    active: input.active ?? true,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  };
-
-  const result = await db.collection("products").insertOne(product);
-
-  return toProduct({ _id: result.insertedId, ...product });
-}
-
-export async function getProduct(productId: string) {
-  const db = await getDb();
-  const product = await db
-    .collection("products")
-    .findOne({ _id: assertObjectId(productId), active: true });
-
-  return product ? toProduct(product) : null;
-}
 
 export async function createOrder(input: CreateOrderInput) {
   const db = await getDb();
@@ -644,96 +539,5 @@ export function isOrderStatus(value: string): value is OrderStatus {
     "completed",
     "cancelled",
   ].includes(value);
-}
-
-export async function updateProduct(productId: string, input: Partial<CreateProductInput>) {
-  const db = await getDb();
-  const timestamp = now();
-  
-  const updateData: Document = {};
-  
-  if (input.name !== undefined) {
-    if (input.name.th !== undefined) {
-      updateData["name.th"] = assertText(input.name.th, "name.th");
-      updateData.slug = createSlug(input.slug || input.name.th);
-    }
-    if (input.name.en !== undefined) {
-      updateData["name.en"] = typeof input.name.en === "string" ? input.name.en.trim() : "";
-    }
-  } else if (input.slug !== undefined) {
-    updateData.slug = createSlug(input.slug);
-  }
-  
-  if (input.description !== undefined) {
-    if (input.description.th !== undefined) {
-      updateData["description.th"] = typeof input.description.th === "string" ? input.description.th.trim() : "";
-    }
-    if (input.description.en !== undefined) {
-      updateData["description.en"] = typeof input.description.en === "string" ? input.description.en.trim() : "";
-    }
-  }
-  
-  if (input.price !== undefined) {
-    updateData.price = assertNumber(input.price, "price");
-  }
-  
-  if (input.stock !== undefined) {
-    updateData.stock = assertNumber(input.stock, "stock");
-  }
-
-  if (input.shippingFirstItem !== undefined) {
-    updateData.shippingFirstItem = assertNumber(input.shippingFirstItem, "shippingFirstItem");
-  }
-
-  if (input.shippingAdditionalItem !== undefined) {
-    updateData.shippingAdditionalItem = assertNumber(input.shippingAdditionalItem, "shippingAdditionalItem");
-  }
-
-  if (input.category !== undefined) {
-    updateData.category = typeof input.category === "string" ? input.category.trim() : "";
-  }
-
-  if (input.options !== undefined) {
-    updateData.options = normalizeOptions(input.options);
-  }
-  
-  if (input.imageUrl !== undefined) {
-    updateData.imageUrl = typeof input.imageUrl === "string" ? input.imageUrl.trim() : "";
-  }
-
-  if (input.imageUrls !== undefined) {
-    updateData.imageUrls = Array.isArray(input.imageUrls)
-      ? input.imageUrls.filter((u) => typeof u === "string" && u)
-      : [];
-  }
-  
-  if (input.active !== undefined) {
-    updateData.active = input.active;
-  }
-  
-  updateData.updatedAt = timestamp;
-
-  const result = await db.collection("products").findOneAndUpdate(
-    { _id: assertObjectId(productId) },
-    { $set: updateData },
-    { returnDocument: "after" }
-  );
-
-  if (!result) {
-    throw new Error("product not found");
-  }
-
-  return toProduct(result);
-}
-
-export async function deleteProduct(productId: string) {
-  const db = await getDb();
-  const result = await db.collection("products").deleteOne({ _id: assertObjectId(productId) });
-  
-  if (result.deletedCount === 0) {
-    throw new Error("product not found");
-  }
-  
-  return { success: true };
 }
 

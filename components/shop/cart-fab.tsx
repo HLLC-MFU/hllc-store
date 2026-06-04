@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
-import { useCart } from "@/lib/cart";
+import { useCart } from "@/lib/client/cart";
 import { usePathname } from "next/navigation";
 
 export function CartFab() {

@@ -13,20 +13,7 @@ type OrderStatus =
   | "cancelled";
 
 type Order = {
-  id: string;
-  customer: { name: string; phone: string; email?: string; address: string };
-  items: {
-    productId: string;
-    name: string | { th: string; en?: string };
-    price: number;
-    quantity: number;
-    subtotal: number;
-  }[];
-  total: number;
   status: OrderStatus;
-  slip: { imageUrl?: string; status: string };
-  trackingNumber?: string;
-  createdAt: string;
   updatedAt: string;
 };
 

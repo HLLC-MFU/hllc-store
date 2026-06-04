@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Lock, User, KeyRound, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { safeParseWithLang, registerSchema } from "@/lib/schemas-i18n";
+import { safeParseWithLang, registerSchema } from "@/lib/validation/schemas-i18n";
 
 export default function AdminRegisterPage() {
   const [message, setMessage] = useState("");

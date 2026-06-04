@@ -95,6 +95,24 @@ export type Order = {
   updatedAt: string;
 };
 
+// Public-facing order shape returned to anonymous customers (phone lookup).
+// Strips PII/internal fields: email, full address, admin notes, slip reviewer.
+export type PublicOrder = {
+  id: string;
+  customer: { name: string; phone: string };
+  items: OrderItem[];
+  subtotal: number;
+  shippingFee: number;
+  deliveryMode: "delivery" | "pickup";
+  total: number;
+  status: OrderStatus;
+  slip: { status: SlipStatus; imageUrl: string };
+  trackingNumber?: string;
+  cancellationReason?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type CreateOrderInput = {
   customer: CustomerInput;
   items: CartItemInput[];

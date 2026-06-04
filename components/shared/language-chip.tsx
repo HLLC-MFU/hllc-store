@@ -1,6 +1,6 @@
 "use client";
 
-import { useLanguage } from "@/lib/language-context";
+import { useLanguage } from "@/lib/client/language-context";
 
 const ThaiFlag = () => (
   <svg viewBox="0 0 9 6" className="w-5.5 h-4 rounded-[3px] shadow-xs">

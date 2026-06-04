@@ -18,3 +18,10 @@ export function unauthorized(message = "unauthorized") {
 export function notFound(message = "not found") {
   return NextResponse.json({ error: message }, { status: 404 });
 }
+
+export function tooManyRequests(retryAfterSeconds = 60, message = "too many requests") {
+  return NextResponse.json(
+    { error: message },
+    { status: 429, headers: { "Retry-After": String(retryAfterSeconds) } },
+  );
+}

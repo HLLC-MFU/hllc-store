@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { CartItem } from "@/lib/cart";
+import type { CartItem } from "@/lib/client/cart";
 import { money } from "./swipeable-cart-item";
 
 type OrderCustomer = {

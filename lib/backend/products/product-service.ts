@@ -1,6 +1,6 @@
 import { ObjectId, type Document } from "mongodb";
 import { z } from "zod";
-import { createProductSchema, imageUrlSchema, parseOrThrow } from "@/lib/schemas";
+import { createProductSchema, imageUrlSchema, parseOrThrow } from "@/lib/validation/schemas";
 import type { CreateProductInput, Product, LocalizedText } from "@/lib/backend/types";
 import { getProductCollection } from "./product-module";
 

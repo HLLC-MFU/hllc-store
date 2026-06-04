@@ -3,7 +3,7 @@
 import { memo, useRef, useState } from "react";
 import Image from "next/image";
 import { Check, Image as ImageIcon, Minus, Plus, Trash2 } from "lucide-react";
-import type { CartItem } from "@/lib/cart";
+import type { CartItem } from "@/lib/client/cart";
 
 export function itemKey(item: CartItem) {
   return `${item.productId}-${item.selectedOption ?? ""}`;

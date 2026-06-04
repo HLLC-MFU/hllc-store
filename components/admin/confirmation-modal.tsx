@@ -4,7 +4,7 @@ import * as React from "react";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { OrderStatus } from "@/components/admin/types";
-import { useLanguage } from "@/lib/language-context";
+import { useLanguage } from "@/lib/client/language-context";
 
 type ConfirmationModalProps = {
   confirm: { orderId: string; approved: boolean; note?: string } | null;

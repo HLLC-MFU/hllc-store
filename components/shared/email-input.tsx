@@ -2,7 +2,7 @@
 
 import { useState, useCallback, forwardRef } from "react";
 import { Mail, AlertCircle } from "lucide-react";
-import { validateEmail } from "@/lib/validation";
+import { validateEmail } from "@/lib/validation/validation";
 import { cn } from "@/lib/utils";
 
 export interface EmailInputProps
