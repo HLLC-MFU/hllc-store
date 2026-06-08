@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -23,11 +24,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/lib/client/language-context";
 import type { Order, OrderStatus } from "./types";
-import { STATUS_COLOR } from "./types";
+import { STATUS_BG, STATUS_COLOR, STATUS_ICON } from "./types";
 import { money, timeAgo, isPickupOrder } from "./api-client";
 import { ShippingLabel } from "@/components/shop/cart/shipping-label";
 
-export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking, onCancel, t, onViewSlip }: {
+export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking, onCancel, t, onViewSlip, useModal = false }: {
   order: Order;
   onStatusChange: (id: string, s: OrderStatus) => void;
   onApproveSlip: (orderId: string, approved: boolean, note?: string) => void;
@@ -35,6 +36,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
   onCancel: (orderId: string, reason: string) => void;
   t: (key: string, replacements?: Record<string, string | number>) => string;
   onViewSlip: (url: string) => void;
+  useModal?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
   const [note, setNote] = React.useState("");
@@ -49,62 +51,50 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
     "payment_review",
     "packing",
     "shipped",
-    "completed",
   ];
 
   const currentIdx = timelineSteps.indexOf(order.status);
   const statusButtonLabel = (status?: OrderStatus) => {
     if (!status) return "";
-    if (status === "payment_review") {
-      return lang === "th" ? "ขออัปโหลดสลิปใหม่" : "Request new slip";
-    }
     return t(`admin.status.${status}`);
   };
 
   return (
-    <Card className={`rounded-3xl shadow-2xs overflow-hidden transition-all duration-200 ${open ? "border-slate-200/80 ring-3 ring-slate-100" : "border-slate-100 hover:border-slate-200"}`}>
+    <>
+    <Card className={`rounded-3xl shadow-2xs overflow-hidden transition-all duration-200 border ${STATUS_BG[order.status]} ${open ? "shadow-md" : "hover:shadow-sm"}`}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-3 p-4 text-left hover:bg-slate-50/50 transition-colors cursor-pointer"
+        className="w-full flex items-center gap-3 p-4 text-left hover:bg-black/2 transition-colors cursor-pointer"
       >
-        {(() => {
-          const iconClass = "w-4 h-4 shrink-0";
-          if (order.status === "payment_review") return <FileCheck2  className={`${iconClass} text-rose-500`} />;
-          if (order.status === "packing")         return <Package     className={`${iconClass} text-yellow-500`} />;
-          if (order.status === "shipped")         return <Truck       className={`${iconClass} text-sky-500`} />;
-          if (order.status === "completed")       return <CheckCircle2 className={`${iconClass} text-teal-600`} />;
-          return <FileCheck2 className={`${iconClass} text-gray-400`} />;
-        })()}
+        {/* Icon circle — same as profile page */}
+        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${STATUS_ICON[order.status]}`}>
+          {order.status === "payment_review" && <FileCheck2 className="w-4 h-4" />}
+          {order.status === "packing"         && <Package    className="w-4 h-4" />}
+          {order.status === "shipped"         && <Truck      className="w-4 h-4" />}
+          {order.status === "completed"       && <CheckCircle2 className="w-4 h-4" />}
+          {order.status === "cancelled"       && <X          className="w-4 h-4" />}
+          {(order.status === "pending_payment" || order.status === "paid") && <FileCheck2 className="w-4 h-4" />}
+        </div>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-extrabold text-sm text-gray-900 leading-none">{order.customer.name}</span>
-            <Badge className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md border ${STATUS_COLOR[order.status]}`}>
-              {t(`admin.status.${order.status}`)}
-            </Badge>
-          </div>
-          <p className="text-xs text-gray-400 mt-1 font-medium truncate">
+          <span className="font-extrabold text-sm text-gray-900 leading-none block truncate">{order.customer.name}</span>
+          <p className="text-xs text-gray-500 mt-0.5 font-medium truncate">
             {order.items.map((i) => `${i.name[lang] || i.name.th} ×${i.quantity}`).join(", ")}
           </p>
-          {order.items.some((item) => item.selectedOption) ? (
-            <p className="mt-1 truncate text-[10px] font-black text-[#85241F]">
-              {order.items
-                .filter((item) => item.selectedOption)
-                .map((item) => item.selectedOption)
-                .join(", ")}
-            </p>
-          ) : null}
+          <p className="text-[10px] text-gray-400 mt-0.5">{money(order.total)} · {timeAgo(order.createdAt, lang)}</p>
         </div>
 
-        <div className="text-right shrink-0 mr-1">
-          <p className="font-black text-sm text-gray-950">{money(order.total)}</p>
-          <p className="text-[10px] text-gray-400 font-medium mt-0.5">{timeAgo(order.createdAt, lang)}</p>
+        <div className="shrink-0 flex items-center gap-2">
+          <Badge className={`text-xs font-black px-3 py-1 rounded-full border-0 ${STATUS_COLOR[order.status]}`}>
+            {t(`admin.status.${order.status}`)}
+          </Badge>
+          {useModal
+            ? <ArrowRight className="w-4 h-4 text-gray-300" />
+            : open ? <ChevronUp className="w-4 h-4 text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-300" />}
         </div>
-
-        {open ? <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />}
       </button>
 
-      {open && (
+      {open && !useModal && (
         <div className="border-t border-slate-100 p-4 bg-slate-50/20 flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200">
 
           {/* Admin Notes timeline */}
@@ -242,7 +232,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                   style={{ width: `${(Math.max(0, currentIdx) / (timelineSteps.length - 1)) * 92}%` }}
                 />
                 {timelineSteps.map((s, idx) => {
-                  const done = idx < currentIdx || order.status === "completed";
+                  const done = idx < currentIdx || order.status === "shipped";
                   const active = idx === currentIdx;
                   const StepIcon = s === "payment_review" ? FileCheck2
                     : s === "packing" ? Package
@@ -313,8 +303,6 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                     <input
                       value={tracking}
                       onChange={(e) => setTracking(e.target.value)}
-                      onBlur={() => tracking.trim() && tracking.trim() !== (order.trackingNumber ?? "") && onSaveTracking(order.id, tracking.trim())}
-                      onKeyDown={(e) => e.key === "Enter" && tracking.trim() && tracking.trim() !== (order.trackingNumber ?? "") && onSaveTracking(order.id, tracking.trim())}
                       placeholder="EG123456789TH"
                       className="w-full text-xs font-mono text-gray-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-[#85241F]/40 focus:ring-2 focus:ring-[#85241F]/10 placeholder:text-gray-400 transition-all"
                     />
@@ -335,19 +323,18 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                     )}
                     <Button
                       disabled={!tracking.trim() && !order.trackingNumber}
-                      onClick={() => onStatusChange(order.id, timelineSteps[currentIdx + 1])}
+                      onClick={() => {
+                        if (tracking.trim() && tracking.trim() !== (order.trackingNumber ?? "")) {
+                          onSaveTracking(order.id, tracking.trim());
+                        }
+                        if (tracking.trim() && tracking.trim() !== (order.trackingNumber ?? "")) {
+                          onSaveTracking(order.id, tracking.trim());
+                        }
+                      }}
                       className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-[#85241F]/15 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      <ArrowRight className="w-4 h-4" />
-                      <span className="font-black">{t(`admin.status.${timelineSteps[currentIdx + 1]}`)}</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => onStatusChange(order.id, timelineSteps[currentIdx - 1])}
-                      className="w-full h-auto py-2.5 text-xs font-bold gap-2"
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                      <span>{statusButtonLabel(timelineSteps[currentIdx - 1])}</span>
+                      <Check className="w-4 h-4" />
+                      <span className="font-black">{lang === "th" ? "บันทึกหมายเลขพัสดุ" : "Save Tracking"}</span>
                     </Button>
                   </div>
                 </div>
@@ -360,9 +347,9 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                 <div className="flex flex-col gap-2">
                   <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3.5 flex items-center gap-2.5 text-emerald-800 text-xs font-bold">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>{t("admin.order.is_completed")}</span>
+                    <span>{lang === "th" ? "จัดส่งแล้ว ✓" : "Shipped ✓"}</span>
                   </div>
-                  {currentIdx > 0 && (
+                  {currentIdx > 1 && (
                     <Button
                       variant="outline"
                       onClick={() => onStatusChange(order.id, timelineSteps[currentIdx - 1])}
@@ -384,7 +371,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       <span className="font-black">{t(`admin.status.${timelineSteps[currentIdx + 1]}`)}</span>
                     </Button>
                   )}
-                  {currentIdx > 0 && (
+                  {currentIdx > 1 && (
                     <Button
                       variant="outline"
                       onClick={() => onStatusChange(order.id, timelineSteps[currentIdx - 1])}
@@ -447,6 +434,244 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
         </div>
       )}
     </Card>
+
+    {/* Modal portal — rendered outside Card */}
+    {useModal && open && typeof window !== "undefined" && createPortal(
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 animate-in fade-in duration-150" style={{zIndex:50}} onClick={() => setOpen(false)}>
+        <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+          {/* Modal header — name + X */}
+          <div className="flex items-center justify-between px-5 pt-4 pb-3 shrink-0">
+            <div>
+              <p className="font-black text-sm text-gray-900">{order.customer.name}</p>
+              <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{order.items.map((i) => `${i.name[lang] || i.name.th} ×${i.quantity}`).join(", ")}</p>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              {canCancel && !showCancel && (
+                <button
+                  type="button"
+                  onClick={() => setShowCancel(true)}
+                  className="p-1.5 rounded-xl hover:bg-red-50 cursor-pointer text-gray-400 hover:text-red-500 transition-colors"
+                  title="ยกเลิกคำสั่งซื้อ"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+              <button type="button" onClick={() => setOpen(false)} className="p-1.5 rounded-xl hover:bg-gray-100 cursor-pointer text-gray-400 shrink-0">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Stepper in header */}
+          {order.status !== "cancelled" && (
+            <div className="px-5 pb-4 border-b border-gray-100 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)] shrink-0">
+              <div className="flex items-center justify-between relative">
+                <div className="absolute top-3.5 left-4 right-4 h-0.5 bg-gray-100 z-0" />
+                <div className="absolute top-3.5 left-4 h-0.5 bg-emerald-500 z-0 transition-all duration-500" style={{ width: `${(Math.max(0, currentIdx) / (timelineSteps.length - 1)) * 88}%` }} />
+                {timelineSteps.map((s, idx) => {
+                  const done = idx < currentIdx || order.status === "shipped";
+                  const active = idx === currentIdx;
+                  const StepIcon = s === "payment_review" ? FileCheck2 : s === "packing" ? Package : s === "shipped" ? Truck : Check;
+                  return (
+                    <div key={s} className="flex flex-col items-center z-10">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all shadow-sm ${done ? "bg-emerald-500 border-emerald-500 text-white" : active ? "bg-white border-[#85241F] text-[#85241F] scale-110 ring-4 ring-[#85241F]/5" : "bg-white border-gray-200 text-gray-300"}`}>
+                        {done ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : <StepIcon className="w-3.5 h-3.5" />}
+                      </div>
+                      <span className={`text-[10px] font-bold mt-1.5 text-center max-w-16 truncate block ${active ? "text-[#85241F] font-black" : done ? "text-emerald-600" : "text-gray-400"}`}>
+                        {t(`admin.status.${s}`)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {/* Modal body — same content as dropdown */}
+          <div className="overflow-y-auto flex-1 p-4 bg-slate-50/20 flex flex-col gap-4">
+
+            {/* Admin Notes */}
+            {order.adminNotes && order.adminNotes.length > 0 && (
+              <Card className="rounded-2xl shadow-3xs">
+                <CardContent className="p-4 flex flex-col gap-3">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">บันทึกแอดมิน</span>
+                  </div>
+                  {order.adminNotes.map((n, i) => (
+                    <div key={i} className="flex gap-2.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-300 mt-1.5 shrink-0" />
+                      <div className="pb-1 flex-1">
+                        <span className="text-[10px] font-black text-[#85241F] bg-[#85241F]/5 px-1.5 py-0.5 rounded-md">{n.action}</span>
+                        <span className="text-[10px] text-gray-400 ml-1">โดย {n.by}</span>
+                        {n.text && <p className="text-xs text-gray-600 mt-0.5">{n.text}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Slip image */}
+            {order.status === "payment_review" && order.slip.imageUrl && order.slip.status !== "none" && (
+              <Card className="rounded-2xl shadow-3xs overflow-hidden">
+                <button onClick={() => order.slip.imageUrl && onViewSlip(order.slip.imageUrl)} className="w-full h-48 bg-gray-100 relative group cursor-pointer block">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={order.slip.imageUrl} alt="slip" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-end px-3 pb-3">
+                    <span className="opacity-0 group-hover:opacity-100 text-white text-[9px] font-black bg-black/60 px-2 py-1 rounded-lg">ขยาย</span>
+                  </div>
+                </button>
+              </Card>
+            )}
+
+            {/* Shipping label or customer info */}
+            {order.status !== "payment_review" && (
+              isPickupOrder(order) ? (
+                <Card className="rounded-2xl shadow-3xs">
+                  <CardContent className="p-4 flex flex-col gap-1.5">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">ข้อมูลผู้รับ</span>
+                    <span className="text-base font-black text-gray-900">{order.customer.name}</span>
+                    <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
+                      <Phone className="w-3.5 h-3.5 text-gray-400" /><span>{order.customer.phone}</span>
+                    </div>
+                    {order.customer.email && (
+                      <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
+                        <Mail className="w-3.5 h-3.5 text-gray-400" /><span>{order.customer.email}</span>
+                      </div>
+                    )}
+                    <div className="flex items-start gap-2 text-sm text-gray-600 font-medium">
+                      <MapPin className="w-3.5 h-3.5 mt-0.5 text-gray-400" /><span>{order.customer.address}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <ShippingLabel name={order.customer.name} address={order.customer.address} phone={order.customer.phone} lang={lang} />
+              )
+            )}
+
+            {/* Items + Total */}
+            <Card className="rounded-2xl shadow-3xs">
+              <CardContent className="p-4 flex flex-col gap-4">
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">รายการสินค้า</span>
+                    <div className="flex items-center gap-1.5 bg-gray-100 rounded-lg px-2.5 py-1">
+                      <span className="text-[10px] font-black text-gray-500">
+                        {new Date(order.createdAt).toLocaleDateString(lang === "th" ? "th-TH" : "en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                      </span>
+                      <span className="text-gray-300 text-[10px]">·</span>
+                      <span className="text-[10px] font-black text-[#85241F]">
+                        {new Date(order.createdAt).toLocaleTimeString(lang === "th" ? "th-TH" : "en-GB", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                  </div>
+                  {order.items.map((item, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <span className="text-sm text-gray-800 font-semibold truncate">{item.name[lang] || item.name.th} <span className="text-gray-400 font-medium">×{item.quantity}</span></span>
+                      <span className="text-sm font-black text-gray-900 shrink-0 ml-3">{money(item.subtotal)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                  <span className="text-sm font-black text-gray-500">ยอดรวม</span>
+                  <span className="text-xl font-black text-gray-950">{money(order.total)}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+          </div>{/* end scrollable body */}
+
+          {/* Footer — fixed, not scrollable */}
+          <div className="shrink-0 border-t border-gray-100 shadow-[0_-2px_8px_-2px_rgba(0,0,0,0.08)] bg-white p-4 flex flex-col gap-3">
+
+            {/* Status changer — full */}
+            <Card className="rounded-2xl shadow-3xs">
+              <CardContent className="p-4">
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-3">{t("admin.order.change_status")}</p>
+                {order.status === "payment_review" && order.slip.status === "pending" ? (
+                  <div className="flex flex-col gap-2.5">
+                    <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="ข้อความถึงลูกค้า (ไม่บังคับ)..." rows={2}
+                      className="w-full text-xs text-gray-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 resize-none outline-none focus:border-[#85241F]/40 placeholder:text-gray-400 transition-all" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button onClick={() => { onApproveSlip(order.id, true, note || undefined); setNote(""); }}
+                        className="bg-linear-to-r from-emerald-500 to-emerald-600 hover:opacity-95 text-white font-black h-9 rounded-xl gap-1.5">
+                        <Check className="w-4 h-4" strokeWidth={3} />{t("admin.slip.approve")}
+                      </Button>
+                      <Button onClick={() => { onApproveSlip(order.id, false, note || undefined); setNote(""); }}
+                        className="bg-linear-to-r from-red-500 to-red-600 hover:opacity-95 text-white font-black h-9 rounded-xl gap-1.5">
+                        <X className="w-4 h-4" strokeWidth={3} />{t("admin.slip.reject")}
+                      </Button>
+                    </div>
+                  </div>
+                ) : order.status === "shipped" ? (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-xs font-black text-gray-500">หมายเลขพัสดุ / Tracking</span>
+                      <input value={tracking} onChange={(e) => setTracking(e.target.value)}
+                        placeholder="EG123456789TH"
+                        className="w-full text-xs font-mono text-gray-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-[#85241F]/40 placeholder:text-gray-400 transition-all" />
+                      {order.trackingNumber && <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1"><Check className="w-3 h-3" strokeWidth={3} />{order.trackingNumber}</p>}
+                    </div>
+                    <Button
+                      disabled={!tracking.trim() && !order.trackingNumber}
+                      onClick={() => {
+                        if (tracking.trim() && tracking.trim() !== (order.trackingNumber ?? "")) {
+                          onSaveTracking(order.id, tracking.trim());
+                        }
+                      }}
+                      className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl gap-2 disabled:opacity-40"
+                    >
+                      <Check className="w-4 h-4" />
+                      {lang === "th" ? "บันทึกหมายเลขพัสดุ" : "Save Tracking"}
+                    </Button>
+                  </div>
+                ) : order.status === "cancelled" ? (
+                  <div className="bg-red-50/50 border border-red-100 rounded-xl p-3.5 flex items-center gap-2.5 text-red-700 text-xs font-bold">
+                    <X className="w-4 h-4 text-red-500 shrink-0" />{lang === "th" ? "คำสั่งซื้อถูกยกเลิกแล้ว" : "Order has been cancelled"}
+                  </div>
+                ) : order.status === "completed" ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3.5 flex items-center gap-2.5 text-emerald-800 text-xs font-bold">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />{lang === "th" ? "จัดส่งแล้ว ✓" : "Shipped ✓"}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {currentIdx < timelineSteps.length - 1 && (
+                      <Button onClick={() => { onStatusChange(order.id, timelineSteps[currentIdx + 1]); }} className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl gap-2">
+                        <ArrowRight className="w-4 h-4" />{t(`admin.status.${timelineSteps[currentIdx + 1]}`)}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Cancel form — shown when trash icon clicked */}
+            {showCancel && (
+              <div className="flex flex-col gap-2 animate-in slide-in-from-bottom-2 duration-150 border-t border-red-100 pt-3">
+                <p className="text-xs font-black text-red-500">ยกเลิกคำสั่งซื้อ</p>
+                <textarea value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder="ระบุเหตุผลการยกเลิก..." rows={2}
+                  className="w-full text-xs text-gray-700 bg-red-50/50 border border-red-200 rounded-xl px-3 py-2.5 resize-none outline-none placeholder:text-gray-400 transition-all" />
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" onClick={() => { setShowCancel(false); setCancelReason(""); }} className="h-9 rounded-xl text-xs font-bold">
+                    ไม่ยกเลิก
+                  </Button>
+                  <Button onClick={() => { if (!cancelReason.trim()) return; onCancel(order.id, cancelReason.trim()); setCancelReason(""); setShowCancel(false); }}
+                    disabled={!cancelReason.trim()}
+                    className="h-9 rounded-xl bg-red-500 hover:bg-red-600 disabled:opacity-40 text-white font-black gap-1.5">
+                    <X className="w-3.5 h-3.5" strokeWidth={3} />ยืนยันยกเลิก
+                  </Button>
+                </div>
+              </div>
+            )}
+
+          </div>{/* end footer */}
+        </div>
+      </div>,
+      document.body
+    )}
+    </>
   );
 }
 

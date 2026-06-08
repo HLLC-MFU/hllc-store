@@ -1,7 +1,10 @@
-import { ObjectId, type Document } from "mongodb";
-import { getDb } from "./mongodb";
-import { z } from "zod";
+import { type Document } from "mongodb";
+import { getDb } from "@/lib/backend/mongodb";
 import { createOrderSchema, imageUrlSchema, parseOrThrow } from "@/lib/validation/schemas";
+import { assertText, assertObjectId, now, normalizeOptions } from "@/lib/backend/validation-utils";
+import { publishOrdersUpdated } from "@/lib/backend/admin-realtime";
+import { sendEmail, trackingNumberEmail } from "@/lib/backend/email-service";
+import { getOrdersCollection } from "./order-module";
 import type {
   CreateOrderInput,
   Order,
@@ -10,7 +13,7 @@ import type {
   PaymentSlipInput,
   PublicOrder,
   ReviewSlipInput,
-} from "./types";
+} from "@/lib/backend/types";
 
 /** Strip PII + internal fields before returning an order to an anonymous customer. */
 export function toPublicOrder(order: Order): PublicOrder {
@@ -31,14 +34,6 @@ export function toPublicOrder(order: Order): PublicOrder {
   };
 }
 
-function assertText(value: unknown, field: string) {
-  const result = z.string().min(1, { message: `${field} is required` }).safeParse(value);
-  if (!result.success) {
-    throw new Error(result.error.issues[0]?.message ?? `${field} is required`);
-  }
-  return result.data.trim();
-}
-
 function assertImageValue(value: unknown, field: string) {
   const result = imageUrlSchema.safeParse(value);
   if (!result.success) {
@@ -47,81 +42,12 @@ function assertImageValue(value: unknown, field: string) {
   return result.data;
 }
 
-function assertNumber(value: unknown, field: string) {
-  const result = z.coerce.number().finite().min(0, { message: `${field} must be a positive number` }).safeParse(value);
-  if (!result.success) {
-    throw new Error(result.error.issues[0]?.message ?? `${field} must be a positive number`);
-  }
-  return result.data;
-}
+function notifyEmail(payload: ReturnType<typeof trackingNumberEmail>) {
+  if (!payload.to) return;
 
-function normalizeOptionStock(value: unknown) {
-  if (value === undefined || value === null || value === "") return undefined;
-  return assertNumber(value, "option.stock");
-}
-
-function assertObjectId(id: string) {
-  if (!ObjectId.isValid(id)) {
-    throw new Error("invalid id");
-  }
-
-  return new ObjectId(id);
-}
-
-function now() {
-  return new Date().toISOString();
-}
-
-function normalizeOptions(value: unknown) {
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => {
-        if (typeof item === "string") {
-          const [label = "", imageUrl = "", stock = ""] = item.split("|").map((part) => part.trim());
-          const optionStock = normalizeOptionStock(stock);
-          return label ? { label, imageUrl, ...(optionStock !== undefined ? { stock: optionStock } : {}) } : null;
-        }
-
-        if (item && typeof item === "object") {
-          const option = item as { label?: unknown; name?: unknown; value?: unknown; imageUrl?: unknown; image?: unknown; stock?: unknown };
-          const label =
-            typeof option.label === "string"
-              ? option.label.trim()
-              : typeof option.name === "string"
-                ? option.name.trim()
-                : typeof option.value === "string"
-                  ? option.value.trim()
-                  : "";
-          const imageUrl =
-            typeof option.imageUrl === "string"
-              ? option.imageUrl.trim()
-              : typeof option.image === "string"
-                ? option.image.trim()
-                : "";
-
-          const optionStock = normalizeOptionStock(option.stock);
-
-          return label ? { label, imageUrl, ...(optionStock !== undefined ? { stock: optionStock } : {}) } : null;
-        }
-
-        return null;
-      })
-      .filter((item): item is { label: string; imageUrl: string; stock?: number } => Boolean(item));
-  }
-
-  if (typeof value === "string") {
-    return value
-      .split(/\r?\n|,/)
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .map((item) => {
-        const [label = "", imageUrl = "", stock = ""] = item.split("|").map((part) => part.trim());
-        const optionStock = normalizeOptionStock(stock);
-        return { label, imageUrl, ...(optionStock !== undefined ? { stock: optionStock } : {}) };
-      });
-  }
-
-  return [];
+  void sendEmail(payload).catch((error) => {
+    console.error("[EMAIL_ERROR]", error instanceof Error ? error.message : "failed to send email");
+  });
 }
 
 function toOrder(doc: Document): Order {
@@ -131,7 +57,7 @@ function toOrder(doc: Document): Order {
     return {
       productId: item.productId.toString(),
       name: product?.name && typeof product.name === "object"
-        ? product.name as import("./types").LocalizedText
+        ? product.name as import("@/lib/backend/types").LocalizedText
         : { th: typeof product?.name === "string" ? product.name : "สินค้าถูกลบ" },
       price: product?.price ?? 0,
       quantity: item.quantity,
@@ -175,6 +101,7 @@ const ORDERS_LOOKUP_PIPELINE: Document[] = [
 
 export async function createOrder(input: CreateOrderInput) {
   const db = await getDb();
+  const orders = await getOrdersCollection();
   const parsed = parseOrThrow(createOrderSchema, input);
   const customer = {
     ...parsed.customer,
@@ -266,7 +193,8 @@ export async function createOrder(input: CreateOrderInput) {
     updatedAt: timestamp,
   };
 
-  const result = await db.collection("orders").insertOne(order);
+  const result = await orders.insertOne(order);
+  publishOrdersUpdated();
 
   return toOrder({ _id: result.insertedId, ...order });
 }
@@ -274,8 +202,9 @@ export async function createOrder(input: CreateOrderInput) {
 export async function listOrders(filters?: {
   customerPhone?: string;
   status?: OrderStatus;
+  excludeStatuses?: OrderStatus[];
 }) {
-  const db = await getDb();
+  const orders = await getOrdersCollection();
   const query: Document = {};
 
   if (filters?.customerPhone) {
@@ -284,10 +213,11 @@ export async function listOrders(filters?: {
 
   if (filters?.status) {
     query.status = filters.status;
+  } else if (filters?.excludeStatuses?.length) {
+    query.status = { $nin: filters.excludeStatuses };
   }
 
-  const orders = await db
-    .collection("orders")
+  const results = await orders
     .aggregate([
       { $match: query },
       { $sort: { createdAt: -1 } },
@@ -295,21 +225,20 @@ export async function listOrders(filters?: {
     ])
     .toArray();
 
-  return orders.map(toOrder);
+  return results.map(toOrder);
 }
 
 export async function countPendingOrders() {
-  const db = await getDb();
+  const orders = await getOrdersCollection();
 
-  return db.collection("orders").countDocuments({
+  return orders.countDocuments({
     $or: [{ status: "payment_review" }, { "slip.status": "pending" }],
   });
 }
 
 export async function getOrder(orderId: string) {
-  const db = await getDb();
-  const results = await db
-    .collection("orders")
+  const orders = await getOrdersCollection();
+  const results = await orders
     .aggregate([
       { $match: { _id: assertObjectId(orderId) } },
       ...ORDERS_LOOKUP_PIPELINE,
@@ -320,7 +249,7 @@ export async function getOrder(orderId: string) {
 }
 
 export async function attachPaymentSlip(orderId: string, input: PaymentSlipInput) {
-  const db = await getDb();
+  const orders = await getOrdersCollection();
   const timestamp = now();
   const slip = {
     imageUrl: assertImageValue(input.imageUrl, "imageUrl"),
@@ -329,7 +258,7 @@ export async function attachPaymentSlip(orderId: string, input: PaymentSlipInput
     status: "pending",
   };
 
-  const result = await db.collection("orders").findOneAndUpdate(
+  const result = await orders.findOneAndUpdate(
     { _id: assertObjectId(orderId) },
     {
       $set: {
@@ -345,11 +274,13 @@ export async function attachPaymentSlip(orderId: string, input: PaymentSlipInput
     throw new Error("order not found");
   }
 
+  publishOrdersUpdated();
   return toOrder(result);
 }
 
 export async function reviewPaymentSlip(orderId: string, input: ReviewSlipInput) {
   const db = await getDb();
+  const orders = await getOrdersCollection();
   const order = await getOrder(orderId);
 
   if (!order) {
@@ -361,7 +292,7 @@ export async function reviewPaymentSlip(orderId: string, input: ReviewSlipInput)
   }
 
   const timestamp = now();
-  const result = await db.collection("orders").findOneAndUpdate(
+  const result = await orders.findOneAndUpdate(
     { _id: assertObjectId(orderId) },
     {
       $set: {
@@ -400,17 +331,13 @@ export async function reviewPaymentSlip(orderId: string, input: ReviewSlipInput)
     );
   }
 
+  publishOrdersUpdated();
   return toOrder(result);
 }
 
-export async function updateOrderStatus(
-  orderId: string,
-  status?: OrderStatus,
-  _trackingNumber?: string,
-) {
-  const db = await getDb();
+async function updateOrderStatus(orderId: string, status?: OrderStatus) {
+  const orders = await getOrdersCollection();
   const timestamp = now();
-  void _trackingNumber;
   const updateFields: Document = { status, updatedAt: timestamp };
 
   if (status === "payment_review") {
@@ -422,7 +349,7 @@ export async function updateOrderStatus(
     updateOp["$unset"] = { "slip.reviewedBy": "", "slip.reviewedAt": "", "slip.reviewNote": "" };
   }
 
-  const result = await db.collection("orders").findOneAndUpdate(
+  const result = await orders.findOneAndUpdate(
     { _id: assertObjectId(orderId) },
     updateOp,
     { returnDocument: "after" },
@@ -435,9 +362,21 @@ export async function updateOrderStatus(
   return toOrder(result);
 }
 
-export async function updateTrackingNumber(orderId: string, trackingNumber: string) {
-  const db = await getDb();
-  const result = await db.collection("orders").findOneAndUpdate(
+/** Transitions an order to a new status, notifies the customer by email when relevant, and broadcasts the update. */
+export async function transitionOrderStatus(orderId: string, status: OrderStatus) {
+  if (status === "payment_review") {
+    throw new Error("ไม่สามารถย้อนกลับไปขอสลิปใหม่ได้ — หากมีปัญหาให้ยกเลิกออเดอร์แทน");
+  }
+
+  const updated = await updateOrderStatus(orderId, status);
+
+  publishOrdersUpdated();
+  return updated;
+}
+
+async function updateTrackingNumber(orderId: string, trackingNumber: string) {
+  const orders = await getOrdersCollection();
+  const result = await orders.findOneAndUpdate(
     { _id: assertObjectId(orderId) },
     { $set: { trackingNumber: trackingNumber.trim(), updatedAt: now() } },
     { returnDocument: "after" },
@@ -450,8 +389,27 @@ export async function updateTrackingNumber(orderId: string, trackingNumber: stri
   return toOrder(result);
 }
 
+/** Sets the order's tracking number, emails the customer, and broadcasts the update. */
+export async function setOrderTrackingNumber(orderId: string, trackingNumber: string) {
+  const updated = await updateTrackingNumber(orderId, trackingNumber);
+
+  notifyEmail(
+    trackingNumberEmail(
+      updated.customer.name,
+      updated.id,
+      updated.trackingNumber ?? trackingNumber,
+      updated.customer.email,
+      updated.customer.phone,
+    ),
+  );
+
+  publishOrdersUpdated();
+  return updated;
+}
+
 export async function cancelOrder(orderId: string, reason: string, cancelledBy: string) {
   const db = await getDb();
+  const orders = await getOrdersCollection();
   const order = await getOrder(orderId);
 
   if (!order) {
@@ -459,7 +417,7 @@ export async function cancelOrder(orderId: string, reason: string, cancelledBy: 
   }
 
   const timestamp = now();
-  const result = await db.collection("orders").findOneAndUpdate(
+  const result = await orders.findOneAndUpdate(
     { _id: assertObjectId(orderId) },
     {
       $set: {
@@ -498,6 +456,7 @@ export async function cancelOrder(orderId: string, reason: string, cancelledBy: 
     );
   }
 
+  publishOrdersUpdated();
   return toOrder(result);
 }
 
@@ -505,7 +464,7 @@ export async function addAdminNote(
   orderId: string,
   note: { text: string; by: string; action: string },
 ) {
-  const db = await getDb();
+  const orders = await getOrdersCollection();
   const entry = {
     text: assertText(note.text, "text"),
     by: assertText(note.by, "by"),
@@ -513,7 +472,7 @@ export async function addAdminNote(
     at: now(),
   };
 
-  const result = await db.collection("orders").findOneAndUpdate(
+  const result = await orders.findOneAndUpdate(
     { _id: assertObjectId(orderId) },
     {
       $push: { adminNotes: entry } as Document,
@@ -540,4 +499,3 @@ export function isOrderStatus(value: string): value is OrderStatus {
     "cancelled",
   ].includes(value);
 }
-

@@ -16,7 +16,7 @@ export function CartFab() {
       id="cart-fab"
       href="/cart"
       aria-label="ตะกร้าสินค้า"
-      className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-[#85241F] hover:bg-[#B72D2A] text-white rounded-full shadow-xl shadow-[#85241F]/30 flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+      className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-[#85241F] hover:bg-[#B72D2A] text-white rounded-full shadow-xl shadow-[#85241F]/30 flex items-center justify-center transition-all active:scale-95 cursor-pointer md:bottom-8 md:right-8"
     >
       <ShoppingCart className="w-6 h-6" />
       {count > 0 && (

@@ -3,7 +3,7 @@ import { getAdminIdentity, requireAdmin } from "@/lib/backend/admin-auth";
 import { writeAuditLog } from "@/lib/backend/admin-user-service";
 import { badRequest, ok } from "@/lib/backend/http";
 import { readLimitedJson } from "@/lib/backend/request-utils";
-import { reviewPaymentSlip } from "@/lib/backend/order-service";
+import { reviewPaymentSlip } from "@/lib/backend/orders/order-service";
 import type { ReviewSlipInput } from "@/lib/backend/types";
 import { sendEmail, slipApprovedEmail, slipRejectedEmail } from "@/lib/backend/email-service";
 

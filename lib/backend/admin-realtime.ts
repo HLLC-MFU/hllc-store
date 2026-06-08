@@ -1,7 +1,7 @@
 import "server-only";
 
 type AdminRealtimeEvent = {
-  type: "super-admin-data";
+  type: "super-admin-data" | "orders-updated";
   at: string;
 };
 
@@ -30,12 +30,11 @@ export function subscribeAdminRealtime(listener: Listener) {
 }
 
 export function publishSuperAdminDataChanged() {
-  const event: AdminRealtimeEvent = {
-    type: "super-admin-data",
-    at: new Date().toISOString(),
-  };
+  const event: AdminRealtimeEvent = { type: "super-admin-data", at: new Date().toISOString() };
+  for (const listener of listeners()) listener(event);
+}
 
-  for (const listener of listeners()) {
-    listener(event);
-  }
+export function publishOrdersUpdated() {
+  const event: AdminRealtimeEvent = { type: "orders-updated", at: new Date().toISOString() };
+  for (const listener of listeners()) listener(event);
 }

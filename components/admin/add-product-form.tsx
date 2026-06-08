@@ -164,45 +164,62 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
 
             {/* Basic fields */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
-                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.name")}</Label>
-                <Input name="name" required defaultValue={product?.name.th ?? ""} placeholder={t("admin.products.placeholder.name")} className="rounded-xl border-gray-200 text-xs h-10" />
+              {/* Name */}
+              <div className="col-span-2 grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-[10px] mb-1.5 flex items-center gap-1 font-bold text-gray-500">
+                    <span>🇹🇭</span> ชื่อสินค้า
+                  </Label>
+                  <Input name="name" required defaultValue={product?.name.th ?? ""} placeholder="เช่น น้ำดื่ม HLLC" className="rounded-xl border-gray-200 text-xs h-10" />
+                </div>
+                <div>
+                  <Label className="text-[10px] mb-1.5 flex items-center gap-1 font-bold text-gray-500">
+                    <span>🇬🇧</span> Product Name
+                  </Label>
+                  <Input name="nameEn" defaultValue={product?.name.en ?? ""} placeholder="e.g. HLLC Water" className="rounded-xl border-gray-200 text-xs h-10" />
+                </div>
               </div>
-              <div className="col-span-2">
-                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.name_en")}</Label>
-                <Input name="nameEn" defaultValue={product?.name.en ?? ""} placeholder={t("admin.products.placeholder.name_en")} className="rounded-xl border-gray-200 text-xs h-10" />
+
+              {/* Price & Stock */}
+              <div>
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">ราคา (฿)</Label>
+                <Input name="price" type="number" min="0" required defaultValue={product?.price ?? ""} placeholder="0" className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
               <div>
-                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.price")}</Label>
-                <Input name="price" type="number" min="0" required defaultValue={product?.price ?? ""} placeholder={t("admin.products.placeholder.price")} className="rounded-xl border-gray-200 text-xs h-10" />
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">จำนวนสต็อก</Label>
+                <Input name="stock" type="number" min="0" required defaultValue={product?.stock ?? ""} placeholder="0" className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
+
+              {/* Shipping */}
               <div>
-                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.stock")}</Label>
-                <Input name="stock" type="number" min="0" required defaultValue={product?.stock ?? ""} placeholder={t("admin.products.placeholder.stock")} className="rounded-xl border-gray-200 text-xs h-10" />
-              </div>
-              <div>
-                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">
-                  {lang === "th" ? "ค่าส่งชิ้นแรก" : "First item shipping"}
-                </Label>
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">ค่าส่งชิ้นแรก (฿)</Label>
                 <Input name="shippingFirstItem" type="number" min="0" defaultValue={product?.shippingFirstItem ?? 0} placeholder="0" className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
               <div>
-                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">
-                  {lang === "th" ? "ค่าส่งชิ้นถัดไป" : "Additional item shipping"}
-                </Label>
+                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">ค่าส่งชิ้นถัดไป (฿)</Label>
                 <Input name="shippingAdditionalItem" type="number" min="0" defaultValue={product?.shippingAdditionalItem ?? 0} placeholder="0" className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
+
+              {/* Category */}
               <div className="col-span-2">
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">หมวดหมู่</Label>
-                <Input name="category" defaultValue={product?.category ?? ""} placeholder="เช่น เสื้อผ้า, รองเท้า" className="rounded-xl border-gray-200 text-xs h-10" />
+                <Input name="category" defaultValue={product?.category ?? ""} placeholder="เช่น เครื่องดื่ม, เสื้อผ้า" className="rounded-xl border-gray-200 text-xs h-10" />
               </div>
-              <div className="col-span-2">
-                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.description")}</Label>
-                <Textarea name="description" rows={2} defaultValue={product?.description?.th ?? ""} placeholder={t("admin.products.placeholder.description")} className="rounded-xl border-gray-200 text-xs resize-none" />
-              </div>
-              <div className="col-span-2">
-                <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">{t("admin.products.label.description_en")}</Label>
-                <Textarea name="descriptionEn" rows={2} defaultValue={product?.description?.en ?? ""} placeholder={t("admin.products.placeholder.description_en")} className="rounded-xl border-gray-200 text-xs resize-none" />
+
+              {/* Description */}
+              <div className="col-span-2 grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-[10px] mb-1.5 flex items-center gap-1 font-bold text-gray-500">
+                    <span>🇹🇭</span> รายละเอียด
+                  </Label>
+                  <Textarea name="description" rows={2} defaultValue={product?.description?.th ?? ""} placeholder="รายละเอียดภาษาไทย..." className="rounded-xl border-gray-200 text-xs resize-none" />
+                </div>
+                <div>
+                  <Label className="text-[10px] mb-1.5 flex items-center gap-1 font-bold text-gray-500">
+                    <span>🇬🇧</span> Description
+                  </Label>
+                  <Textarea name="descriptionEn" rows={2} defaultValue={product?.description?.en ?? ""} placeholder="Description in English..." className="rounded-xl border-gray-200 text-xs resize-none" />
+                </div>
               </div>
             </div>
 

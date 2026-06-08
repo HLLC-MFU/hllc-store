@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { type LucideIcon, ClipboardList, Home, LayoutDashboard, Mail, Menu, Package, ShoppingCart, User } from "lucide-react";
+import { type LucideIcon, ClipboardList, Home, LayoutDashboard, Mail, Menu, Package, ShoppingCart, User, X } from "lucide-react";
 import { useCart } from "@/lib/client/cart";
 import { useCartFly } from "@/lib/client/cart-fly";
 import { useLanguage } from "@/lib/client/language-context";
@@ -75,7 +75,7 @@ function CartButton({ count }: { count: number }) {
     >
       <ShoppingCart className="w-4.5 h-4.5 text-gray-700" />
       {count > 0 && (
-        <span className="absolute -top-1 -right-1 min-w-4.5 h-4.5 bg-blue-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-0.5 leading-none">
+        <span className="absolute -top-1 -right-1 min-w-4.5 h-4.5 bg-[#85241F] text-white text-[9px] font-black rounded-full flex items-center justify-center px-0.5 leading-none">
           {count > 9 ? "9+" : count}
         </span>
       )}
@@ -107,7 +107,7 @@ export function AppHeader({ navItems = SHOP_NAV, showCart = true, logoHref = "/h
             onClick={() => setOpen((v) => !v)}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 active:scale-95 transition-all cursor-pointer"
           >
-            <Menu className="w-4.5 h-4.5 text-gray-700" />
+            {open ? <X className="w-4.5 h-4.5 text-gray-700" /> : <Menu className="w-4.5 h-4.5 text-gray-700" />}
           </button>
         </div>
 

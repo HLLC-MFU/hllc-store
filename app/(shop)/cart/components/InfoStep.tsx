@@ -1,9 +1,9 @@
 "use client";
 
-import { ArrowLeft, ClipboardList, Store, Truck } from "lucide-react";
+import { ArrowLeft, ClipboardList, Mail, MapPin, Store, Truck, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { EmailInput } from "@/components/shared/email-input";
 import { PhoneInput } from "@/components/shared/phone-input";
 import { ProvinceSelect } from "@/components/shared/province-select";
@@ -12,12 +12,26 @@ import { TimeSelect } from "./TimeSelect";
 const fmt = new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 });
 const money = (v: number) => fmt.format(v);
 
+const inputCls = "h-12 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus-visible:border-[#85241F] focus-visible:ring-1 focus-visible:ring-[#85241F]/20";
+
+function FieldRow({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="relative flex items-center">
+      <span className="absolute left-3.5 z-10 text-gray-400 pointer-events-none">{icon}</span>
+      <div className="w-full [&>input]:pl-10 [&>textarea]:pl-10 [&>div>input]:pl-10">{children}</div>
+    </div>
+  );
+}
+
 type Props = {
   lang: "th" | "en";
   t: (key: string) => string;
   deliveryMode: "delivery" | "pickup";
+  name: string; setName: (v: string) => void;
   phone: string; setPhone: (v: string) => void;
   email: string; setEmail: (v: string) => void;
+  address: string; setAddress: (v: string) => void;
+  district: string; setDistrict: (v: string) => void;
   province: string; setProvince: (v: string) => void;
   postalCode: string; setPostalCode: (v: string) => void;
   fieldErrors: Record<string, string>;
@@ -33,7 +47,8 @@ type Props = {
 
 export function InfoStep({
   lang, t, deliveryMode,
-  phone, setPhone, email, setEmail,
+  name, setName, phone, setPhone, email, setEmail,
+  address, setAddress, district, setDistrict,
   province, setProvince, postalCode, setPostalCode,
   fieldErrors, loading,
   selectedCount, selectedTotal, selectedShippingFee, selectedPayableTotal,
@@ -41,10 +56,7 @@ export function InfoStep({
 }: Props) {
   return (
     <section className="mx-auto max-w-xl animate-in fade-in slide-in-from-bottom-2 duration-200">
-      <button
-        onClick={onBack}
-        className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-gray-700 transition-colors"
-      >
+      <button onClick={onBack} className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-gray-700 transition-colors">
         <ArrowLeft className="h-4 w-4" />
         {lang === "th" ? "กลับ" : "Back"}
       </button>
@@ -56,9 +68,7 @@ export function InfoStep({
             {lang === "th" ? "วิธีรับสินค้า" : "Fulfillment"}
           </span>
           <span className="text-[#85241F]">
-            {deliveryMode === "delivery"
-              ? lang === "th" ? "จัดส่ง" : "Delivery"
-              : lang === "th" ? "รับเอง" : "Pickup"}
+            {deliveryMode === "delivery" ? (lang === "th" ? "จัดส่ง" : "Delivery") : (lang === "th" ? "รับเอง" : "Pickup")}
           </span>
         </div>
 
@@ -67,25 +77,32 @@ export function InfoStep({
           <p className="text-xs font-black text-gray-400 uppercase tracking-wider px-1">
             {lang === "th" ? "ข้อมูลผู้รับ" : "Recipient"}
           </p>
-          <Input
-            name="name"
-            placeholder={lang === "th" ? "ชื่อ-นามสกุล *" : "Full name *"}
-            className="h-12 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus-visible:border-[#85241F] focus-visible:ring-1 focus-visible:ring-[#85241F]/20"
-          />
+
+          <FieldRow icon={<User className="h-4 w-4" />}>
+            <Input
+              name="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={lang === "th" ? "ชื่อ-นามสกุล" : "Full name"}
+              className={inputCls}
+            />
+          </FieldRow>
+
           <PhoneInput
             name="phone" value={phone} onChange={setPhone} lang={lang}
-            placeholder={t("checkout.label.phone")}
+            placeholder={lang === "th" ? "เบอร์โทรศัพท์" : "Phone number"}
             className="h-12 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus:border-[#85241F]"
           />
-          <EmailInput
-            name="email" value={email} onChange={setEmail} lang={lang}
-            placeholder={t("checkout.label.email")}
-            className="h-12 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus:border-[#85241F]"
-          />
+
+          <FieldRow icon={<Mail className="h-4 w-4" />}>
+            <EmailInput
+              name="email" value={email} onChange={setEmail} lang={lang}
+              placeholder={lang === "th" ? "อีเมล" : "Email"}
+              className={inputCls}
+            />
+          </FieldRow>
           <p className="-mt-1 px-1 text-[11px] font-semibold text-gray-400">
-            {lang === "th"
-              ? "ใช้อีเมลนี้เพื่อรับการแจ้งเตือนสถานะคำสั่งซื้อและการจัดส่ง"
-              : "We use this email for order status and delivery notifications."}
+            {lang === "th" ? "ใช้อีเมลนี้เพื่อรับการแจ้งเตือนสถานะคำสั่งซื้อ" : "We use this email for order status notifications."}
           </p>
         </div>
 
@@ -95,15 +112,21 @@ export function InfoStep({
             <p className="text-xs font-black text-gray-400 uppercase tracking-wider px-1">
               {lang === "th" ? "ที่อยู่จัดส่ง" : "Shipping address"}
             </p>
-            <Textarea
-              name="address"
-              placeholder={lang === "th" ? "บ้านเลขที่, อาคาร, หมู่, ถนน, แขวง/ตำบล *" : "House no., building, street, subdistrict *"}
-              className="min-h-24 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus-visible:border-[#85241F] focus-visible:ring-1 focus-visible:ring-[#85241F]/20 resize-none"
-            />
+            <FieldRow icon={<MapPin className="h-4 w-4 mt-3.5 self-start" />}>
+              <Textarea
+                name="address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder={lang === "th" ? "บ้านเลขที่, อาคาร, หมู่, ถนน, แขวง/ตำบล" : "House no., building, street, subdistrict"}
+                className="min-h-24 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus-visible:border-[#85241F] focus-visible:ring-1 focus-visible:ring-[#85241F]/20 resize-none"
+              />
+            </FieldRow>
             <Input
               name="district"
+              value={district}
+              onChange={(e) => setDistrict(e.target.value)}
               placeholder={lang === "th" ? "เขต/อำเภอ" : "District"}
-              className="h-12 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus-visible:border-[#85241F] focus-visible:ring-1 focus-visible:ring-[#85241F]/20"
+              className={inputCls}
             />
             <input type="hidden" name="province" value={province} />
             <ProvinceSelect value={province} onChange={setProvince} lang={lang as "th" | "en"} />
@@ -112,7 +135,7 @@ export function InfoStep({
               value={postalCode}
               onChange={(e) => setPostalCode(e.target.value.replace(/\D/g, "").slice(0, 5))}
               placeholder={lang === "th" ? "รหัสไปรษณีย์" : "Postal code"}
-              className="h-12 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus-visible:border-[#85241F] focus-visible:ring-1 focus-visible:ring-[#85241F]/20"
+              className={inputCls}
               inputMode="numeric" maxLength={5}
             />
           </div>
@@ -120,17 +143,13 @@ export function InfoStep({
           <div className="rounded-2xl border-2 border-[#85241F]/15 bg-[#85241F]/5 p-4 flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <Store className="h-4 w-4 text-[#85241F]" />
-              <p className="text-sm font-black text-[#85241F]">
-                {lang === "th" ? "รับสินค้าเองที่ D1" : "Pickup at D1"}
-              </p>
+              <p className="text-sm font-black text-[#85241F]">{lang === "th" ? "รับสินค้าเองที่ D1" : "Pickup at D1"}</p>
             </div>
             <p className="text-xs font-semibold text-gray-400">
               {lang === "th" ? "กรุณาระบุเวลาที่สะดวกมารับสินค้า" : "Please select your preferred pickup time."}
             </p>
             <TimeSelect name="pickupTime" />
-            {fieldErrors.pickupTime && (
-              <p className="mt-1.5 text-xs font-semibold text-red-500">{fieldErrors.pickupTime}</p>
-            )}
+            {fieldErrors.pickupTime && <p className="mt-1.5 text-xs font-semibold text-red-500">{fieldErrors.pickupTime}</p>}
           </div>
         )}
 

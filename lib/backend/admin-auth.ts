@@ -23,6 +23,7 @@ function requiredEnv(name: string, fallback?: string) {
 }
 
 export const ADMIN_USERNAME = requiredEnv("ADMIN_USERNAME", "adminae");
+const COOKIE_SECURE = process.env.COOKIE_SECURE !== "false" && process.env.NODE_ENV === "production";
 export const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH || "";
 export const ADMIN_PASSWORD =
   process.env.ADMIN_PASSWORD ||
@@ -114,7 +115,7 @@ export function setAdminSessionCookie(response: NextResponse, identity: AdminIde
     value: createAdminSessionToken(identity),
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: COOKIE_SECURE,
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
   });
@@ -123,7 +124,7 @@ export function setAdminSessionCookie(response: NextResponse, identity: AdminIde
     value: csrfToken,
     httpOnly: false,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: COOKIE_SECURE,
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
   });
@@ -137,7 +138,7 @@ export function clearAdminSessionCookie(response: NextResponse) {
     value: "",
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: COOKIE_SECURE,
     path: "/",
     maxAge: 0,
   });
@@ -146,7 +147,7 @@ export function clearAdminSessionCookie(response: NextResponse) {
     value: "",
     httpOnly: false,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: COOKIE_SECURE,
     path: "/",
     maxAge: 0,
   });

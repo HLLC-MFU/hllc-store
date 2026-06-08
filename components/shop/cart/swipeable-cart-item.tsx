@@ -53,6 +53,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
   }
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType !== "touch") return; // swipe only on touch devices
     dragging.current = true;
     setIsDragging(true);
     startX.current = e.clientX;
@@ -147,6 +148,15 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
 
         {/* Qty controls — far right */}
         <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+          {/* Delete button — desktop only (mobile uses swipe) */}
+          <button
+            type="button"
+            onClick={() => onRemove(item)}
+            className="hidden md:flex h-9 w-9 rounded-full border border-gray-200 items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors cursor-pointer"
+            aria-label={lang === "th" ? "ลบสินค้า" : "Remove item"}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
           <button
             type="button"
             onClick={() => onDecrease(item)}

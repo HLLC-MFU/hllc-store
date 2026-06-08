@@ -2,11 +2,12 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronUp, Copy, Check, RefreshCw, Search, Truck } from "lucide-react";
+import { ChevronDown, ChevronUp, Copy, Check, RefreshCw, Search, Truck, FileCheck2, Package, CheckCircle2, X as XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/lib/client/language-context";
 import { LogisticsProgress } from "@/components/shop/logistics-progress";
+import { fetchOrdersByPhone } from "@/lib/modules/orders";
 
 type OrderStatus =
   | "pending_payment" | "payment_review" | "paid"
@@ -40,15 +41,25 @@ function itemName(name: string | { th: string; en?: string }, lang: "th" | "en")
   return name[lang] || name.th;
 }
 
-const STATUS_LABEL: Record<string, { th: string; en: string; badge: string; bar: string }> = {
-  payment_review:  { th: "รอยืนยันชำระ",  en: "Awaiting confirmation", badge: "text-amber-700 bg-amber-50",   bar: "bg-amber-400"   },
-  paid:            { th: "ชำระแล้ว",        en: "Paid",                  badge: "text-blue-700 bg-blue-50",     bar: "bg-blue-400"    },
-  packing:         { th: "กำลังแพ็ค",       en: "Packing",               badge: "text-blue-700 bg-blue-50",     bar: "bg-blue-400"    },
-  shipped:         { th: "กำลังจัดส่ง",     en: "On the way",            badge: "text-sky-700 bg-sky-50",       bar: "bg-sky-400"     },
-  completed:       { th: "ส่งถึงมือแล้ว",  en: "Delivered",             badge: "text-emerald-700 bg-emerald-50", bar: "bg-emerald-400"},
-  cancelled:       { th: "ยกเลิกแล้ว",      en: "Cancelled",             badge: "text-red-700 bg-red-50",       bar: "bg-red-400"     },
-  pending_payment: { th: "รอชำระเงิน",      en: "Pending payment",       badge: "text-gray-500 bg-gray-100",    bar: "bg-gray-300"    },
+const STATUS_LABEL: Record<string, { th: string; en: string; badge: string; icon: string }> = {
+  payment_review:  { th: "รอยืนยันชำระ",  en: "Awaiting confirmation", badge: "text-amber-700 bg-amber-50",    icon: "bg-amber-100 text-amber-600"   },
+  paid:            { th: "ชำระแล้ว",        en: "Paid",                  badge: "text-blue-700 bg-blue-50",      icon: "bg-blue-100 text-blue-600"     },
+  packing:         { th: "กำลังแพ็ค",       en: "Packing",               badge: "text-blue-700 bg-blue-50",      icon: "bg-blue-100 text-blue-600"     },
+  shipped:         { th: "กำลังจัดส่ง",     en: "On the way",            badge: "text-sky-700 bg-sky-50",        icon: "bg-sky-100 text-sky-600"       },
+  completed:       { th: "ส่งถึงมือแล้ว",  en: "Delivered",             badge: "text-emerald-700 bg-emerald-50", icon: "bg-emerald-100 text-emerald-600"},
+  cancelled:       { th: "ยกเลิกแล้ว",      en: "Cancelled",             badge: "text-red-700 bg-red-50",        icon: "bg-red-100 text-red-500"       },
+  pending_payment: { th: "รอชำระเงิน",      en: "Pending payment",       badge: "text-gray-500 bg-gray-100",     icon: "bg-gray-100 text-gray-400"     },
 };
+
+function StatusIcon({ status }: { status: string }) {
+  const cls = "w-4 h-4";
+  if (status === "payment_review" || status === "paid" || status === "pending_payment") return <FileCheck2 className={cls} />;
+  if (status === "packing")   return <Package     className={cls} />;
+  if (status === "shipped")   return <Truck       className={cls} />;
+  if (status === "completed") return <CheckCircle2 className={cls} />;
+  if (status === "cancelled") return <XIcon       className={cls} />;
+  return <FileCheck2 className={cls} />;
+}
 
 function OrderCard({ order, lang }: { order: Order; lang: "th" | "en" }) {
   const [open, setOpen] = useState(false);
@@ -74,24 +85,25 @@ function OrderCard({ order, lang }: { order: Order; lang: "th" | "en" }) {
       {/* Collapsed row — always visible */}
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-0 text-left hover:bg-gray-50/40 transition-colors cursor-pointer"
+        className="w-full flex items-center gap-3 p-4 text-left hover:bg-gray-50/40 transition-colors cursor-pointer"
       >
-        {/* Left accent bar */}
-        <div className={`w-1 self-stretch rounded-l-3xl shrink-0 ${statusMeta.bar}`} />
-
-        <div className="flex flex-1 items-center gap-3 px-4 py-4 min-w-0">
-          <div className="flex-1 min-w-0">
-            <span className="text-sm font-black text-gray-900 truncate block">{order.customer.name}</span>
-            <p className="mt-0.5 text-xs text-gray-400 font-medium truncate">{preview}</p>
-            <p className="mt-0.5 text-[10px] text-gray-300">{money(order.total)} · {dateStr}</p>
-          </div>
-          <div className="shrink-0 text-right">
-            <span className={`inline-block text-xs font-black px-3 py-1 rounded-full ${statusMeta.badge}`}>
-              {lang === "th" ? statusMeta.th : statusMeta.en}
-            </span>
-          </div>
-          {open ? <ChevronUp className="h-4 w-4 text-gray-300 shrink-0" /> : <ChevronDown className="h-4 w-4 text-gray-300 shrink-0" />}
+        {/* Icon circle */}
+        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${statusMeta.icon}`}>
+          <StatusIcon status={order.status} />
         </div>
+
+        <div className="flex-1 min-w-0">
+          <span className="text-sm font-black text-gray-900 truncate block">{order.customer.name}</span>
+          <p className="mt-0.5 text-xs text-gray-400 font-medium truncate">{preview}</p>
+          <p className="mt-0.5 text-[10px] text-gray-300">{money(order.total)} · {dateStr}</p>
+        </div>
+
+        <div className="shrink-0">
+          <span className={`inline-block text-xs font-black px-3 py-1 rounded-full ${statusMeta.badge}`}>
+            {lang === "th" ? statusMeta.th : statusMeta.en}
+          </span>
+        </div>
+        {open ? <ChevronUp className="h-4 w-4 text-gray-300 shrink-0" /> : <ChevronDown className="h-4 w-4 text-gray-300 shrink-0" />}
       </button>
 
       {/* Expanded content */}
@@ -183,12 +195,10 @@ function ProfileContent() {
     setLoading(true);
     setMessage("");
     try {
-      const res = await fetch(`/api/backend/orders?customerPhone=${encodeURIComponent(normalized)}`, { cache: "no-store" });
-      const payload = (await res.json()) as { data?: Order[]; error?: string };
-      if (!res.ok) throw new Error(payload.error ?? "Unable to load orders");
-      setOrders(payload.data ?? []);
+      const orders = await fetchOrdersByPhone(normalized);
+      setOrders(orders);
       localStorage.setItem("shop-last-phone", normalized);
-      if (!payload.data?.length) setMessage(lang === "th" ? "ยังไม่พบคำสั่งซื้อของเบอร์นี้" : "No orders found for this phone.");
+      if (!orders.length) setMessage(lang === "th" ? "ยังไม่พบคำสั่งซื้อของเบอร์นี้" : "No orders found for this phone.");
     } catch (err) {
       setOrders([]);
       setMessage(err instanceof Error ? err.message : "Unable to load orders");

@@ -68,7 +68,7 @@ export default function AdminRegisterPage() {
 
         {/* Card */}
         <div className="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-100/80 p-6 flex flex-col gap-4">
-          <form onSubmit={submit} className="flex flex-col gap-4">
+          <form onSubmit={submit} method="post" className="flex flex-col gap-4">
 
             {/* Username */}
             <div className="flex flex-col gap-1.5">

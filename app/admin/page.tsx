@@ -5,7 +5,6 @@ import {
   ClipboardList,
   LayoutDashboard,
   LogOut,
-  Mail,
   Package,
   PackagePlus,
   CheckCircle2,
@@ -13,54 +12,19 @@ import {
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useLanguage } from "@/lib/client/language-context";
 import type { Order, OrderStatus, Product } from "@/components/admin/types";
-import { api, csrfHeaders } from "@/components/admin/api-client";
+import * as ordersApi from "@/lib/modules/orders";
+import * as productsApi from "@/lib/modules/products";
+import * as adminUsersApi from "@/lib/modules/admin-users";
+import type { AdminRole, AdminUser, AuditLog, CurrentAdmin } from "@/lib/modules/admin-users";
 import AddProductForm from "@/components/admin/add-product-form";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AppHeader, type NavItem } from "@/components/shared/app-header";
-import { safeParseWithLang, emailPayloadSchema } from "@/lib/validation/schemas-i18n";
-
 import { AdminLogin } from "@/components/admin/admin-login";
 import { AdminStats } from "@/components/admin/admin-stats";
 import { OrdersPanel } from "@/components/admin/orders-panel";
 import { ProductsPanel } from "@/components/admin/products-panel";
 import { ConfirmationModal } from "@/components/admin/confirmation-modal";
-import { EmailPanel } from "@/components/admin/email-panel";
 import { SuperAdminPanel } from "@/components/admin/super-admin-panel";
-
-type AdminRole = "superAdmin" | "admin";
-
-type CurrentAdmin = {
-  username: string;
-  role: AdminRole;
-};
-
-type AdminUser = {
-  id: string;
-  username: string;
-  role: AdminRole;
-  active: boolean;
-  registered: boolean;
-  createdAt: string;
-};
-
-type AuditLog = {
-  id: string;
-  actorUsername: string;
-  actorRole: AdminRole;
-  action: string;
-  actionLabel?: string;
-  metadata: Record<string, unknown>;
-  targetLabel?: string;
-  createdAt: string;
-};
-
-type EmailFormState = {
-  to: string;
-  subject: string;
-  text: string;
-  html: string;
-};
-
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = React.useState("dashboard");
@@ -74,13 +38,6 @@ export default function AdminPage() {
   const [lightbox, setLightbox] = React.useState<string | null>(null);
   const [adminUsers, setAdminUsers] = React.useState<AdminUser[]>([]);
   const [auditLogs, setAuditLogs] = React.useState<AuditLog[]>([]);
-  const [emailForm, setEmailForm] = React.useState<EmailFormState>({
-    to: "",
-    subject: "HLLC Store order update",
-    text: "Hello, this is a test email from HLLC Store.",
-    html: "<p>Hello, this is a <strong>test email</strong> from HLLC Store.</p>",
-  });
-  const [emailSending, setEmailSending] = React.useState(false);
   const { lang, t } = useLanguage();
 
   const [loading, setLoading] = React.useState(false);
@@ -89,7 +46,7 @@ export default function AdminPage() {
   const [loginLoading, setLoginLoading] = React.useState(false);
 
   async function handleLogout() {
-    await api("/api/backend/admin/auth", { method: "DELETE" });
+    await adminUsersApi.logout();
     setIsLoggedIn(false);
     setCurrentUser(null);
   }
@@ -102,7 +59,7 @@ export default function AdminPage() {
   React.useEffect(() => {
     let mounted = true;
 
-    api<{ authenticated: boolean; user: CurrentAdmin | null }>("/api/backend/admin/auth")
+    adminUsersApi.fetchSession()
       .then((res) => {
         if (!mounted || !res.data?.authenticated || !res.data.user) return;
         setCurrentUser(res.data.user);
@@ -118,8 +75,8 @@ export default function AdminPage() {
     if (currentUser?.role !== "superAdmin") return;
 
     const [usersRes, logsRes] = await Promise.all([
-      api<AdminUser[]>("/api/backend/admin/users"),
-      api<AuditLog[]>("/api/backend/admin/audit-logs"),
+      adminUsersApi.fetchAdminUsers(),
+      adminUsersApi.fetchAuditLogs(),
     ]);
     if (usersRes.data) setAdminUsers(usersRes.data);
     if (logsRes.data) setAuditLogs(logsRes.data);
@@ -128,8 +85,8 @@ export default function AdminPage() {
   const loadData = React.useCallback(async () => {
     setLoading(true);
     const [ordersRes, productsRes] = await Promise.all([
-      api<Order[]>("/api/backend/admin/orders"),
-      api<Product[]>("/api/backend/admin/products"),
+      ordersApi.fetchAdminOrders(),
+      productsApi.fetchAdminProducts(),
     ]);
 
     if (ordersRes.data) {
@@ -153,16 +110,23 @@ export default function AdminPage() {
   }, [isLoggedIn, loadData]);
 
   React.useEffect(() => {
-    if (!isLoggedIn || currentUser?.role !== "superAdmin") return;
+    if (!isLoggedIn) return;
 
-    void Promise.resolve().then(loadSuperAdminData);
+    if (currentUser?.role === "superAdmin") {
+      void Promise.resolve().then(loadSuperAdminData);
+    }
+
     const events = new EventSource("/api/backend/admin/realtime");
-    events.onmessage = () => {
-      void loadSuperAdminData();
+    events.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data) as { type?: string };
+        if (data.type === "orders-updated") void loadData();
+        if (data.type === "super-admin-data" && currentUser?.role === "superAdmin") void loadSuperAdminData();
+      } catch { void loadData(); }
     };
 
     return () => events.close();
-  }, [currentUser, isLoggedIn, loadSuperAdminData]);
+  }, [currentUser, isLoggedIn, loadData, loadSuperAdminData]);
 
   const pendingSlips = orders.filter((o) => o.slip.status === "pending");
 
@@ -170,13 +134,10 @@ export default function AdminPage() {
     setLoginLoading(true);
 
     const fd = new FormData(form);
-    const res = await api<{ authenticated: boolean; user: CurrentAdmin }>("/api/backend/admin/auth", {
-      method: "POST",
-      body: JSON.stringify({
-        username: String(fd.get("username") ?? "").trim(),
-        password: String(fd.get("password") ?? ""),
-      }),
-    });
+    const res = await adminUsersApi.login(
+      String(fd.get("username") ?? "").trim(),
+      String(fd.get("password") ?? ""),
+    );
 
     setLoginLoading(false);
     if (res.error || !res.data?.user) return false;
@@ -192,10 +153,7 @@ export default function AdminPage() {
     if (!username) return;
 
     setLoading(true);
-    const res = await api<AdminUser>("/api/backend/admin/users", {
-      method: "POST",
-      body: JSON.stringify({ username, role }),
-    });
+    const res = await adminUsersApi.createAdminUser(username, role);
     setLoading(false);
 
     if (res.error) {
@@ -207,12 +165,23 @@ export default function AdminPage() {
     await loadSuperAdminData();
   }
 
+  async function deleteAdminUser(username: string) {
+    const res = await adminUsersApi.deleteAdminUser(username);
+    if (res.error) { notify(res.error); return; }
+    notify(`ลบ ${username} แล้ว`);
+    await loadSuperAdminData();
+  }
+
+  async function resetAdminPassword(username: string) {
+    const res = await adminUsersApi.resetAdminPassword(username);
+    if (res.error) { notify(res.error); return; }
+    notify(`รีเซ็ตรหัสผ่านของ ${username} แล้ว ต้องตั้งรหัสใหม่ที่ /admin/register`);
+    await loadSuperAdminData();
+  }
+
   async function callSlipApi(orderId: string, approved: boolean, note?: string) {
     setLoading(true);
-    const res = await api<Order>(`/api/backend/admin/slips/${orderId}`, {
-      method: "POST",
-      body: JSON.stringify({ approved, reviewedBy: "admin", note }),
-    });
+    const res = await ordersApi.reviewPaymentSlip(orderId, approved, "admin", note);
     setLoading(false);
     if (res.error) {
       notify(res.error);
@@ -234,10 +203,7 @@ export default function AdminPage() {
 
   async function updateStatus(orderId: string, status: OrderStatus) {
     setLoading(true);
-    const res = await api<Order>(`/api/backend/admin/orders/${orderId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ status }),
-    });
+    const res = await ordersApi.updateAdminOrder(orderId, { status });
     setLoading(false);
     if (res.error) {
       notify(res.error);
@@ -248,10 +214,7 @@ export default function AdminPage() {
   }
 
   async function saveTracking(orderId: string, trackingNumber: string) {
-    const res = await api<Order>(`/api/backend/admin/orders/${orderId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ trackingNumber }),
-    });
+    const res = await ordersApi.updateAdminOrder(orderId, { trackingNumber });
     if (res.error) {
       notify(res.error);
     } else {
@@ -272,10 +235,7 @@ export default function AdminPage() {
 
   async function cancelOrder(orderId: string, reason: string) {
     setLoading(true);
-    const res = await api<Order>(`/api/backend/admin/orders/${orderId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ cancel: true, reason }),
-    });
+    const res = await ordersApi.updateAdminOrder(orderId, { cancel: true, reason });
     setLoading(false);
     if (res.error) {
       notify(res.error);
@@ -289,40 +249,37 @@ export default function AdminPage() {
     const nameTh = String(formData.get("name") ?? "").trim();
     if (!nameTh) return;
     setLoading(true);
-    const res = await api<Product>("/api/backend/admin/products", {
-      method: "POST",
-      body: JSON.stringify({
-        name: {
-          th: nameTh,
-          en: String(formData.get("nameEn") ?? "").trim() || undefined,
-        },
-        slug: nameTh.toLowerCase().replace(/\s+/g, "-"),
-        description: {
-          th: String(formData.get("description") ?? "").trim(),
-          en: String(formData.get("descriptionEn") ?? "").trim() || undefined,
-        },
-        price: Number(formData.get("price")) || 0,
-        stock: Number(formData.get("stock")) || 0,
-        shippingFirstItem: Number(formData.get("shippingFirstItem")) || 0,
-        shippingAdditionalItem: Number(formData.get("shippingAdditionalItem")) || 0,
-        discount: Number(formData.get("discount")) || undefined,
-        imageUrl: String(formData.get("imageUrl") ?? "").trim() || undefined,
-        imageUrls: (() => {
-          try {
-            return JSON.parse(String(formData.get("imageUrls") ?? "[]"));
-          } catch {
-            return undefined;
-          }
-        })(),
-        options: (() => {
-          try {
-            return JSON.parse(String(formData.get("options") ?? "[]"));
-          } catch {
-            return undefined;
-          }
-        })(),
-        active: true,
-      }),
+    const res = await productsApi.createProduct({
+      name: {
+        th: nameTh,
+        en: String(formData.get("nameEn") ?? "").trim() || undefined,
+      },
+      slug: nameTh.toLowerCase().replace(/\s+/g, "-"),
+      description: {
+        th: String(formData.get("description") ?? "").trim(),
+        en: String(formData.get("descriptionEn") ?? "").trim() || undefined,
+      },
+      price: Number(formData.get("price")) || 0,
+      stock: Number(formData.get("stock")) || 0,
+      shippingFirstItem: Number(formData.get("shippingFirstItem")) || 0,
+      shippingAdditionalItem: Number(formData.get("shippingAdditionalItem")) || 0,
+      discount: Number(formData.get("discount")) || undefined,
+      imageUrl: String(formData.get("imageUrl") ?? "").trim() || undefined,
+      imageUrls: (() => {
+        try {
+          return JSON.parse(String(formData.get("imageUrls") ?? "[]"));
+        } catch {
+          return undefined;
+        }
+      })(),
+      options: (() => {
+        try {
+          return JSON.parse(String(formData.get("options") ?? "[]"));
+        } catch {
+          return undefined;
+        }
+      })(),
+      active: true,
     });
     setLoading(false);
     if (res.error) {
@@ -335,10 +292,7 @@ export default function AdminPage() {
 
   async function updateProduct(updated: Product) {
     setLoading(true);
-    const res = await api<Product>(`/api/backend/admin/products/${updated.id}`, {
-      method: "PATCH",
-      body: JSON.stringify(updated),
-    });
+    const res = await productsApi.updateProduct(updated);
     setLoading(false);
     if (res.error) {
       notify(res.error);
@@ -350,9 +304,7 @@ export default function AdminPage() {
 
   async function deleteProduct(id: string) {
     setLoading(true);
-    const res = await api<{ success: boolean }>(`/api/backend/admin/products/${id}`, {
-      method: "DELETE",
-    });
+    const res = await productsApi.deleteProduct(id);
     setLoading(false);
     if (res.error) {
       notify(res.error);
@@ -366,38 +318,6 @@ export default function AdminPage() {
 
   if (!isLoggedIn) {
     return <AdminLogin onLogin={handleLogin} loading={loginLoading} />;
-  }
-
-  async function sendMockEmail(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setEmailSending(true);
-
-    const validation = safeParseWithLang(emailPayloadSchema("th"), emailForm, "th");
-    if (!validation.success) {
-      notify(validation.error ?? "อีเมลไม่ถูกต้อง");
-      setEmailSending(false);
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/send-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...csrfHeaders() },
-        body: JSON.stringify(emailForm),
-      });
-      const payload = (await response.json()) as { message?: string };
-
-      if (!response.ok) {
-        notify(payload.message ?? "failed to send email");
-        return;
-      }
-
-      notify(payload.message ?? "email sent");
-    } catch (error) {
-      notify(error instanceof Error ? error.message : "failed to send email");
-    } finally {
-      setEmailSending(false);
-    }
   }
 
   return (
@@ -439,7 +359,6 @@ export default function AdminPage() {
             { label: t("admin.tab.dashboard"), icon: LayoutDashboard, onClick: () => setActiveTab("dashboard") },
             { label: t("admin.tab.orders"),    icon: ClipboardList,   onClick: () => setActiveTab("orders"),   badge: pendingSlips.length },
             { label: t("admin.tab.products"),  icon: Package,         onClick: () => setActiveTab("products") },
-            { label: "Email",                  icon: Mail,            onClick: () => setActiveTab("email") },
             ...(currentUser?.role === "superAdmin"
               ? [{ label: "SuperAdmin", icon: LayoutDashboard, onClick: () => setActiveTab("superAdmin") } as NavItem]
               : []),
@@ -483,15 +402,6 @@ export default function AdminPage() {
                 t={t}
               />
             </TabsContent>
-            <TabsContent value="email" className="mt-4 animate-in fade-in duration-200">
-              <EmailPanel
-                lang={lang}
-                emailForm={emailForm}
-                setEmailForm={setEmailForm}
-                emailSending={emailSending}
-                onSubmit={sendMockEmail}
-              />
-            </TabsContent>
             {currentUser?.role === "superAdmin" ? (
               <TabsContent value="superAdmin" className="mt-4 animate-in fade-in duration-200">
                 <SuperAdminPanel
@@ -499,6 +409,9 @@ export default function AdminPage() {
                   auditLogs={auditLogs}
                   loading={loading}
                   onCreateAccount={createAdminAccount}
+                  onDeleteUser={deleteAdminUser}
+                  onResetPassword={resetAdminPassword}
+                  currentUsername={currentUser.username}
                 />
               </TabsContent>
             ) : null}

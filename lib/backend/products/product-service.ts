@@ -1,16 +1,8 @@
-import { ObjectId, type Document } from "mongodb";
-import { z } from "zod";
+import { type Document } from "mongodb";
 import { createProductSchema, imageUrlSchema, parseOrThrow } from "@/lib/validation/schemas";
 import type { CreateProductInput, Product, LocalizedText } from "@/lib/backend/types";
 import { getProductCollection } from "./product-module";
-
-function assertText(value: unknown, field: string) {
-  const result = z.string().min(1, { message: `${field} is required` }).safeParse(value);
-  if (!result.success) {
-    throw new Error(result.error.issues[0]?.message ?? `${field} is required`);
-  }
-  return result.data.trim();
-}
+import { assertText, assertNumber, assertObjectId, now, normalizeOptions } from "@/lib/backend/validation-utils";
 
 function normalizeImageValue(value: unknown) {
   if (value === undefined || value === null || value === "") return "";
@@ -26,93 +18,12 @@ function normalizeOptionImageValue(value: unknown) {
   return normalizeImageValue(value);
 }
 
-function normalizeOptionStock(value: unknown) {
-  if (value === undefined || value === null || value === "") return undefined;
-  return assertNumber(value, "option.stock");
-}
-
-function assertNumber(value: unknown, field: string) {
-  const result = z.coerce.number().finite().min(0, { message: `${field} must be a positive number` }).safeParse(value);
-  if (!result.success) {
-    throw new Error(result.error.issues[0]?.message ?? `${field} must be a positive number`);
-  }
-  return result.data;
-}
-
-function assertObjectId(id: string) {
-  if (!ObjectId.isValid(id)) {
-    throw new Error("invalid product id");
-  }
-
-  return new ObjectId(id);
-}
-
 function createSlug(value: string) {
   return value
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
-}
-
-function now() {
-  return new Date().toISOString();
-}
-
-function normalizeOptions(value: unknown) {
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => {
-        if (typeof item === "string") {
-          const [label = "", imageUrl = "", stock = ""] = item.split("|").map((part) => part.trim());
-          const optionStock = normalizeOptionStock(stock);
-          return label
-            ? { label, imageUrl: normalizeOptionImageValue(imageUrl), ...(optionStock !== undefined ? { stock: optionStock } : {}) }
-            : null;
-        }
-
-        if (item && typeof item === "object") {
-          const option = item as { label?: unknown; name?: unknown; value?: unknown; imageUrl?: unknown; image?: unknown; stock?: unknown };
-          const label =
-            typeof option.label === "string"
-              ? option.label.trim()
-              : typeof option.name === "string"
-                ? option.name.trim()
-                : typeof option.value === "string"
-                  ? option.value.trim()
-                  : "";
-          const imageUrl =
-            typeof option.imageUrl === "string"
-              ? option.imageUrl.trim()
-              : typeof option.image === "string"
-                ? option.image.trim()
-                : "";
-
-          const optionStock = normalizeOptionStock(option.stock);
-
-          return label
-            ? { label, imageUrl: normalizeOptionImageValue(imageUrl), ...(optionStock !== undefined ? { stock: optionStock } : {}) }
-            : null;
-        }
-
-        return null;
-      })
-      .filter((item): item is { label: string; imageUrl: string; stock?: number } => Boolean(item));
-  }
-
-  if (typeof value === "string") {
-    return value
-      .split(/\r?\n|,/)
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .map((item) => {
-        const [label = "", imageUrl = "", stock = ""] = item.split("|").map((part) => part.trim());
-        const optionStock = normalizeOptionStock(stock);
-        return { label, imageUrl: normalizeOptionImageValue(imageUrl), ...(optionStock !== undefined ? { stock: optionStock } : {}) };
-      });
-  }
-
-  return [];
 }
 
 export function toProduct(doc: Document): Product {
@@ -156,7 +67,7 @@ export function toProduct(doc: Document): Product {
     shippingFirstItem: Number(doc.shippingFirstItem ?? doc.shipping ?? 0),
     shippingAdditionalItem: Number(doc.shippingAdditionalItem ?? 0),
     category: doc.category ?? "",
-    options: normalizeOptions(doc.options),
+    options: normalizeOptions(doc.options, normalizeOptionImageValue),
     imageUrl: doc.imageUrl || imageUrls[0] || "",
     imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
     active: doc.active ?? true,
@@ -186,7 +97,7 @@ function buildCreateProduct(input: CreateProductInput) {
     shippingFirstItem: parsed.shippingFirstItem ?? 0,
     shippingAdditionalItem: parsed.shippingAdditionalItem ?? 0,
     category: parsed.category ?? "",
-    options: normalizeOptions(input.options),
+    options: normalizeOptions(input.options, normalizeOptionImageValue),
     imageUrl: normalizeImageValue(input.imageUrl),
     imageUrls: Array.isArray(input.imageUrls)
       ? input.imageUrls.map((url) => normalizeImageValue(url)).filter(Boolean)
@@ -273,7 +184,7 @@ export async function updateProduct(
   }
 
   if (input.options !== undefined) {
-    updateData.options = normalizeOptions(input.options);
+    updateData.options = normalizeOptions(input.options, normalizeOptionImageValue);
   }
 
   if (input.imageUrl !== undefined) {
@@ -291,7 +202,7 @@ export async function updateProduct(
   }
 
   const result = await collection.findOneAndUpdate(
-    { _id: assertObjectId(productId) },
+    { _id: assertObjectId(productId, "product id") },
     { $set: updateData },
     { returnDocument: "after" },
   );
@@ -305,7 +216,7 @@ export async function updateProduct(
 
 export async function deleteProduct(productId: string) {
   const collection = await getProductCollection();
-  const oid = assertObjectId(productId);
+  const oid = assertObjectId(productId, "product id");
 
   const result = await collection.deleteOne({ _id: oid });
 

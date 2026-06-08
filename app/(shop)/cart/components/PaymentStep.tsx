@@ -17,6 +17,7 @@ type Props = {
   selectedShippingFee: number;
   copiedAccount: boolean;
   slipPreview: string;
+  slipError: string;
   onCopyAccount: () => void;
   onSlipFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onClearSlip: () => void;
@@ -26,7 +27,7 @@ type Props = {
 
 export function PaymentStep({
   lang, t, selectedPayableTotal, selectedShippingFee,
-  copiedAccount, slipPreview, onCopyAccount, onSlipFile,
+  copiedAccount, slipPreview, slipError, onCopyAccount, onSlipFile,
   onClearSlip, onBack, onContinue,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -76,8 +77,8 @@ export function PaymentStep({
         </div>
       </div>
 
-      <div className="rounded-xl border border-dashed border-gray-200 p-3">
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onSlipFile} />
+      <div className={`rounded-xl border border-dashed p-3 ${slipError ? "border-red-300 bg-red-50/30" : "border-gray-200"}`}>
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={onSlipFile} />
         {slipPreview ? (
           <div className="relative">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -93,13 +94,18 @@ export function PaymentStep({
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="flex w-full flex-col items-center gap-2 py-10 text-gray-400"
+            className={`flex w-full flex-col items-center gap-2 py-10 ${slipError ? "text-red-400" : "text-gray-400"}`}
           >
             <Upload className="h-7 w-7" />
             <span className="text-xs font-bold">{t("checkout.upload_tap")}</span>
           </button>
         )}
       </div>
+      {slipError && (
+        <p className="text-xs font-semibold text-red-500 flex items-center gap-1.5">
+          <span>⚠</span> {slipError}
+        </p>
+      )}
 
       <Button onClick={onContinue} className="mt-4 h-12 w-full rounded-xl bg-[#85241F] text-sm font-black hover:bg-[#B72D2A]">
         {t("checkout.continue")}

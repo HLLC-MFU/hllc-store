@@ -1,4 +1,6 @@
+import type { z } from "zod";
 import type { Order } from "./types";
+import { validateResponse } from "@/lib/validation/response-schemas";
 
 const currencyFormatter = new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 });
 
@@ -48,6 +50,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<{ data?:
     }
 
     const response = await fetch(path, {
+      cache: "no-store",
       ...init,
       headers,
     });
@@ -59,5 +62,25 @@ export async function api<T>(path: string, init?: RequestInit): Promise<{ data?:
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Network error";
     return { error: message };
+  }
+}
+
+/**
+ * Like `api()`, but validates the unwrapped `data` against a Zod schema before
+ * returning — an unexpected API shape surfaces as `{ error }` instead of `undefined`
+ * deep inside component state.
+ */
+export async function apiValidated<T>(
+  schema: z.ZodType<T>,
+  path: string,
+  init?: RequestInit,
+): Promise<{ data?: T; error?: string }> {
+  const result = await api<unknown>(path, init);
+  if (result.error) return { error: result.error };
+  if (result.data === undefined) return {};
+  try {
+    return { data: validateResponse(schema, result.data) };
+  } catch (err: unknown) {
+    return { error: err instanceof Error ? err.message : "Unexpected response shape" };
   }
 }

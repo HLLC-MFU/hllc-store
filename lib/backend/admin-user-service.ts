@@ -137,6 +137,29 @@ export async function createAdminUser(input: { username?: unknown; role?: unknow
   return publicUser({ ...doc, _id: result.insertedId } as AdminUserDoc & Document);
 }
 
+export async function deleteAdminUser(username: string, actor: AdminIdentity) {
+  const db = await getDb();
+  const target = await db.collection<AdminUserDoc>("admin_users").findOne({ username });
+  if (!target) throw new Error("user not found");
+  if (target.username === actor.username) throw new Error("cannot delete your own account");
+  await db.collection<AdminUserDoc>("admin_users").deleteOne({ username });
+  await writeAuditLog(actor, "admin_user.deleted", { username });
+  return { success: true };
+}
+
+export async function resetAdminPassword(username: string, actor: AdminIdentity) {
+  const db = await getDb();
+  const target = await db.collection<AdminUserDoc>("admin_users").findOne({ username });
+  if (!target) throw new Error("user not found");
+  if (target.username === actor.username) throw new Error("cannot reset your own password here");
+  await db.collection<AdminUserDoc>("admin_users").updateOne(
+    { username },
+    { $unset: { passwordHash: "" }, $set: { updatedAt: now() } },
+  );
+  await writeAuditLog(actor, "admin_user.password_reset", { username });
+  return { success: true };
+}
+
 export async function registerAdminPassword(input: { username: string; password: string }) {
   await ensureDefaultSuperAdmin();
   const username = cleanUsername(input.username);

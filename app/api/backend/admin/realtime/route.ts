@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requireSuperAdmin } from "@/lib/backend/admin-auth";
+import { requireAdmin } from "@/lib/backend/admin-auth";
 import { subscribeAdminRealtime } from "@/lib/backend/admin-realtime";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ function encodeEvent(event: unknown) {
 }
 
 export async function GET(request: NextRequest) {
-  const authError = requireSuperAdmin(request);
+  const authError = requireAdmin(request);
   if (authError) return authError;
 
   const stream = new ReadableStream({

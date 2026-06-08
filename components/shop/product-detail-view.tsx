@@ -101,7 +101,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
 
   function handleBuyNow() {
     if (!handleAddToCart()) return;
-    router.push("/cart");
+    router.push("/cart?selectAll=1");
   }
 
   function scrollTo(index: number, ref: RefObject<HTMLDivElement | null>) {
@@ -134,7 +134,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
     : "";
 
   return (
-    <div className="min-h-screen bg-white px-5 py-6 pb-24 flex flex-col animate-in fade-in slide-in-from-bottom-3 duration-300">
+    <div className="min-h-screen bg-white animate-in fade-in slide-in-from-bottom-3 duration-300">
       {/* Toast */}
       <div className={`fixed inset-0 z-50 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${showToast ? "opacity-100" : "opacity-0"}`}>
         <div className="flex items-center gap-3 bg-gray-900/90 text-white px-6 py-4 rounded-2xl shadow-xl">
@@ -144,8 +144,12 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
           </span>
         </div>
       </div>
+
+      {/* Layout: 1 col mobile, 2 col desktop */}
+      <div className="mx-auto max-w-6xl px-4 py-6 lg:grid lg:grid-cols-[1fr_420px] lg:gap-12 lg:items-start pb-28 lg:pb-10">
+
       {/* Image Card */}
-      <div className="rounded-2xl bg-gray-100 overflow-hidden">
+      <div className="rounded-2xl bg-gray-100 overflow-hidden lg:sticky lg:top-6">
         {displayImages.length > 0 ? (
           <div className="relative aspect-square">
             <div
@@ -209,7 +213,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
       </div>
 
       {/* Info section */}
-      <div className="flex-1 pt-4 flex flex-col gap-3">
+      <div className="pt-4 lg:pt-0 flex flex-col gap-3">
 
         {/* Card: Name + Price */}
         <div className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100 flex items-center justify-between gap-3">
@@ -323,32 +327,60 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
           </div>
         )}
 
+        {/* Action bar — desktop only (mobile uses fixed bar below) */}
+        <div className="mt-2 hidden lg:block">
+          {outOfStock ? (
+            <div className="w-full py-3.5 rounded-2xl bg-gray-100 text-center text-sm font-bold text-gray-400">
+              {lang === "th" ? "สินค้าหมด" : "Out of Stock"}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col justify-center shrink-0">
+                <span className="text-xs text-gray-400 font-medium">{lang === "th" ? "ราคารวม" : "Total"}</span>
+                <span className="text-base font-black text-[#85241F] leading-tight">{money(product.price * quantity)}</span>
+              </div>
+              <div className="w-px h-8 bg-gray-200 shrink-0" />
+              <button
+                ref={addBtnRef}
+                type="button"
+                onClick={handleAddToCart}
+                disabled={mustSelectOption || selectedOptionOutOfStock}
+                className="flex items-center justify-center w-11 h-11 rounded-2xl bg-[#fce8e7] text-[#85241F] active:scale-95 transition-transform shrink-0 disabled:opacity-45 disabled:active:scale-100"
+              >
+                <span className="relative">
+                  <ShoppingCart className="h-5 w-5" />
+                  <Plus className="absolute -top-1.5 -right-1.5 h-3 w-3 stroke-3" />
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={handleBuyNow}
+                disabled={mustSelectOption || selectedOptionOutOfStock}
+                className="flex-1 flex items-center justify-center rounded-2xl bg-[#85241F] h-11 text-sm font-bold text-white active:scale-95 transition-transform disabled:bg-gray-300 disabled:text-gray-500 disabled:active:scale-100"
+              >
+                {lang === "th" ? "ซื้อเลย" : "Buy Now"}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Bottom action bar */}
-      <div className="fixed inset-x-0 bottom-0 z-20 bg-white border-t border-gray-100 px-4 py-3">
+      </div>{/* end grid */}
+
+      {/* Fixed bottom bar — mobile only */}
+      <div className="lg:hidden fixed inset-x-0 bottom-0 z-20 bg-white border-t border-gray-100 px-4 py-3">
         {outOfStock ? (
           <div className="w-full py-3.5 rounded-2xl bg-gray-100 text-center text-sm font-bold text-gray-400">
             {lang === "th" ? "สินค้าหมด" : "Out of Stock"}
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            {/* Total price */}
             <div className="flex flex-col justify-center shrink-0">
-              <span className="text-xs text-gray-400 font-medium">
-                {lang === "th" ? "ราคารวม" : "Total"}
-              </span>
-              <span className="text-base font-black text-[#85241F] leading-tight">
-                {money(product.price * quantity)}
-              </span>
+              <span className="text-xs text-gray-400 font-medium">{lang === "th" ? "ราคารวม" : "Total"}</span>
+              <span className="text-base font-black text-[#85241F] leading-tight">{money(product.price * quantity)}</span>
             </div>
-
-            {/* Divider */}
             <div className="w-px h-8 bg-gray-200 shrink-0" />
-
-            {/* Add to cart */}
             <button
-              ref={addBtnRef}
               type="button"
               onClick={handleAddToCart}
               disabled={mustSelectOption || selectedOptionOutOfStock}
@@ -359,8 +391,6 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                 <Plus className="absolute -top-1.5 -right-1.5 h-3 w-3 stroke-3" />
               </span>
             </button>
-
-            {/* Buy now */}
             <button
               type="button"
               onClick={handleBuyNow}

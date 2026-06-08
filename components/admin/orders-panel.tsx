@@ -155,7 +155,7 @@ export function OrdersPanel({
           )}
         </div>
 
-        {/* Order list */}
+        {/* Order list — modal mode */}
         <div className="flex flex-col gap-3">
           {filteredOrders.map((order) => (
             <OrderRow
@@ -167,6 +167,7 @@ export function OrdersPanel({
               onCancel={onCancelOrder}
               t={t}
               onViewSlip={onViewSlip}
+              useModal={true}
             />
           ))}
           {filteredOrders.length === 0 && (

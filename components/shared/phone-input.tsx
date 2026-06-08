@@ -74,7 +74,7 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
             autoComplete="tel"
             value={formatPhoneDisplay(value)}
             onChange={(e) => {
-              const digits = normalizePhone(e.target.value);
+              const digits = normalizePhone(e.target.value).slice(0, 10);
               onChange(digits);
               if (externalError && touched) {
                 setTouched(false);

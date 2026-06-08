@@ -1,0 +1,57 @@
+{
+  "folders": [
+    { "path": ".", "name": "🏠 root" },
+    { "path": "app", "name": "🧭 app (routes & api)" },
+    { "path": "components", "name": "🧩 components" },
+    { "path": "lib", "name": "📚 lib" }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/.git": true,
+      "**/node_modules": true,
+      "**/.next": true,
+      "**/out": true,
+      "**/build": true,
+      "**/coverage": true,
+      "**/*.tsbuildinfo": true
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/.next": true,
+      "**/out": true,
+      "**/build": true,
+      "**/coverage": true,
+      "**/pnpm-lock.yaml": true,
+      "**/*.tsbuildinfo": true
+    },
+    "files.eol": "\n",
+
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": { "source.fixAll.eslint": "explicit" },
+
+    "[javascript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[typescript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[typescriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[json]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[jsonc]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[css]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[markdown]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+
+    "eslint.validate": ["javascript", "typescript", "typescriptreact"],
+
+    "tailwindCSS.includeLanguages": { "typescriptreact": "javascript" },
+    "tailwindCSS.experimental.classRegex": [
+      ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+      ["cx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+    ]
+  },
+  "extensions": {
+    "recommendations": [
+      "esbenp.prettier-vscode",
+      "dbaeumer.vscode-eslint",
+      "bradlc.vscode-tailwindcss",
+      "mongodb.mongodb-vscode",
+      "humao.rest-client"
+    ]
+  }
+}

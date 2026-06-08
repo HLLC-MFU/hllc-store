@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, ShoppingCart } from "lucide-react";
 import { useCart, type CartItem } from "@/lib/client/cart";
 import { useLanguage } from "@/lib/client/language-context";
 import { safeParseWithLang, checkoutFormSchema, normalizePhone, normalizeEmail } from "@/lib/validation/schemas-i18n";
 import type { Lang } from "@/lib/validation/schemas-i18n";
+import { attachPaymentSlip, cancelPublicOrder, createOrder } from "@/lib/modules/orders";
 import { SwipeableCartItem, itemKey } from "@/components/shop/cart/swipeable-cart-item";
 import { ReceiptView } from "@/components/shop/cart/receipt-view";
 import { CartSummaryPanel } from "./components/CartSummaryPanel";
@@ -26,6 +27,8 @@ type Order = {
   status: string;
   customer?: { name: string; phone: string; email: string; address: string };
 };
+
+const MAX_SLIP_BYTES = 5 * 1024 * 1024;
 
 function saveOrderLookup(orderId: string, phone: string) {
   try {
@@ -53,6 +56,17 @@ export default function CartPage() {
     return { selectedItems: selected, selectedTotal: total, selectedCount: count };
   }, [items, selectedIds]);
 
+  const autoSelected = useRef(false);
+  useEffect(() => {
+    if (autoSelected.current || items.length === 0) return;
+    const isSelectAll = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("selectAll") === "1";
+    if (isSelectAll) {
+      autoSelected.current = true;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedIds(new Set(items.map(itemKey)));
+    }
+  }, [items]);
+
   const toggleSelectAll = useCallback(() => {
     setSelectedIds(allSelected ? new Set() : new Set(items.map(itemKey)));
   }, [allSelected, items]);
@@ -69,15 +83,19 @@ export default function CartPage() {
   const [receiptItems, setReceiptItems] = useState<CartItem[]>([]);
   const [slipPreview, setSlipPreview] = useState("");
   const [slipImage, setSlipImage] = useState("");
+  const [slipError, setSlipError] = useState("");
   const [removeTarget, setRemoveTarget] = useState<CartItem | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const pendingFormRef = useRef<FormData | null>(null);
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("delivery");
   const [copiedAccount, setCopiedAccount] = useState(false);
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [province, setProvince] = useState("");
-  const [postalCode, setPostalCode] = useState("");
+  const [name, setName] = useState(() => { try { return localStorage.getItem("checkout-name") ?? ""; } catch { return ""; } });
+  const [email, setEmail] = useState(() => { try { return localStorage.getItem("checkout-email") ?? ""; } catch { return ""; } });
+  const [phone, setPhone] = useState(() => { try { return localStorage.getItem("checkout-phone") ?? ""; } catch { return ""; } });
+  const [address, setAddress] = useState(() => { try { return localStorage.getItem("checkout-address") ?? ""; } catch { return ""; } });
+  const [district, setDistrict] = useState(() => { try { return localStorage.getItem("checkout-district") ?? ""; } catch { return ""; } });
+  const [province, setProvince] = useState(() => { try { return localStorage.getItem("checkout-province") ?? ""; } catch { return ""; } });
+  const [postalCode, setPostalCode] = useState(() => { try { return localStorage.getItem("checkout-postalCode") ?? ""; } catch { return ""; } });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const selectedShippingFee = useMemo(() => deliveryMode === "pickup" ? 0 : selectedItems.reduce((sum, item) => sum + itemShippingFee(item), 0), [deliveryMode, selectedItems]);
@@ -99,10 +117,22 @@ export default function CartPage() {
   const handleSlipFile = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      setSlipError(lang === "th" ? "รองรับรูปแบบ JPG, PNG, WEBP เท่านั้น" : "Please upload a JPG, PNG, or WEBP image");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > MAX_SLIP_BYTES) {
+      setSlipError(lang === "th" ? "รูปไฟล์ใหญ่เกินไป ขอไม่เกิน 5 MB นะ" : "Image is too large, please keep it under 5 MB");
+      event.target.value = "";
+      return;
+    }
+    setSlipError("");
     const reader = new FileReader();
     reader.onload = (e) => { const r = String(e.target?.result ?? ""); setSlipPreview(r); setSlipImage(r); };
     reader.readAsDataURL(file);
-  }, []);
+  }, [lang]);
 
   const goPayment = useCallback(() => {
     if (!selectedItems.length) { setMessage(lang === "th" ? "กรุณาเลือกสินค้าก่อน" : "Please select items first."); return; }
@@ -164,24 +194,19 @@ export default function CartPage() {
       ? `รับเองที่ D1${pickupTime ? ` เวลา ${pickupTime}` : ""}`
       : [address, district, prov, postal].filter(Boolean).join(" ");
     try {
-      const orderResponse = await fetch("/api/backend/orders", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customer: { name, phone: rawPhone, email: rawEmail, address: fullAddress },
-          items: selectedItems.map((item) => ({ productId: item.productId, quantity: item.quantity, selectedOption: item.selectedOption || undefined })),
-          deliveryMode,
-        }),
+      const order = await createOrder({
+        customer: { name, phone: rawPhone, email: rawEmail, address: fullAddress },
+        items: selectedItems.map((item) => ({ productId: item.productId, quantity: item.quantity, selectedOption: item.selectedOption || undefined })),
+        deliveryMode,
       });
-      const orderPayload = (await orderResponse.json()) as { data?: Order; error?: string };
-      if (!orderResponse.ok) throw new Error(orderPayload.error ?? "Unable to create order");
-      const order = orderPayload.data!;
 
-      const slipResponse = await fetch(`/api/backend/orders/${order.id}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: slipImage }),
-      });
-      const slipPayload = (await slipResponse.json()) as { data?: Order; error?: string };
-      if (!slipResponse.ok) throw new Error(slipPayload.error ?? "Order created, but slip upload failed");
+      try {
+        await attachPaymentSlip(order.id, slipImage);
+      } catch {
+        // Roll back — cancel the order so it doesn't stay as pending_payment
+        await cancelPublicOrder(order.id, "slip upload failed");
+        throw new Error(lang === "th" ? "อัปโหลดสลิปไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" : "Slip upload failed, please try again");
+      }
 
       saveOrderLookup(order.id, rawPhone);
       setCreatedOrder(order); setReceiptItems(selectedItems);
@@ -191,7 +216,7 @@ export default function CartPage() {
     } finally {
       setLoading(false);
     }
-  }, [loading, selectedItems, deliveryMode, slipImage, clearCart]);
+  }, [loading, selectedItems, deliveryMode, slipImage, clearCart, lang]);
 
   return (
     <main className="min-h-screen bg-white px-5 py-6 pb-24 lg:px-10">
@@ -207,24 +232,25 @@ export default function CartPage() {
           </div>
         )}
 
-        {step === "cart" && (
+        {step === "cart" && !items.length && (
+          <div className="flex flex-col items-center justify-center min-h-[70vh] gap-4 text-center">
+            <div className="w-20 h-20 rounded-3xl bg-gray-100 flex items-center justify-center">
+              <ShoppingCart className="w-9 h-9 text-gray-400" />
+            </div>
+            <div>
+              <p className="text-lg font-black text-gray-900">{lang === "th" ? "รถเข็นว่างเปล่าเลย!" : "Your cart is empty!"}</p>
+              <p className="mt-1 text-sm text-gray-400 font-medium">{lang === "th" ? "ไปเลือกสินค้าที่ถูกใจก่อนนะ" : "Go pick something you like"}</p>
+            </div>
+            <Link href="/home" className="mt-2 bg-[#85241F] hover:bg-[#B72D2A] text-white font-black text-sm px-6 py-3 rounded-2xl transition-all active:scale-95 shadow-md shadow-[#85241F]/20">
+              {lang === "th" ? "ไปเลือกสินค้า" : "Start shopping"}
+            </Link>
+          </div>
+        )}
+
+        {step === "cart" && !!items.length && (
           <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
             {/* Item list */}
             <section className="space-y-3">
-              {!items.length && (
-                <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-                  <div className="w-20 h-20 rounded-3xl bg-gray-100 flex items-center justify-center">
-                    <ShoppingCart className="w-9 h-9 text-gray-400" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-black text-gray-900">{lang === "th" ? "รถเข็นว่างเปล่าเลย!" : "Your cart is empty!"}</p>
-                    <p className="mt-1 text-sm text-gray-400 font-medium">{lang === "th" ? "ไปเลือกสินค้าที่ถูกใจก่อนนะ" : "Go pick something you like"}</p>
-                  </div>
-                  <Link href="/home" className="mt-2 bg-[#85241F] hover:bg-[#B72D2A] text-white font-black text-sm px-6 py-3 rounded-2xl transition-all active:scale-95 shadow-md shadow-[#85241F]/20">
-                    {lang === "th" ? "ไปเลือกสินค้า" : "Start shopping"}
-                  </Link>
-                </div>
-              )}
               {items.length > 0 && (
                 <div className="flex items-center justify-between mb-3">
                   <button type="button" onClick={toggleSelectAll}
@@ -266,9 +292,9 @@ export default function CartPage() {
           <PaymentStep
             lang={lang} t={t}
             selectedPayableTotal={selectedPayableTotal} selectedShippingFee={selectedShippingFee}
-            copiedAccount={copiedAccount} slipPreview={slipPreview}
+            copiedAccount={copiedAccount} slipPreview={slipPreview} slipError={slipError}
             onCopyAccount={copyBankAccount} onSlipFile={handleSlipFile}
-            onClearSlip={() => { setSlipPreview(""); setSlipImage(""); }}
+            onClearSlip={() => { setSlipPreview(""); setSlipImage(""); setSlipError(""); }}
             onBack={() => setStep("cart")} onContinue={goInfo}
           />
         )}
@@ -276,9 +302,13 @@ export default function CartPage() {
         {step === "info" && (
           <InfoStep
             lang={lang} t={t} deliveryMode={deliveryMode}
-            phone={phone} setPhone={setPhone} email={email} setEmail={setEmail}
-            province={province} setProvince={setProvince}
-            postalCode={postalCode} setPostalCode={setPostalCode}
+            name={name} setName={(v) => { setName(v); try { localStorage.setItem("checkout-name", v); } catch {} }}
+            phone={phone} setPhone={(v) => { setPhone(v); try { localStorage.setItem("checkout-phone", v); } catch {} }}
+            email={email} setEmail={(v) => { setEmail(v); try { localStorage.setItem("checkout-email", v); } catch {} }}
+            address={address} setAddress={(v) => { setAddress(v); try { localStorage.setItem("checkout-address", v); } catch {} }}
+            district={district} setDistrict={(v) => { setDistrict(v); try { localStorage.setItem("checkout-district", v); } catch {} }}
+            province={province} setProvince={(v) => { setProvince(v); try { localStorage.setItem("checkout-province", v); } catch {} }}
+            postalCode={postalCode} setPostalCode={(v) => { setPostalCode(v); try { localStorage.setItem("checkout-postalCode", v); } catch {} }}
             fieldErrors={fieldErrors} loading={loading}
             selectedCount={selectedCount} selectedTotal={selectedTotal}
             selectedShippingFee={selectedShippingFee} selectedPayableTotal={selectedPayableTotal}

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Image as ImageIcon, Truck } from "lucide-react";
 import { useLanguage } from "@/lib/client/language-context";
-import { LanguageChip } from "@/components/shared/language-chip";
 
 type ProductOption = {
   label: string;
@@ -56,7 +55,7 @@ export function HomeClient({ products }: HomeClientProps) {
   const trackingEntry = (
     <Link
       href="/profile"
-      className="shop-tracking mb-5 flex items-center justify-between rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#85241F]/20 hover:bg-[#85241F]/5 hover:shadow-md active:translate-y-0"
+      className="shop-tracking mb-4 flex items-center justify-between rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-all duration-200 hover:border-[#85241F]/20 hover:bg-[#85241F]/5 active:scale-[0.98] md:hidden"
     >
       <div className="flex items-center gap-3">
         <div className="shop-tracking-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#85241F]/8 text-[#85241F]">
@@ -195,46 +194,12 @@ export function HomeClient({ products }: HomeClientProps) {
   );
 
   return (
-    <>
-      <div className="shop-page lg:hidden flex flex-col bg-white min-h-screen">
-        <div className="px-5 md:px-8 py-6 pb-8">
-          {trackingEntry}
-          {productGrid}
-        </div>
+    <div className="min-h-screen bg-white">
+      <div className="px-4 md:px-6 py-4 pb-24">
+        {/* Mobile: tracking card */}
+        {trackingEntry}
+        {productGrid}
       </div>
-
-      <div className="shop-page hidden lg:flex min-h-screen bg-white">
-        <aside className="w-60 xl:w-72 shrink-0 border-r border-gray-100 sticky top-0 h-screen flex flex-col">
-          <div className="flex justify-center pt-8 pb-6 px-6 border-b border-gray-100">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/images/HLLCLOGO.png"
-              alt="HLLC Logo"
-              className="shop-logo h-20 w-auto object-contain"
-            />
-          </div>
-          <div className="px-4 py-5 flex-1 overflow-y-auto">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase px-3 mb-3">
-              {lang === "th" ? "คำสั่งซื้อ" : "Orders"}
-            </p>
-            {trackingEntry}
-          </div>
-        </aside>
-
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-8 py-4 xl:px-10">
-            <div className="flex items-center justify-between gap-4">
-              <h3 className="text-sm font-bold text-gray-600">
-                {t("shop.all_products")}
-              </h3>
-              <LanguageChip />
-            </div>
-          </div>
-          <div className="px-8 xl:px-10 py-6 flex-1">
-            {productGrid}
-          </div>
-        </div>
-      </div>
-    </>
+    </div>
   );
 }
