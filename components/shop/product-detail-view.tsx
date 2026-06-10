@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useRef, useCallback, type RefObject } from "react";
-import { ChevronLeft, ChevronRight, ShoppingCart, Plus } from "lucide-react";
+import { useState, useRef, useCallback, useMemo, type RefObject } from "react";
+import { ChevronLeft, ChevronRight, ShoppingCart, Plus, AlertCircle } from "lucide-react";
 import { useCart } from "@/lib/client/cart";
 import { useCartFly } from "@/lib/client/cart-fly";
+import { vibrateTap } from "@/lib/client/haptics";
 import { useLanguage } from "@/lib/client/language-context";
 
 export type LocalizedText = {
@@ -42,7 +43,7 @@ function money(value: number) {
 
 export function ProductDetailView({ product }: { product: ProductDetailProduct }) {
   const router = useRouter();
-  const { addItem } = useCart();
+  const { addItem, items } = useCart();
   const { flyToCart } = useCartFly();
   const { lang } = useLanguage();
   const addBtnRef = useRef<HTMLButtonElement>(null);
@@ -54,7 +55,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   const [quantity, setQuantity] = useState(1);
   const [selectedOptionLabel, setSelectedOptionLabel] = useState("");
   const [expanded, setExpanded] = useState(false);
-  const [showToast, setShowToast] = useState(false);
+  const [toast, setToast] = useState<{ kind: "added" | "alert"; text: string } | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
@@ -69,19 +70,41 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   const selectedOptionOutOfStock = Boolean(selectedOption && selectedOptionStock < 1);
   const mustSelectOption = options.length > 0 && !selectedOption;
 
-  const triggerToast = useCallback(() => {
-    setShowToast(true);
+  const showToast = useCallback((kind: "added" | "alert", text: string) => {
+    setToast({ kind, text });
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setShowToast(false), 2000);
+    toastTimer.current = setTimeout(() => setToast(null), 2000);
   }, []);
 
-  function handleAddToCart() {
-    if (mustSelectOption || selectedOptionOutOfStock || outOfStock) {
-      triggerToast();
+  // How many of this product/option are already in the cart.
+  const cartQty = useMemo(
+    () => items
+      .filter((i) => i.productId === product.id && (i.selectedOption ?? "") === (selectedOption?.label ?? ""))
+      .reduce((sum, i) => sum + i.quantity, 0),
+    [items, product.id, selectedOption],
+  );
+
+  function handleAddToCart(sourceEl?: HTMLElement | null) {
+    vibrateTap();
+    if (mustSelectOption) {
+      showToast("alert", lang === "th" ? "กรุณาเลือกตัวเลือกสินค้าก่อน" : "Please choose an option first");
+      return false;
+    }
+    if (selectedOptionOutOfStock || outOfStock) {
+      showToast("alert", lang === "th" ? "สินค้าหมดแล้ว" : "Out of stock");
       return false;
     }
 
-    for (let i = 0; i < quantity; i++) {
+    const remaining = selectedOptionStock - cartQty;
+    if (remaining <= 0) {
+      showToast("alert", lang === "th"
+        ? `เพิ่มไม่ได้แล้ว มีในสต็อกสูงสุด ${selectedOptionStock} ชิ้น`
+        : `Can't add more — only ${selectedOptionStock} in stock`);
+      return false;
+    }
+
+    const addCount = Math.min(quantity, remaining);
+    for (let i = 0; i < addCount; i++) {
       addItem({
         productId: product.id,
         name: product.name,
@@ -94,8 +117,11 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         selectedOption: selectedOption?.label ?? "",
       });
     }
-    if (addBtnRef.current) flyToCart(addBtnRef.current, displayImages[0]);
-    triggerToast();
+    const flySource = sourceEl ?? addBtnRef.current;
+    if (flySource) flyToCart(flySource, displayImages[0]);
+    showToast("added", lang === "th"
+      ? `เพิ่มลงตะกร้าแล้ว ${addCount} ชิ้น`
+      : `Added ${addCount} item${addCount > 1 ? "s" : ""} to cart`);
     return true;
   }
 
@@ -136,12 +162,12 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   return (
     <div className="min-h-screen bg-white animate-in fade-in slide-in-from-bottom-3 duration-300">
       {/* Toast */}
-      <div className={`fixed inset-0 z-50 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${showToast ? "opacity-100" : "opacity-0"}`}>
+      <div className={`fixed inset-0 z-50 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${toast ? "opacity-100" : "opacity-0"}`}>
         <div className="flex items-center gap-3 bg-gray-900/90 text-white px-6 py-4 rounded-2xl shadow-xl">
-          <ShoppingCart className="h-5 w-5 text-green-400 shrink-0" />
-          <span className="text-sm font-semibold">
-            {lang === "th" ? `เพิ่มลงตะกร้าแล้ว ${quantity} ชิ้น` : `Added ${quantity} item${quantity > 1 ? "s" : ""} to cart`}
-          </span>
+          {toast?.kind === "alert"
+            ? <AlertCircle className="h-5 w-5 text-amber-400 shrink-0" />
+            : <ShoppingCart className="h-5 w-5 text-green-400 shrink-0" />}
+          <span className="text-sm font-semibold">{toast?.text}</span>
         </div>
       </div>
 
@@ -343,7 +369,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
               <button
                 ref={addBtnRef}
                 type="button"
-                onClick={handleAddToCart}
+                onClick={(e) => handleAddToCart(e.currentTarget)}
                 disabled={mustSelectOption || selectedOptionOutOfStock}
                 className="flex items-center justify-center w-11 h-11 rounded-2xl bg-[#fce8e7] text-[#85241F] active:scale-95 transition-transform shrink-0 disabled:opacity-45 disabled:active:scale-100"
               >
@@ -382,7 +408,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
             <div className="w-px h-8 bg-gray-200 shrink-0" />
             <button
               type="button"
-              onClick={handleAddToCart}
+              onClick={(e) => handleAddToCart(e.currentTarget)}
               disabled={mustSelectOption || selectedOptionOutOfStock}
               className="flex items-center justify-center w-11 h-11 rounded-2xl bg-[#fce8e7] text-[#85241F] active:scale-95 transition-transform shrink-0 disabled:opacity-45 disabled:active:scale-100"
             >

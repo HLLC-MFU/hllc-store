@@ -1,6 +1,9 @@
 import { listStoreProducts } from "@/lib/backend/products/product-service";
 import { HomeClient } from "@/components/shop/home-client";
 
+// Always read fresh products so admin edits show up immediately (no build cache).
+export const dynamic = "force-dynamic";
+
 type ProductOption = {
   label: string;
   imageUrl?: string;

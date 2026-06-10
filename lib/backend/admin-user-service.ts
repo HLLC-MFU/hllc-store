@@ -214,6 +214,7 @@ function actionLabel(action: string) {
     "product.deleted": "Deleted product",
     "slip.approved": "Approved payment slip",
     "slip.rejected": "Rejected payment slip",
+    "payment_settings.updated": "Updated payment account",
   };
 
   return labels[action] ?? action;

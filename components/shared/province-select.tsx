@@ -5,7 +5,6 @@ import { THAI_PROVINCES } from "@/lib/data/thai-provinces";
 import {
   Combobox,
   ComboboxContent,
-  ComboboxEmpty,
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
@@ -32,9 +31,6 @@ export function ProvinceSelect({ value, onChange, lang = "th", error }: Props) {
           placeholder={lang === "th" ? "เลือกจังหวัด" : "Select province"}
         />
         <ComboboxContent>
-          <ComboboxEmpty>
-            {lang === "th" ? "ไม่พบจังหวัด" : "No results"}
-          </ComboboxEmpty>
           <ComboboxList>
             {(item: string) => (
               <ComboboxItem key={item} value={item}>

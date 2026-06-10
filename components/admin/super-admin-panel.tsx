@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { KeyRound, Search, Trash2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ const ACTION_LABEL: Record<string, { th: string; en: string; color: string }> = 
   "product.created":           { th: "เพิ่มสินค้าใหม่",          en: "Product created",          color: "bg-blue-50 text-blue-700"    },
   "product.updated":           { th: "แก้ไขสินค้า",              en: "Product updated",          color: "bg-gray-100 text-gray-600"   },
   "product.deleted":           { th: "ลบสินค้า",                 en: "Product deleted",          color: "bg-red-50 text-red-700"      },
+  "payment_settings.updated":  { th: "แก้ไขบัญชีรับเงิน",        en: "Payment account updated",  color: "bg-indigo-50 text-indigo-700"},
 };
 
 type AdminRole = "superAdmin" | "admin";
@@ -46,14 +47,18 @@ function metaText(metadata: Record<string, unknown>, key: string) {
   return typeof value === "string" && value.trim() ? value.trim() : "";
 }
 
-function auditDetail(log: AuditLog) {
-  return [
-    log.targetLabel ? `Target: ${log.targetLabel}` : "",
-    metaText(log.metadata, "status") ? `Status: ${metaText(log.metadata, "status")}` : "",
-    metaText(log.metadata, "reason") ? `Reason: ${metaText(log.metadata, "reason")}` : "",
-    metaText(log.metadata, "note") ? `Note: ${metaText(log.metadata, "note")}` : "",
-    metaText(log.metadata, "role") ? `Role: ${metaText(log.metadata, "role")}` : "",
-  ].filter(Boolean).join(" | ");
+function auditDetails(log: AuditLog): { label: string; value: string }[] {
+  const fields: { label: string; value: string }[] = [];
+  if (log.targetLabel) fields.push({ label: "เป้าหมาย", value: log.targetLabel });
+  const status = metaText(log.metadata, "status");
+  if (status) fields.push({ label: "สถานะ", value: status });
+  const reason = metaText(log.metadata, "reason");
+  if (reason) fields.push({ label: "เหตุผล", value: reason });
+  const note = metaText(log.metadata, "note");
+  if (note) fields.push({ label: "หมายเหตุ", value: note });
+  const role = metaText(log.metadata, "role");
+  if (role) fields.push({ label: "บทบาท", value: role });
+  return fields;
 }
 
 type Props = {
@@ -69,7 +74,9 @@ type Props = {
 export function SuperAdminPanel({ adminUsers, auditLogs, loading, onCreateAccount, onDeleteUser, onResetPassword, currentUsername }: Props) {
   const [search, setSearch] = useState("");
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+    <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
+      {/* Left column: create account + admin list */}
+      <div className="flex flex-col gap-4">
       <Card className="rounded-2xl border-gray-100 shadow-xs">
         <CardContent className="p-5">
           <h2 className="text-sm font-black text-gray-900 mb-4">สร้างบัญชี Admin</h2>
@@ -98,7 +105,7 @@ export function SuperAdminPanel({ adminUsers, auditLogs, loading, onCreateAccoun
       <Card className="rounded-2xl border-gray-100 shadow-xs">
         <CardContent className="p-4">
           <h2 className="mb-3 text-sm font-black text-gray-900">Admin Accounts</h2>
-          <div className="flex max-h-[360px] flex-col gap-2 overflow-y-auto">
+          <div className="flex max-h-90 flex-col gap-2 overflow-y-auto">
             {adminUsers.map((user) => {
               const isSelf = user.username === currentUsername;
               return (
@@ -136,14 +143,15 @@ export function SuperAdminPanel({ adminUsers, auditLogs, loading, onCreateAccoun
           </div>
         </CardContent>
       </Card>
+      </div>
 
-      <Card className="rounded-2xl border-gray-100 shadow-xs lg:col-span-2">
+      <Card className="rounded-2xl border-gray-100 shadow-xs">
         <CardContent className="p-4">
           {/* Header + Search */}
           <div className="flex items-center gap-3 mb-4">
             <div>
-              <h2 className="text-sm font-black text-gray-900">Audit Logs</h2>
-              <p className="text-[10px] text-gray-400 mt-0.5">{auditLogs.length} รายการทั้งหมด</p>
+              <h2 className="text-base font-black text-gray-900">Audit Logs</h2>
+              <p className="text-xs text-gray-400 mt-0.5">{auditLogs.length} รายการทั้งหมด</p>
             </div>
             <div className="ml-auto flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 w-56 focus-within:border-[#85241F] transition-colors">
               <Search className="h-3.5 w-3.5 text-gray-400 shrink-0" />
@@ -174,69 +182,64 @@ export function SuperAdminPanel({ adminUsers, auditLogs, loading, onCreateAccoun
               : auditLogs;
 
             if (filtered.length === 0) return (
-              <p className="py-8 text-center text-xs font-bold text-gray-400">
+              <p className="py-8 text-center text-sm font-bold text-gray-400">
                 {q ? `ไม่พบ "${search}"` : "ยังไม่มี log"}
               </p>
             );
 
             return (
-              <div className="max-h-120 overflow-y-auto">
-                <div className="flex flex-col">
-                  {filtered.map((log, idx) => {
-                    const isLast = idx === filtered.length - 1;
-                    const detail = auditDetail(log);
-                    const date = new Date(log.createdAt);
-                    const timeStr = date.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
-                    const dateStr = date.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
-                    const isSuperAdmin = log.actorRole === "superAdmin";
-                    const actionMeta = ACTION_LABEL[log.action];
+              <div className="max-h-160 divide-y divide-gray-100 overflow-y-auto pr-1">
+                {filtered.map((log) => {
+                  const details = auditDetails(log);
+                  const date = new Date(log.createdAt);
+                  const timeStr = date.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+                  const dateStr = date.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
+                  const isSuperAdmin = log.actorRole === "superAdmin";
+                  const actionMeta = ACTION_LABEL[log.action];
 
-                    return (
-                      <div key={log.id} className="flex gap-3">
-                        <div className="flex flex-col items-center">
-                          <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${isSuperAdmin ? "bg-[#85241F]" : "bg-gray-300"}`} />
-                          {!isLast && <div className="w-px flex-1 bg-gray-100 mt-1 mb-1" />}
-                        </div>
-
-                        <div className={`pb-4 flex-1 min-w-0 ${isLast ? "pb-0" : ""}`}>
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0 flex-1">
-                              {/* Action badge */}
-                              {actionMeta ? (
-                                <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${actionMeta.color}`}>
-                                    {actionMeta.th}
-                                  </span>
-                                  <span className="text-[9px] text-gray-400">{actionMeta.en}</span>
-                                </div>
-                              ) : (
-                                <p className="text-xs font-black text-gray-900 mb-1">
-                                  {log.actionLabel ?? log.action}
-                                </p>
-                              )}
-                              {/* Actor */}
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${isSuperAdmin ? "bg-[#85241F]/8 text-[#85241F]" : "bg-gray-100 text-gray-500"}`}>
-                                  {log.actorUsername}
-                                </span>
-                                <span className="text-[9px] text-gray-400">{log.actorRole === "superAdmin" ? "Super Admin" : "Admin"}</span>
-                              </div>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <p className="text-[10px] font-bold text-gray-700">{timeStr}</p>
-                              <p className="text-[9px] text-gray-400">{dateStr}</p>
-                            </div>
-                          </div>
-                          {detail && (
-                            <p className="mt-1.5 text-[10px] font-semibold text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5 leading-relaxed">
-                              {detail}
-                            </p>
-                          )}
+                  return (
+                    <div key={log.id} className="py-3.5 first:pt-0 last:pb-0">
+                      {/* Action + timestamp */}
+                      <div className="flex items-start justify-between gap-3">
+                        {actionMeta ? (
+                          <span className={`text-xs font-black px-2.5 py-1 rounded-full ${actionMeta.color}`}>
+                            {actionMeta.th}
+                          </span>
+                        ) : (
+                          <span className="text-sm font-black text-gray-900">
+                            {log.actionLabel ?? log.action}
+                          </span>
+                        )}
+                        <div className="shrink-0 text-right">
+                          <p className="text-xs font-bold text-gray-700">{timeStr}</p>
+                          <p className="text-[10px] text-gray-400">{dateStr}</p>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+
+                      {/* Actor */}
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+                        <span className="text-gray-400">โดย</span>
+                        <span className={`font-black px-2 py-0.5 rounded-md ${isSuperAdmin ? "bg-[#85241F]/8 text-[#85241F]" : "bg-gray-100 text-gray-600"}`}>
+                          {log.actorUsername}
+                        </span>
+                        <span className="text-gray-400">· {isSuperAdmin ? "Super Admin" : "Admin"}</span>
+                        {actionMeta && <span className="text-gray-300">· {actionMeta.en}</span>}
+                      </div>
+
+                      {/* Details */}
+                      {details.length > 0 && (
+                        <dl className="mt-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-lg bg-gray-50 px-3 py-2.5 text-xs leading-relaxed">
+                          {details.map((field) => (
+                            <Fragment key={field.label}>
+                              <dt className="font-bold text-gray-400">{field.label}</dt>
+                              <dd className="min-w-0 wrap-break-word font-semibold text-gray-700">{field.value}</dd>
+                            </Fragment>
+                          ))}
+                        </dl>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             );
           })()}

@@ -44,7 +44,7 @@ export type Order = {
   deliveryMode?: "delivery" | "pickup";
   total: number;
   status: OrderStatus;
-  slip: { imageUrl?: string; status: SlipStatus; paidAt?: string };
+  slip: { imageUrl?: string; status: SlipStatus; paidAt?: string | null };
   trackingNumber?: string;
   cancellationReason?: string;
   adminNotes?: { text: string; by: string; at: string; action: string }[];

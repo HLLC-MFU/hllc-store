@@ -1,18 +1,17 @@
 "use client";
 
-import { ArrowLeft, ClipboardList, Mail, MapPin, Store, Truck, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Mail, MapPin, Store, Truck, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { EmailInput } from "@/components/shared/email-input";
 import { PhoneInput } from "@/components/shared/phone-input";
-import { ProvinceSelect } from "@/components/shared/province-select";
+import { AddressSelect } from "@/components/shared/address-select";
 import { TimeSelect } from "./TimeSelect";
+import { CheckoutFooter } from "./CheckoutFooter";
 
 const fmt = new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 });
 const money = (v: number) => fmt.format(v);
 
-const inputCls = "h-12 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus-visible:border-[#85241F] focus-visible:ring-1 focus-visible:ring-[#85241F]/20";
+const inputCls = "h-12 rounded-none border-0 bg-transparent text-sm font-semibold shadow-none placeholder:text-gray-400 focus-visible:ring-0";
 
 function FieldRow({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -27,12 +26,14 @@ type Props = {
   lang: "th" | "en";
   t: (key: string) => string;
   deliveryMode: "delivery" | "pickup";
+  setDeliveryMode: (mode: "delivery" | "pickup") => void;
   name: string; setName: (v: string) => void;
   phone: string; setPhone: (v: string) => void;
   email: string; setEmail: (v: string) => void;
   address: string; setAddress: (v: string) => void;
   district: string; setDistrict: (v: string) => void;
   province: string; setProvince: (v: string) => void;
+  subDistrict: string; setSubDistrict: (v: string) => void;
   postalCode: string; setPostalCode: (v: string) => void;
   fieldErrors: Record<string, string>;
   loading: boolean;
@@ -46,30 +47,44 @@ type Props = {
 };
 
 export function InfoStep({
-  lang, t, deliveryMode,
+  lang, t, deliveryMode, setDeliveryMode,
   name, setName, phone, setPhone, email, setEmail,
   address, setAddress, district, setDistrict,
-  province, setProvince, postalCode, setPostalCode,
+  province, setProvince, subDistrict, setSubDistrict, postalCode, setPostalCode,
   fieldErrors, loading,
   selectedCount, selectedTotal, selectedShippingFee, selectedPayableTotal,
   itemsLength, onBack, onSubmit,
 }: Props) {
   return (
-    <section className="mx-auto max-w-xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+    <section className="mx-auto max-w-xl pb-24 animate-in fade-in slide-in-from-bottom-2 duration-200">
       <button onClick={onBack} className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-gray-700 transition-colors">
         <ArrowLeft className="h-4 w-4" />
         {lang === "th" ? "กลับ" : "Back"}
       </button>
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <div className="flex items-center justify-between rounded-2xl bg-gray-50 px-4 py-3 text-sm font-bold">
-          <span className="flex items-center gap-2 text-gray-500">
-            {deliveryMode === "delivery" ? <Truck className="h-4 w-4" /> : <Store className="h-4 w-4" />}
+      <form id="checkout-info-form" onSubmit={onSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <p className="px-1 text-xs font-black uppercase tracking-wider text-gray-400">
             {lang === "th" ? "วิธีรับสินค้า" : "Fulfillment"}
-          </span>
-          <span className="text-[#85241F]">
-            {deliveryMode === "delivery" ? (lang === "th" ? "จัดส่ง" : "Delivery") : (lang === "th" ? "รับเอง" : "Pickup")}
-          </span>
+          </p>
+          <div className="grid grid-cols-2 rounded-2xl bg-gray-100 p-1">
+            <button
+              type="button"
+              onClick={() => setDeliveryMode("delivery")}
+              className={`flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-black transition-colors ${deliveryMode === "delivery" ? "bg-white text-[#85241F] shadow-sm" : "text-gray-500"}`}
+            >
+              <Truck className="h-4 w-4" />
+              {lang === "th" ? "จัดส่ง" : "Delivery"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeliveryMode("pickup")}
+              className={`flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-black transition-colors ${deliveryMode === "pickup" ? "bg-white text-[#85241F] shadow-sm" : "text-gray-500"}`}
+            >
+              <Store className="h-4 w-4" />
+              {lang === "th" ? "รับเอง" : "Pickup"}
+            </button>
+          </div>
         </div>
 
         {/* Recipient */}
@@ -78,30 +93,32 @@ export function InfoStep({
             {lang === "th" ? "ข้อมูลผู้รับ" : "Recipient"}
           </p>
 
-          <FieldRow icon={<User className="h-4 w-4" />}>
-            <Input
-              name="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={lang === "th" ? "ชื่อ-นามสกุล" : "Full name"}
+          <div className="divide-y divide-gray-100">
+            <FieldRow icon={<User className="h-4 w-4" />}>
+              <Input
+                name="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={lang === "th" ? "ชื่อ-นามสกุล" : "Full name"}
+                className={inputCls}
+              />
+            </FieldRow>
+
+            <PhoneInput
+              name="phone" value={phone} onChange={setPhone} lang={lang}
+              placeholder={lang === "th" ? "เบอร์โทรศัพท์" : "Phone number"}
               className={inputCls}
             />
-          </FieldRow>
 
-          <PhoneInput
-            name="phone" value={phone} onChange={setPhone} lang={lang}
-            placeholder={lang === "th" ? "เบอร์โทรศัพท์" : "Phone number"}
-            className="h-12 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus:border-[#85241F]"
-          />
-
-          <FieldRow icon={<Mail className="h-4 w-4" />}>
-            <EmailInput
-              name="email" value={email} onChange={setEmail} lang={lang}
-              placeholder={lang === "th" ? "อีเมล" : "Email"}
-              className={inputCls}
-            />
-          </FieldRow>
-          <p className="-mt-1 px-1 text-[11px] font-semibold text-gray-400">
+            <FieldRow icon={<Mail className="h-4 w-4" />}>
+              <EmailInput
+                name="email" value={email} onChange={setEmail} lang={lang}
+                placeholder={lang === "th" ? "อีเมล" : "Email"}
+                className={inputCls}
+              />
+            </FieldRow>
+          </div>
+          <p className="px-1 text-[11px] font-semibold text-gray-400">
             {lang === "th" ? "ใช้อีเมลนี้เพื่อรับการแจ้งเตือนสถานะคำสั่งซื้อ" : "We use this email for order status notifications."}
           </p>
         </div>
@@ -112,32 +129,28 @@ export function InfoStep({
             <p className="text-xs font-black text-gray-400 uppercase tracking-wider px-1">
               {lang === "th" ? "ที่อยู่จัดส่ง" : "Shipping address"}
             </p>
-            <FieldRow icon={<MapPin className="h-4 w-4 mt-3.5 self-start" />}>
-              <Textarea
-                name="address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder={lang === "th" ? "บ้านเลขที่, อาคาร, หมู่, ถนน, แขวง/ตำบล" : "House no., building, street, subdistrict"}
-                className="min-h-24 rounded-2xl border-gray-300 text-sm font-semibold placeholder:text-gray-400 focus-visible:border-[#85241F] focus-visible:ring-1 focus-visible:ring-[#85241F]/20 resize-none"
+            <div className="divide-y divide-gray-100">
+              <FieldRow icon={<MapPin className="h-4 w-4" />}>
+                <Input
+                  name="address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder={lang === "th" ? "บ้านเลขที่, อาคาร, หมู่, ถนน" : "House no., building, street"}
+                  className={inputCls}
+                />
+              </FieldRow>
+              <AddressSelect
+                lang={lang}
+                value={{ province, district, subDistrict, postalCode }}
+                onChange={(v) => {
+                  if (v.province !== province) setProvince(v.province);
+                  if (v.district !== district) setDistrict(v.district);
+                  if (v.subDistrict !== subDistrict) setSubDistrict(v.subDistrict);
+                  if (v.postalCode !== postalCode) setPostalCode(v.postalCode);
+                }}
+                error={fieldErrors.district || fieldErrors.postalCode}
               />
-            </FieldRow>
-            <Input
-              name="district"
-              value={district}
-              onChange={(e) => setDistrict(e.target.value)}
-              placeholder={lang === "th" ? "เขต/อำเภอ" : "District"}
-              className={inputCls}
-            />
-            <input type="hidden" name="province" value={province} />
-            <ProvinceSelect value={province} onChange={setProvince} lang={lang as "th" | "en"} />
-            <Input
-              name="postalCode"
-              value={postalCode}
-              onChange={(e) => setPostalCode(e.target.value.replace(/\D/g, "").slice(0, 5))}
-              placeholder={lang === "th" ? "รหัสไปรษณีย์" : "Postal code"}
-              className={inputCls}
-              inputMode="numeric" maxLength={5}
-            />
+            </div>
           </div>
         ) : (
           <div className="rounded-2xl border-2 border-[#85241F]/15 bg-[#85241F]/5 p-4 flex flex-col gap-2">
@@ -169,15 +182,18 @@ export function InfoStep({
           </div>
         </div>
 
-        <Button
-          disabled={loading || !itemsLength}
-          className="h-13 w-full rounded-2xl bg-[#85241F] text-sm font-black hover:bg-[#B72D2A] shadow-lg shadow-[#85241F]/20"
-          type="submit"
-        >
-          <ClipboardList className="h-4 w-4" />
-          {loading ? t("checkout.creating_order") : t("checkout.confirm_button")}
-        </Button>
       </form>
+
+      <CheckoutFooter
+        lang={lang}
+        total={selectedPayableTotal}
+        shippingFee={selectedShippingFee}
+        buttonLabel={lang === "th" ? "ไปหน้าชำระเงิน" : "Continue to payment"}
+        buttonType="submit"
+        formId="checkout-info-form"
+        disabled={!itemsLength}
+        loading={loading}
+      />
     </section>
   );
 }

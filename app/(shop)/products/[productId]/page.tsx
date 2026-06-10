@@ -5,6 +5,9 @@ import {
 } from "@/components/shop/product-detail-view";
 import { listStoreProducts } from "@/lib/backend/products/product-service";
 
+// Always read fresh products so admin edits show up immediately (no build cache).
+export const dynamic = "force-dynamic";
+
 type ProductPageProps = {
   params: Promise<{
     productId: string;

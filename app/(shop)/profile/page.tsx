@@ -184,12 +184,14 @@ function ProfileContent() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [searched, setSearched] = useState(false);
 
   async function loadOrders(nextPhone = phone) {
     const normalized = nextPhone.replace(/\D/g, "");
     if (normalized.length < 9) {
       setMessage(lang === "th" ? "กรุณากรอกเบอร์โทรให้ถูกต้อง" : "Enter a valid phone number.");
       setOrders([]);
+      setSearched(false);
       return;
     }
     setLoading(true);
@@ -197,10 +199,11 @@ function ProfileContent() {
     try {
       const orders = await fetchOrdersByPhone(normalized);
       setOrders(orders);
+      setSearched(true);
       localStorage.setItem("shop-last-phone", normalized);
-      if (!orders.length) setMessage(lang === "th" ? "ยังไม่พบคำสั่งซื้อของเบอร์นี้" : "No orders found for this phone.");
     } catch (err) {
       setOrders([]);
+      setSearched(false);
       setMessage(err instanceof Error ? err.message : "Unable to load orders");
     } finally {
       setLoading(false);
@@ -262,11 +265,27 @@ function ProfileContent() {
           </div>
         )}
 
-        <div className="flex flex-col gap-4">
-          {orders.map((order) => (
-            <OrderCard key={order.id} order={order} lang={lang} />
-          ))}
-        </div>
+        {searched && !loading && orders.length === 0 ? (
+          <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 text-center">
+            <div className="w-20 h-20 rounded-3xl bg-gray-100 flex items-center justify-center">
+              <Package className="w-9 h-9 text-gray-400" />
+            </div>
+            <div>
+              <p className="text-lg font-black text-gray-900">
+                {lang === "th" ? "ยังไม่มีคำสั่งซื้อเลย" : "No orders yet"}
+              </p>
+              <p className="mt-1 text-sm text-gray-400 font-medium">
+                {lang === "th" ? "ลองเช็กว่าใช้เบอร์เดียวกับตอนสั่งซื้อไหมนะ" : "Make sure it's the phone you used at checkout"}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {orders.map((order) => (
+              <OrderCard key={order.id} order={order} lang={lang} />
+            ))}
+          </div>
+        )}
       </div>
     </main>
   );

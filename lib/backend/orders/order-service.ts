@@ -3,6 +3,7 @@ import { getDb } from "@/lib/backend/mongodb";
 import { createOrderSchema, imageUrlSchema, parseOrThrow } from "@/lib/validation/schemas";
 import { assertText, assertObjectId, now, normalizeOptions } from "@/lib/backend/validation-utils";
 import { publishOrdersUpdated } from "@/lib/backend/admin-realtime";
+import { calcShippingFee } from "@/lib/config/shipping";
 import { sendEmail, trackingNumberEmail } from "@/lib/backend/email-service";
 import { getOrdersCollection } from "./order-module";
 import type {
@@ -162,13 +163,14 @@ export async function createOrder(input: CreateOrderInput) {
 
   const subtotal = storedItems.reduce((sum, item) => sum + item._price * item.quantity, 0);
   const deliveryMode = parsed.deliveryMode ?? "delivery";
-  const shippingFee = deliveryMode === "pickup"
-    ? 0
-    : storedItems.reduce(
-      (sum, item) =>
-        sum + item._shippingFirstItem + item._shippingAdditionalItem * Math.max(0, item.quantity - 1),
-      0,
-    );
+  const shippingFee = calcShippingFee(
+    storedItems.map((item) => ({
+      quantity: item.quantity,
+      shippingFirstItem: item._shippingFirstItem,
+      shippingAdditionalItem: item._shippingAdditionalItem,
+    })),
+    deliveryMode,
+  );
   const total = subtotal + shippingFee;
 
   const timestamp = now();

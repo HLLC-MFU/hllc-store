@@ -64,7 +64,7 @@ export const orderResponseSchema = orderCommonResponseSchema.extend({
   slip: z.object({
     imageUrl: z.string().optional(),
     status: slipStatusResponseSchema,
-    paidAt: z.string().optional(),
+    paidAt: z.string().nullable().optional(),
   }),
   adminNotes: z.array(z.object({ text: z.string(), by: z.string(), at: z.string(), action: z.string() })).optional(),
 });

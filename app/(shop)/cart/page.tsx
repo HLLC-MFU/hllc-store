@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, ShoppingCart } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { useCart, type CartItem } from "@/lib/client/cart";
 import { useLanguage } from "@/lib/client/language-context";
 import { safeParseWithLang, checkoutFormSchema, normalizePhone, normalizeEmail } from "@/lib/validation/schemas-i18n";
 import type { Lang } from "@/lib/validation/schemas-i18n";
 import { attachPaymentSlip, cancelPublicOrder, createOrder } from "@/lib/modules/orders";
+import { fetchStoreProducts } from "@/lib/modules/products/api";
+import { calcShippingFee } from "@/lib/config/shipping";
 import { SwipeableCartItem, itemKey } from "@/components/shop/cart/swipeable-cart-item";
 import { ReceiptView } from "@/components/shop/cart/receipt-view";
 import { CartSummaryPanel } from "./components/CartSummaryPanel";
@@ -38,13 +40,8 @@ function saveOrderLookup(orderId: string, phone: string) {
   } catch { }
 }
 
-function itemShippingFee(item: CartItem) {
-  if (item.quantity <= 0) return 0;
-  return (item.shippingFirstItem ?? 0) + (item.shippingAdditionalItem ?? 0) * Math.max(0, item.quantity - 1);
-}
-
 export default function CartPage() {
-  const { items, updateQty, removeItem, clearCart } = useCart();
+  const { items, updateQty, removeItem, clearCart, syncFromProducts } = useCart();
   const { lang, t } = useLanguage();
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
@@ -59,13 +56,18 @@ export default function CartPage() {
   const autoSelected = useRef(false);
   useEffect(() => {
     if (autoSelected.current || items.length === 0) return;
-    const isSelectAll = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("selectAll") === "1";
-    if (isSelectAll) {
-      autoSelected.current = true;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedIds(new Set(items.map(itemKey)));
-    }
+    autoSelected.current = true;
+    setSelectedIds(new Set(items.map(itemKey)));
   }, [items]);
+
+  // Refresh cart lines against the latest product data once on open, so admin
+  // price/shipping/stock edits apply without removing and re-adding the item.
+  const synced = useRef(false);
+  useEffect(() => {
+    if (synced.current) return;
+    synced.current = true;
+    fetchStoreProducts().then(syncFromProducts).catch(() => {});
+  }, [syncFromProducts]);
 
   const toggleSelectAll = useCallback(() => {
     setSelectedIds(allSelected ? new Set() : new Set(items.map(itemKey)));
@@ -88,18 +90,21 @@ export default function CartPage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const pendingFormRef = useRef<FormData | null>(null);
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("delivery");
-  const [copiedAccount, setCopiedAccount] = useState(false);
   const [name, setName] = useState(() => { try { return localStorage.getItem("checkout-name") ?? ""; } catch { return ""; } });
   const [email, setEmail] = useState(() => { try { return localStorage.getItem("checkout-email") ?? ""; } catch { return ""; } });
   const [phone, setPhone] = useState(() => { try { return localStorage.getItem("checkout-phone") ?? ""; } catch { return ""; } });
   const [address, setAddress] = useState(() => { try { return localStorage.getItem("checkout-address") ?? ""; } catch { return ""; } });
   const [district, setDistrict] = useState(() => { try { return localStorage.getItem("checkout-district") ?? ""; } catch { return ""; } });
   const [province, setProvince] = useState(() => { try { return localStorage.getItem("checkout-province") ?? ""; } catch { return ""; } });
+  const [subDistrict, setSubDistrict] = useState(() => { try { return localStorage.getItem("checkout-subDistrict") ?? ""; } catch { return ""; } });
   const [postalCode, setPostalCode] = useState(() => { try { return localStorage.getItem("checkout-postalCode") ?? ""; } catch { return ""; } });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const selectedShippingFee = useMemo(() => deliveryMode === "pickup" ? 0 : selectedItems.reduce((sum, item) => sum + itemShippingFee(item), 0), [deliveryMode, selectedItems]);
+  const selectedShippingFee = useMemo(() => calcShippingFee(selectedItems, deliveryMode, { province, postalCode }), [selectedItems, deliveryMode, province, postalCode]);
   const selectedPayableTotal = selectedTotal + selectedShippingFee;
+  // Cart preview: delivery-rate base from each product's own shipping fee, before
+  // any special-area surcharge (which needs the province entered at checkout).
+  const baseShippingPreview = useMemo(() => calcShippingFee(selectedItems, "delivery"), [selectedItems]);
 
   const confirmRemoveText = useMemo(() => lang === "th" ? "ต้องการลบสินค้านี้ออกจากตะกร้าใช่ไหม?" : "Remove this item from cart?", [lang]);
 
@@ -134,19 +139,14 @@ export default function CartPage() {
     reader.readAsDataURL(file);
   }, [lang]);
 
-  const goPayment = useCallback(() => {
+  const goInfo = useCallback(() => {
     if (!selectedItems.length) { setMessage(lang === "th" ? "กรุณาเลือกสินค้าก่อน" : "Please select items first."); return; }
-    setMessage(""); setStep("payment");
+    setMessage(""); setStep("info");
   }, [selectedItems.length, lang]);
 
-  const copyBankAccount = useCallback(async () => {
-    try { await navigator.clipboard.writeText("6621540027"); setCopiedAccount(true); window.setTimeout(() => setCopiedAccount(false), 1800); }
-    catch { setMessage(lang === "th" ? "คัดลอกเลขบัญชีไม่สำเร็จ" : "Unable to copy account number."); }
-  }, [lang]);
-
-  const goInfo = useCallback(() => {
+  const confirmPayment = useCallback(() => {
     if (!slipImage) { setMessage(lang === "th" ? "กรุณาอัปโหลดสลิปก่อน" : "Please upload a payment slip first."); return; }
-    setMessage(""); setStep("info");
+    setMessage(""); setShowConfirmModal(true);
   }, [slipImage, lang]);
 
   const handleCheckout = useCallback((event: React.FormEvent<HTMLFormElement>) => {
@@ -174,7 +174,7 @@ export default function CartPage() {
       return;
     }
     pendingFormRef.current = formData;
-    setShowConfirmModal(true);
+    setMessage(""); setStep("payment");
   }, [loading, items.length, deliveryMode, lang, phone, email, province]);
 
   const submitOrder = useCallback(async () => {
@@ -187,12 +187,13 @@ export default function CartPage() {
     const rawEmail = String(formData.get("email") ?? "").trim().toLowerCase();
     const address = String(formData.get("address") ?? "").trim();
     const district = String(formData.get("district") ?? "").trim();
+    const sub = String(formData.get("subDistrict") ?? "").trim();
     const prov = String(formData.get("province") ?? "").trim();
     const postal = String(formData.get("postalCode") ?? "").trim();
     const pickupTime = String(formData.get("pickupTime") ?? "").trim();
     const fullAddress = deliveryMode === "pickup"
       ? `รับเองที่ D1${pickupTime ? ` เวลา ${pickupTime}` : ""}`
-      : [address, district, prov, postal].filter(Boolean).join(" ");
+      : [address, sub, district, prov, postal].filter(Boolean).join(" ");
     try {
       const order = await createOrder({
         customer: { name, phone: rawPhone, email: rawEmail, address: fullAddress },
@@ -248,24 +249,12 @@ export default function CartPage() {
         )}
 
         {step === "cart" && !!items.length && (
-          <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+          <>
             {/* Item list */}
             <section className="space-y-3">
-              {items.length > 0 && (
-                <div className="flex items-center justify-between mb-3">
-                  <button type="button" onClick={toggleSelectAll}
-                    className="flex items-center gap-2 h-10 px-2 -mx-2 rounded-xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer select-none"
-                    aria-label={lang === "th" ? "เลือกรายการทั้งหมด" : "Select all items"}
-                    aria-checked={allSelected} role="checkbox"
-                  >
-                    <div className={`h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-colors ${allSelected ? "bg-[#85241F] border-[#85241F]" : "border-gray-300 bg-white"}`}>
-                      {allSelected && <Check className="h-3.5 w-3.5 text-white" />}
-                    </div>
-                    <span className="text-sm font-bold text-gray-700">{lang === "th" ? "เลือกทั้งหมด" : "Select all"}</span>
-                  </button>
-                  <span className="text-sm text-gray-400">{items.length} {lang === "th" ? "รายการ" : `item${items.length > 1 ? "s" : ""}`}</span>
-                </div>
-              )}
+              <div className="mb-3 flex items-center justify-end">
+                <span className="text-sm text-gray-400">{items.length} {lang === "th" ? "รายการ" : `item${items.length > 1 ? "s" : ""}`}</span>
+              </div>
               <div className="space-y-3">
                 {items.map((item) => (
                   <SwipeableCartItem
@@ -276,43 +265,44 @@ export default function CartPage() {
                   />
                 ))}
               </div>
-            </section>
 
             <CartSummaryPanel
-              lang={lang} t={t}
+              lang={lang}
+              allSelected={allSelected} onToggleSelectAll={toggleSelectAll}
               selectedCount={selectedCount} selectedTotal={selectedTotal}
-              selectedShippingFee={selectedShippingFee} selectedPayableTotal={selectedPayableTotal}
-              deliveryMode={deliveryMode} setDeliveryMode={setDeliveryMode}
-              onPay={goPayment} items={items}
+              baseShipping={baseShippingPreview}
+              onPay={goInfo} items={items}
             />
-          </div>
+            </section>
+          </>
         )}
 
         {step === "payment" && (
           <PaymentStep
             lang={lang} t={t}
             selectedPayableTotal={selectedPayableTotal} selectedShippingFee={selectedShippingFee}
-            copiedAccount={copiedAccount} slipPreview={slipPreview} slipError={slipError}
-            onCopyAccount={copyBankAccount} onSlipFile={handleSlipFile}
+            slipPreview={slipPreview} slipError={slipError}
+            onSlipFile={handleSlipFile}
             onClearSlip={() => { setSlipPreview(""); setSlipImage(""); setSlipError(""); }}
-            onBack={() => setStep("cart")} onContinue={goInfo}
+            onBack={() => setStep("info")} onContinue={confirmPayment}
           />
         )}
 
         {step === "info" && (
           <InfoStep
-            lang={lang} t={t} deliveryMode={deliveryMode}
+            lang={lang} t={t} deliveryMode={deliveryMode} setDeliveryMode={setDeliveryMode}
             name={name} setName={(v) => { setName(v); try { localStorage.setItem("checkout-name", v); } catch {} }}
             phone={phone} setPhone={(v) => { setPhone(v); try { localStorage.setItem("checkout-phone", v); } catch {} }}
             email={email} setEmail={(v) => { setEmail(v); try { localStorage.setItem("checkout-email", v); } catch {} }}
             address={address} setAddress={(v) => { setAddress(v); try { localStorage.setItem("checkout-address", v); } catch {} }}
             district={district} setDistrict={(v) => { setDistrict(v); try { localStorage.setItem("checkout-district", v); } catch {} }}
             province={province} setProvince={(v) => { setProvince(v); try { localStorage.setItem("checkout-province", v); } catch {} }}
+            subDistrict={subDistrict} setSubDistrict={(v) => { setSubDistrict(v); try { localStorage.setItem("checkout-subDistrict", v); } catch {} }}
             postalCode={postalCode} setPostalCode={(v) => { setPostalCode(v); try { localStorage.setItem("checkout-postalCode", v); } catch {} }}
             fieldErrors={fieldErrors} loading={loading}
             selectedCount={selectedCount} selectedTotal={selectedTotal}
             selectedShippingFee={selectedShippingFee} selectedPayableTotal={selectedPayableTotal}
-            itemsLength={items.length} onBack={() => setStep("payment")} onSubmit={handleCheckout}
+            itemsLength={items.length} onBack={() => setStep("cart")} onSubmit={handleCheckout}
           />
         )}
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 
 export type LocalizedText = {
   th: string;
@@ -20,11 +20,24 @@ export type CartItem = {
   quantity: number;
 };
 
+export type ProductSync = {
+  id: string;
+  name: LocalizedText;
+  description?: LocalizedText;
+  price: number;
+  stock: number;
+  shippingFirstItem?: number;
+  shippingAdditionalItem?: number;
+  imageUrl?: string;
+  options?: { label: string; imageUrl?: string; stock?: number }[];
+};
+
 type CartContextType = {
   items: CartItem[];
   addItem: (item: Omit<CartItem, "quantity">) => void;
   removeItem: (productId: string, selectedOption?: string) => void;
   updateQty: (productId: string, qty: number, selectedOption?: string) => void;
+  syncFromProducts: (products: ProductSync[]) => void;
   clearCart: () => void;
   total: number;
   count: number;
@@ -95,6 +108,32 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
   }
 
+  // Refresh stored cart lines against the latest product data (price, shipping,
+  // stock, name, image) so edits in the admin reflect without re-adding.
+  const syncFromProducts = useCallback((products: ProductSync[]) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        const product = products.find((p) => p.id === item.productId);
+        if (!product) return item;
+        const option = item.selectedOption
+          ? product.options?.find((o) => o.label === item.selectedOption)
+          : undefined;
+        const stock = option ? (option.stock ?? product.stock) : product.stock;
+        return {
+          ...item,
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          shippingFirstItem: product.shippingFirstItem,
+          shippingAdditionalItem: product.shippingAdditionalItem,
+          stock,
+          imageUrl: option?.imageUrl ?? product.imageUrl ?? item.imageUrl,
+          quantity: stock > 0 ? Math.min(item.quantity, stock) : item.quantity,
+        };
+      }),
+    );
+  }, []);
+
   function clearCart() {
     setItems([]);
   }
@@ -104,7 +143,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   return (
     <CartContext.Provider
-      value={{ items, addItem, removeItem, updateQty, clearCart, total, count }}
+      value={{ items, addItem, removeItem, updateQty, syncFromProducts, clearCart, total, count }}
     >
       {children}
     </CartContext.Provider>

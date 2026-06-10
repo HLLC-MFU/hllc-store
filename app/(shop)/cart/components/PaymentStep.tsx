@@ -1,24 +1,20 @@
 "use client";
 
-import { useRef } from "react";
-import { ArrowLeft, Check, Copy, Upload, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, Check, Copy, Landmark, Upload, X } from "lucide-react";
+import { CheckoutFooter } from "./CheckoutFooter";
+import { fetchPaymentSettings, type PaymentSettings } from "@/lib/modules/settings";
 
 const fmt = new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 });
 const money = (v: number) => fmt.format(v);
-
-const BANK_ACCOUNT_NAME = "นันทเดช วงศ์ไชยา";
-const BANK_ACCOUNT_NUMBER = "6621540027";
 
 type Props = {
   lang: "th" | "en";
   t: (key: string) => string;
   selectedPayableTotal: number;
   selectedShippingFee: number;
-  copiedAccount: boolean;
   slipPreview: string;
   slipError: string;
-  onCopyAccount: () => void;
   onSlipFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onClearSlip: () => void;
   onBack: () => void;
@@ -27,16 +23,32 @@ type Props = {
 
 export function PaymentStep({
   lang, t, selectedPayableTotal, selectedShippingFee,
-  copiedAccount, slipPreview, slipError, onCopyAccount, onSlipFile,
-  onClearSlip, onBack, onContinue,
+  slipPreview, slipError, onSlipFile, onClearSlip, onBack, onContinue,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [settings, setSettings] = useState<PaymentSettings | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    fetchPaymentSettings().then((s) => { if (alive) setSettings(s); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  async function copyAccount() {
+    if (!settings) return;
+    try {
+      await navigator.clipboard.writeText(settings.bankAccountNumber.replace(/-/g, ""));
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {}
+  }
 
   return (
-    <section className="mx-auto max-w-xl rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-      <button onClick={onBack} className="mb-4 inline-flex items-center gap-2 text-xs font-bold text-gray-500">
+    <section className="mx-auto max-w-xl pb-24 animate-in fade-in slide-in-from-bottom-2 duration-200">
+      <button onClick={onBack} className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-gray-700 transition-colors">
         <ArrowLeft className="h-4 w-4" />
-        {lang === "th" ? "กลับตะกร้า" : "Back to cart"}
+        {lang === "th" ? "กลับ" : "Back"}
       </button>
 
       <div className="mb-4 rounded-2xl bg-[#85241F]/5 p-4 text-center">
@@ -50,33 +62,38 @@ export function PaymentStep({
         )}
       </div>
 
-      <div className={`mb-4 rounded-2xl border p-3 transition-all duration-300 ${copiedAccount ? "border-emerald-500 bg-emerald-50/70 ring-1 ring-emerald-500/10" : "border-[#1E63B6]/10 bg-[#1E63B6]/5"}`}>
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-[#1E63B6]/10 relative">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/bangkokBank.jpg" alt="Bangkok Bank" className="h-full w-full object-cover scale-110" />
+      {!settings ? (
+        <div className="mb-4 h-28 animate-pulse rounded-2xl bg-gray-100" />
+      ) : (
+        <div className={`mb-4 rounded-2xl border p-3 transition-all duration-300 ${copied ? "border-emerald-500 bg-emerald-50/70 ring-1 ring-emerald-500/10" : "border-gray-200 bg-gray-50"}`}>
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#85241F]/10 text-[#85241F]">
+              <Landmark className="h-6 w-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-black uppercase text-gray-400">
+                {lang === "th" ? "บัญชีรับชำระ" : "Payment account"}
+              </p>
+              <p className="mt-0.5 text-sm font-black text-gray-950">{settings.bankName}</p>
+              <p className="mt-1 truncate text-xs font-bold text-gray-500">{settings.bankAccountName}</p>
+              <p className="mt-1 font-mono text-lg font-black tracking-wide text-[#85241F]">{settings.bankAccountNumber}</p>
+            </div>
+            <button
+              type="button"
+              onClick={copyAccount}
+              className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-xs font-black text-gray-700 shadow-sm hover:bg-gray-50"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? (lang === "th" ? "คัดลอกแล้ว" : "Copied") : (lang === "th" ? "คัดลอก" : "Copy")}
+            </button>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-black uppercase text-[#1E63B6]">
-              {lang === "th" ? "บัญชีรับชำระ" : "Payment account"}
-            </p>
-            <p className="mt-0.5 text-sm font-black text-gray-950">
-              {lang === "th" ? "ธนาคารกรุงเทพ" : "Bangkok Bank"}
-            </p>
-            <p className="mt-1 truncate text-xs font-bold text-gray-500">{BANK_ACCOUNT_NAME}</p>
-            <p className="mt-1 font-mono text-lg font-black tracking-wide text-[#85241F]">{BANK_ACCOUNT_NUMBER}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onCopyAccount}
-            className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-[#1E63B6]/20 bg-white px-3 text-xs font-black text-[#1E63B6] shadow-sm hover:bg-[#1E63B6]/5"
-          >
-            {copiedAccount ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-            {copiedAccount ? (lang === "th" ? "คัดลอกแล้ว" : "Copied") : (lang === "th" ? "คัดลอก" : "Copy")}
-          </button>
         </div>
-      </div>
+      )}
 
+      {/* Slip upload */}
+      <p className="mb-1.5 px-1 text-xs font-black text-gray-400">
+        {lang === "th" ? "แนบสลิปการโอน" : "Attach payment slip"}
+      </p>
       <div className={`rounded-xl border border-dashed p-3 ${slipError ? "border-red-300 bg-red-50/30" : "border-gray-200"}`}>
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={onSlipFile} />
         {slipPreview ? (
@@ -107,9 +124,13 @@ export function PaymentStep({
         </p>
       )}
 
-      <Button onClick={onContinue} className="mt-4 h-12 w-full rounded-xl bg-[#85241F] text-sm font-black hover:bg-[#B72D2A]">
-        {t("checkout.continue")}
-      </Button>
+      <CheckoutFooter
+        lang={lang}
+        total={selectedPayableTotal}
+        shippingFee={selectedShippingFee}
+        buttonLabel={t("checkout.confirm_button")}
+        onButtonClick={onContinue}
+      />
     </section>
   );
 }

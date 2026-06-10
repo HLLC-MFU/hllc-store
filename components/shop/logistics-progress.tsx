@@ -23,7 +23,6 @@ const STEPS: { status: StepStatus; th: string; en: string; Icon: React.ElementTy
   { status: "payment_review", th: "ยืนยันชำระเงิน", en: "Payment confirmed", Icon: FileCheck2 },
   { status: "packing",        th: "กำลังแพ็คสินค้า", en: "Packing",           Icon: Package   },
   { status: "shipped",        th: "จัดส่งแล้ว",       en: "On the way",        Icon: Truck     },
-  { status: "completed",      th: "ถึงมือแล้ว",       en: "Delivered",         Icon: CheckCircle2 },
 ];
 
 const STATUS_META: Record<OrderStatus, { th: string; en: string; color: string; bg: string; icon: React.ElementType }> = {

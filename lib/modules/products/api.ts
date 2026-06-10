@@ -6,6 +6,15 @@ export function fetchAdminProducts() {
   return apiValidated(z.array(productResponseSchema), "/api/backend/admin/products");
 }
 
+// Storefront (anonymous): current active products, used to refresh cart items
+// against the latest price / shipping / stock.
+export async function fetchStoreProducts(): Promise<Product[]> {
+  const response = await fetch("/api/backend/products", { cache: "no-store" });
+  const payload = (await response.json()) as { data?: unknown; error?: string };
+  if (!response.ok) throw new Error(payload.error ?? "Unable to load products");
+  return z.array(productResponseSchema).parse(payload.data ?? []);
+}
+
 export function createProduct(input: ProductInput) {
   return apiValidated(productResponseSchema, "/api/backend/admin/products", {
     method: "POST",

@@ -16,6 +16,9 @@ import * as ordersApi from "@/lib/modules/orders";
 import * as productsApi from "@/lib/modules/products";
 import * as adminUsersApi from "@/lib/modules/admin-users";
 import type { AdminRole, AdminUser, AuditLog, CurrentAdmin } from "@/lib/modules/admin-users";
+import * as settingsApi from "@/lib/modules/settings";
+import type { PaymentSettings } from "@/lib/modules/settings";
+import { PaymentAccountPanel } from "@/components/admin/payment-account-panel";
 import AddProductForm from "@/components/admin/add-product-form";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AppHeader, type NavItem } from "@/components/shared/app-header";
@@ -38,6 +41,7 @@ export default function AdminPage() {
   const [lightbox, setLightbox] = React.useState<string | null>(null);
   const [adminUsers, setAdminUsers] = React.useState<AdminUser[]>([]);
   const [auditLogs, setAuditLogs] = React.useState<AuditLog[]>([]);
+  const [paymentSettings, setPaymentSettings] = React.useState<PaymentSettings | null>(null);
   const { lang, t } = useLanguage();
 
   const [loading, setLoading] = React.useState(false);
@@ -74,13 +78,25 @@ export default function AdminPage() {
   const loadSuperAdminData = React.useCallback(async () => {
     if (currentUser?.role !== "superAdmin") return;
 
-    const [usersRes, logsRes] = await Promise.all([
+    const [usersRes, logsRes, settingsRes] = await Promise.all([
       adminUsersApi.fetchAdminUsers(),
       adminUsersApi.fetchAuditLogs(),
+      settingsApi.fetchAdminPaymentSettings(),
     ]);
     if (usersRes.data) setAdminUsers(usersRes.data);
     if (logsRes.data) setAuditLogs(logsRes.data);
+    if (settingsRes.data) setPaymentSettings(settingsRes.data);
   }, [currentUser]);
+
+  const savePaymentSettings = React.useCallback(async (input: PaymentSettings) => {
+    setLoading(true);
+    const res = await settingsApi.updatePaymentSettings(input);
+    setLoading(false);
+    if (res.error) { notify(res.error); return; }
+    if (res.data) setPaymentSettings(res.data);
+    notify(lang === "th" ? "บันทึกบัญชีรับเงินแล้ว" : "Payment account saved");
+    void loadSuperAdminData();
+  }, [lang, loadSuperAdminData]);
 
   const loadData = React.useCallback(async () => {
     setLoading(true);
@@ -404,15 +420,23 @@ export default function AdminPage() {
             </TabsContent>
             {currentUser?.role === "superAdmin" ? (
               <TabsContent value="superAdmin" className="mt-4 animate-in fade-in duration-200">
-                <SuperAdminPanel
-                  adminUsers={adminUsers}
-                  auditLogs={auditLogs}
-                  loading={loading}
-                  onCreateAccount={createAdminAccount}
-                  onDeleteUser={deleteAdminUser}
-                  onResetPassword={resetAdminPassword}
-                  currentUsername={currentUser.username}
-                />
+                <div className="flex flex-col gap-4">
+                  <PaymentAccountPanel
+                    key={paymentSettings ? "loaded" : "empty"}
+                    settings={paymentSettings}
+                    loading={loading}
+                    onSave={savePaymentSettings}
+                  />
+                  <SuperAdminPanel
+                    adminUsers={adminUsers}
+                    auditLogs={auditLogs}
+                    loading={loading}
+                    onCreateAccount={createAdminAccount}
+                    onDeleteUser={deleteAdminUser}
+                    onResetPassword={resetAdminPassword}
+                    currentUsername={currentUser.username}
+                  />
+                </div>
               </TabsContent>
             ) : null}
           </Tabs>
