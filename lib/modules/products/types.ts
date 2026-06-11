@@ -13,6 +13,10 @@ export type ProductInput = {
   stock: number;
   shippingFirstItem: number;
   shippingAdditionalItem: number;
+  remoteShippingFirstItem?: number;
+  remoteShippingAdditionalItem?: number;
+  islandShippingFirstItem?: number;
+  islandShippingAdditionalItem?: number;
   discount?: number;
   imageUrl?: string;
   imageUrls?: string[];

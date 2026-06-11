@@ -14,6 +14,7 @@ type OrderStatus =
 
 type Order = {
   status: OrderStatus;
+  slip?: { status?: string };
   updatedAt: string;
 };
 
@@ -35,6 +36,14 @@ const STATUS_META: Record<OrderStatus, { th: string; en: string; color: string; 
   pending_payment:{ th: "รอชำระเงิน",         en: "Pending payment",      color: "text-gray-600",   bg: "bg-gray-50 border-gray-200",     icon: Clock        },
 };
 
+const RESUBMIT_META = {
+  th: "รอสลิปใหม่",
+  en: "Awaiting new slip",
+  color: "text-red-700",
+  bg: "bg-red-50 border-red-200",
+  icon: FileCheck2,
+};
+
 function stepIndex(status: OrderStatus) {
   if (status === "completed") return 3;
   if (status === "shipped")   return 2;
@@ -43,7 +52,9 @@ function stepIndex(status: OrderStatus) {
 }
 
 export function LogisticsProgress({ order, lang }: { order: Order; lang: "th" | "en" }) {
-  const meta = STATUS_META[order.status];
+  const meta = order.status === "pending_payment" && order.slip?.status === "rejected"
+    ? RESUBMIT_META
+    : STATUS_META[order.status];
   const StatusIcon = meta.icon;
   const currentIdx = stepIndex(order.status);
   const cancelled = order.status === "cancelled";

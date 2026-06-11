@@ -126,7 +126,7 @@ const DICTIONARY: TranslationDict = {
   // Admin Slip Review Card
   "admin.slip.view": { th: "ดูสลิป", en: "View Slip" },
   "admin.slip.approve": { th: "อนุมัติ", en: "Approve" },
-  "admin.slip.reject": { th: "ปฏิเสธ", en: "Reject" },
+  "admin.slip.reject": { th: "ขอสลิปใหม่", en: "Request New Slip" },
 
   // Admin Order Row & Stepper
   "admin.status.pending_payment": { th: "รอชำระเงิน", en: "Awaiting Payment" },
@@ -151,9 +151,9 @@ const DICTIONARY: TranslationDict = {
 
   // Admin Modals
   "admin.modal.approve_title": { th: "อนุมัติสลิปนี้?", en: "Approve this slip?" },
-  "admin.modal.reject_title": { th: "ปฏิเสธสลิปนี้?", en: "Reject this slip?" },
+  "admin.modal.reject_title": { th: "ขอสลิปใหม่?", en: "Request a new slip?" },
   "admin.modal.approve_desc": { th: "ออเดอร์จะเปลี่ยนเป็น 'ชำระแล้ว' และเริ่มแพ็คได้เลย", en: "Order will move to 'Paid' and ready to pack" },
-  "admin.modal.reject_desc": { th: "ลูกค้าจะได้รับแจ้งให้ส่งสลิปใหม่", en: "Customer will be asked to resend the slip" },
+  "admin.modal.reject_desc": { th: "ออเดอร์จะกลับไปรอสลิปใหม่ และลูกค้าจะได้รับแจ้งให้อัปโหลดอีกครั้ง", en: "Order will wait for a new slip and the customer will be asked to upload again" },
   "admin.modal.cancel": { th: "ยกเลิก", en: "Cancel" },
   "admin.modal.confirm": { th: "ยืนยัน", en: "Confirm" },
   "admin.modal.status_title": { th: "เปลี่ยนสถานะ?", en: "Change status?" },
@@ -179,7 +179,7 @@ const DICTIONARY: TranslationDict = {
 
   // Admin Toast Notifications
   "admin.toast.slip_approved": { th: "อนุมัติสลิปแล้ว ✓", en: "Slip approved ✓" },
-  "admin.toast.slip_rejected": { th: "ปฏิเสธสลิปแล้ว", en: "Slip rejected" },
+  "admin.toast.slip_rejected": { th: "ส่งกลับไปรอสลิปใหม่แล้ว", en: "Waiting for a new slip" },
   "admin.toast.product_added": { th: "เพิ่มสินค้าแล้ว ✓", en: "Product added ✓" },
   "admin.toast.product_updated": { th: "อัปเดตสินค้าแล้ว ✓", en: "Product updated ✓" },
   "admin.toast.product_deleted": { th: "ลบสินค้าแล้ว", en: "Product deleted" },

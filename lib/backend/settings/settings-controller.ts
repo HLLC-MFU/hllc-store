@@ -17,3 +17,20 @@ export async function updatePaymentSettings(request: Request) {
     return badRequest(error);
   }
 }
+
+export async function getShippingSettings() {
+  try {
+    return ok(await settingsService.getShippingSettings());
+  } catch (error) {
+    return badRequest(error);
+  }
+}
+
+export async function updateShippingSettings(request: Request) {
+  try {
+    const body = await request.json();
+    return ok(await settingsService.updateShippingSettings(body));
+  } catch (error) {
+    return badRequest(error);
+  }
+}

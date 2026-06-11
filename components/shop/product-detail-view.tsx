@@ -29,6 +29,10 @@ export type ProductDetailProduct = {
   imageUrls?: string[];
   shippingFirstItem?: number;
   shippingAdditionalItem?: number;
+  remoteShippingFirstItem?: number;
+  remoteShippingAdditionalItem?: number;
+  islandShippingFirstItem?: number;
+  islandShippingAdditionalItem?: number;
 };
 
 const currencyFormatter = new Intl.NumberFormat("th-TH", {
@@ -113,6 +117,10 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         stock: selectedOptionStock,
         shippingFirstItem: product.shippingFirstItem ?? 0,
         shippingAdditionalItem: product.shippingAdditionalItem ?? 0,
+        remoteShippingFirstItem: product.remoteShippingFirstItem ?? 0,
+        remoteShippingAdditionalItem: product.remoteShippingAdditionalItem ?? 0,
+        islandShippingFirstItem: product.islandShippingFirstItem ?? 0,
+        islandShippingAdditionalItem: product.islandShippingAdditionalItem ?? 0,
         imageUrl: displayImages[0] ?? "",
         selectedOption: selectedOption?.label ?? "",
       });

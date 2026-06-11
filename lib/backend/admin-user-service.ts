@@ -215,6 +215,7 @@ function actionLabel(action: string) {
     "slip.approved": "Approved payment slip",
     "slip.rejected": "Rejected payment slip",
     "payment_settings.updated": "Updated payment account",
+    "shipping_settings.updated": "Updated shipping rates",
   };
 
   return labels[action] ?? action;

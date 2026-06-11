@@ -188,7 +188,7 @@ export function InfoStep({
         lang={lang}
         total={selectedPayableTotal}
         shippingFee={selectedShippingFee}
-        buttonLabel={lang === "th" ? "ไปหน้าชำระเงิน" : "Continue to payment"}
+        buttonLabel={lang === "th" ? "ไปหน้าชำระเงิน" : "Proceed to pay"}
         buttonType="submit"
         formId="checkout-info-form"
         disabled={!itemsLength}

@@ -119,150 +119,146 @@ function siteUrl() {
   return readEnv("NEXT_PUBLIC_SITE_URL") || readEnv("SITE_URL") || "http://localhost:3000";
 }
 
-function slipApprovedHtml(customerName: string, orderId: string, customerPhone?: string) {
-  const orderCode = orderId.slice(-6).toUpperCase();
-  const trackingUrl = `${siteUrl().replace(/\/$/, "")}/profile${customerPhone ? `?customerPhone=${encodeURIComponent(customerPhone)}` : ""}`;
-
-  return `<div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #eeeeee;border-radius:18px;overflow:hidden;font-family:Arial,'Noto Sans Thai',sans-serif;color:#111827;">
-  <div style="background:linear-gradient(135deg,#166534,#22c55e);padding:28px 24px;text-align:center;">
-    <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:800;letter-spacing:.5px;">HLLC Store</h1>
-    <p style="margin:8px 0 0;color:#dcfce7;font-size:14px;">Slip Approval Notification</p>
-  </div>
-  <div style="padding:28px 24px;text-align:center;">
-    <div style="display:inline-block;background:#dcfce7;color:#166534;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:bold;margin-bottom:16px;">Payment Approved</div>
-    <h2 style="margin:0;color:#111827;font-size:22px;font-weight:800;">สลิปผ่านการอนุมัติแล้ว</h2>
-    <p style="margin:14px 0 0;color:#4b5563;font-size:15px;line-height:1.7;">
-      สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>
-      ระบบ <b>HLLC Store</b> ได้ตรวจสอบสลิปการชำระเงินของคุณเรียบร้อยแล้ว<br>
-      สถานะคำสั่งซื้อ <b>#${escapeHtml(orderCode)}</b> ของคุณได้รับการอนุมัติสำเร็จ
-    </p>
-  </div>
-  <div style="padding:0 24px 24px;">
-    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;padding:18px;">
-      <p style="margin:0 0 10px;color:#6b7280;font-size:13px;">รายละเอียดการอนุมัติ</p>
-      <table style="width:100%;border-collapse:collapse;font-size:14px;">
-        <tr>
-          <td style="padding:8px 0;color:#6b7280;">สถานะสลิป</td>
-          <td style="padding:8px 0;text-align:right;color:#16a34a;font-weight:bold;">อนุมัติแล้ว</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#6b7280;">ระบบ</td>
-          <td style="padding:8px 0;text-align:right;color:#111827;font-weight:bold;">HLLC Store</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#6b7280;">ประเภท</td>
-          <td style="padding:8px 0;text-align:right;color:#111827;font-weight:bold;">Payment Slip</td>
-        </tr>
-      </table>
-    </div>
-  </div>
-  <div style="padding:0 24px 28px;text-align:center;">
-    <a href="${escapeHtml(trackingUrl)}" style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;border-radius:12px;padding:13px 24px;font-size:14px;font-weight:bold;">ดูรายละเอียดคำสั่งซื้อ / ติดตามพัสดุ</a>
-  </div>
-  <div style="background:#f9fafb;border-top:1px solid #eeeeee;padding:18px 24px;text-align:center;">
-    <p style="margin:0;color:#9ca3af;font-size:12px;line-height:1.6;">
-      อีเมลนี้ถูกส่งอัตโนมัติจากระบบ HLLC Store<br>
-      กรุณาอย่าตอบกลับอีเมลฉบับนี้
-    </p>
-  </div>
-</div>`;
+// ── Shared base template ─────────────────────────────────────────────────────
+function trackingUrl(customerPhone?: string) {
+  return `${siteUrl().replace(/\/$/, "")}/profile${customerPhone ? `?customerPhone=${encodeURIComponent(customerPhone)}` : ""}`;
 }
 
-function statusEmailHtml({
-  badge,
-  badgeBg,
-  badgeColor,
-  buttonColor,
-  customerName,
-  description,
-  detailRows,
-  headline,
-  orderId,
-  subtitle,
-  customerPhone,
-}: {
+const CTA_LABEL = "ดูคำสั่งซื้อ / ติดตามสถานะ";
+
+type BaseEmailOptions = {
   badge: string;
   badgeBg: string;
   badgeColor: string;
-  buttonColor: string;
-  customerName: string;
-  description: string;
-  detailRows: { label: string; value: string; color?: string }[];
+  alert: string;
+  icon: "check" | "alert" | "arrow" | "target" | "x";
   headline: string;
-  orderId: string;
-  subtitle: string;
+  /** HTML allowed — escape dynamic parts at the call site. */
+  intro: string;
+  detailRows: { label: string; value: string; color?: string }[];
+  note?: { label: string; text: string };
   customerPhone?: string;
-}) {
-  const orderCode = orderId.slice(-6).toUpperCase();
-  const trackingUrl = `${siteUrl().replace(/\/$/, "")}/profile${customerPhone ? `?customerPhone=${encodeURIComponent(customerPhone)}` : ""}`;
-  const rows = detailRows
-    .map((row) => `<tr>
-          <td style="padding:8px 0;color:#6b7280;">${escapeHtml(row.label)}</td>
-          <td style="padding:8px 0;text-align:right;color:${row.color ?? "#111827"};font-weight:bold;">${escapeHtml(row.value)}</td>
-        </tr>`)
+};
+
+function baseEmailHtml(opts: BaseEmailOptions) {
+  const rows = opts.detailRows
+    .map((row) => `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 10px;border-collapse:separate;border-spacing:0;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;">
+        <tr>
+          <td style="padding:11px 13px;color:#6b7280;font-size:12px;font-weight:700;line-height:1.4;">${escapeHtml(row.label)}</td>
+          <td align="right" style="padding:11px 13px;color:${row.color ?? "#111827"};font-size:13px;font-weight:800;line-height:1.4;">${escapeHtml(row.value)}</td>
+        </tr>
+      </table>`)
     .join("");
 
-  return `<div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #eeeeee;border-radius:18px;overflow:hidden;font-family:Arial,'Noto Sans Thai',sans-serif;color:#111827;">
-  <div style="background:linear-gradient(135deg,#111827,#374151);padding:28px 24px;text-align:center;">
-    <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:800;letter-spacing:.5px;">HLLC Store</h1>
-    <p style="margin:8px 0 0;color:#e5e7eb;font-size:14px;">${escapeHtml(subtitle)}</p>
-  </div>
-  <div style="padding:28px 24px;text-align:center;">
-    <div style="display:inline-block;background:${badgeBg};color:${badgeColor};border-radius:999px;padding:8px 14px;font-size:13px;font-weight:bold;margin-bottom:16px;">${escapeHtml(badge)}</div>
-    <h2 style="margin:0;color:#111827;font-size:22px;font-weight:800;">${escapeHtml(headline)}</h2>
-    <p style="margin:14px 0 0;color:#4b5563;font-size:15px;line-height:1.7;">
-      สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>
-      ${description}<br>
-      หมายเลขคำสั่งซื้อ <b>#${escapeHtml(orderCode)}</b>
-    </p>
-  </div>
-  <div style="padding:0 24px 24px;">
-    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;padding:18px;">
-      <p style="margin:0 0 10px;color:#6b7280;font-size:13px;">รายละเอียด</p>
-      <table style="width:100%;border-collapse:collapse;font-size:14px;">${rows}</table>
-    </div>
-  </div>
-  <div style="padding:0 24px 28px;text-align:center;">
-    <a href="${escapeHtml(trackingUrl)}" style="display:inline-block;background:${buttonColor};color:#ffffff;text-decoration:none;border-radius:12px;padding:13px 24px;font-size:14px;font-weight:bold;">ดูรายละเอียดคำสั่งซื้อ / ติดตามพัสดุ</a>
-  </div>
-  <div style="background:#f9fafb;border-top:1px solid #eeeeee;padding:18px 24px;text-align:center;">
-    <p style="margin:0;color:#9ca3af;font-size:12px;line-height:1.6;">
-      อีเมลนี้ถูกส่งอัตโนมัติจากระบบ HLLC Store<br>
-      กรุณาอย่าตอบกลับอีเมลฉบับนี้
-    </p>
-  </div>
+  const noteBlock = opts.note
+    ? `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;border-collapse:separate;border-spacing:0;background:#ffffff;border:1px solid #e5e7eb;border-left:4px solid #a52a25;border-radius:10px;">
+        <tr>
+          <td style="padding:13px 15px;">
+            <div style="color:#8f2924;font-size:12px;font-weight:800;line-height:1.45;">${escapeHtml(opts.note.label)}</div>
+            <div style="margin-top:6px;color:#4b5563;font-size:13px;font-weight:700;line-height:1.55;white-space:pre-line;">${escapeHtml(opts.note.text)}</div>
+          </td>
+        </tr>
+      </table>`
+    : "";
+
+  const iconGlyph = {
+    check: "&#10003;",
+    alert: "!",
+    arrow: "&#8599;",
+    target: "&#9678;",
+    x: "&#215;",
+  }[opts.icon];
+
+  return `<div style="margin:0;padding:8px 4px;background:#f3f4f6;font-family:Arial,'Noto Sans Thai',sans-serif;color:#111827;">
+  <table role="presentation" align="center" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;border-collapse:separate;border-spacing:0;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+    <tr>
+      <td style="padding:18px 14px;border-bottom:1px solid #e5e7eb;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+          <tr>
+            <td style="vertical-align:middle;">
+              <span style="color:#8b2420;font-size:22px;font-weight:800;letter-spacing:3px;line-height:1;white-space:nowrap;">HLLC</span>
+              <span style="color:#6b7280;font-size:10px;font-weight:700;letter-spacing:2px;line-height:1;padding-left:6px;white-space:nowrap;">ONLINE STORE</span>
+            </td>
+            <td align="right" style="vertical-align:middle;">
+              <span style="display:inline-block;background:${opts.badgeBg};color:${opts.badgeColor};border-radius:999px;padding:7px 11px;font-size:11px;font-weight:800;line-height:1.2;white-space:nowrap;">${escapeHtml(opts.badge)}</span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:18px 14px 22px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;border-collapse:separate;border-spacing:0;background:${opts.badgeBg};border-radius:12px;">
+          <tr>
+            <td width="48" align="center" style="padding:14px 0 14px 12px;">
+              <span style="display:inline-block;width:36px;height:36px;border-radius:999px;background:${opts.badgeColor};color:#ffffff;font-family:Arial,sans-serif;font-size:22px;font-weight:800;line-height:36px;text-align:center;">${iconGlyph}</span>
+            </td>
+            <td style="padding:14px 13px;color:${opts.badgeColor};font-size:14px;font-weight:800;line-height:1.45;">${escapeHtml(opts.alert)}</td>
+          </tr>
+        </table>
+        <h1 style="margin:0 0 12px;color:#111827;font-size:20px;font-weight:800;line-height:1.35;">${escapeHtml(opts.headline)}</h1>
+        <div style="margin:0 0 18px;color:#4b5563;font-size:14px;font-weight:500;line-height:1.6;">${opts.intro}</div>
+        <div style="margin:0 0 8px;">${rows}</div>
+        ${noteBlock}
+        <table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin:20px auto 26px;border-collapse:collapse;">
+          <tr>
+            <td align="center" bgcolor="#a52a25" style="border-radius:8px;">
+              <a href="${escapeHtml(trackingUrl(opts.customerPhone))}" style="display:inline-block;padding:11px 22px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:800;line-height:1.25;">${CTA_LABEL}</a>
+            </td>
+          </tr>
+        </table>
+        <div style="border-top:1px solid #e5e7eb;padding-top:16px;text-align:center;color:#9ca3af;font-size:11px;font-weight:700;line-height:1.55;">
+          อีเมลฉบับนี้ส่งโดยอัตโนมัติ กรุณาอย่าตอบกลับ<br>
+          © HLLC Store
+        </div>
+      </td>
+    </tr>
+  </table>
 </div>`;
 }
 
-export function slipApprovedEmail(customerName: string, orderId: string, to = "", customerPhone?: string): EmailPayload {
+// ── Email templates ──────────────────────────────────────────────────────────
+export function slipApprovedEmail(customerName: string, to = "", customerPhone?: string): EmailPayload {
   return {
     to,
     subject: "HLLC Store - สลิปผ่านการอนุมัติแล้ว",
-    text: `Hello ${customerName}, your payment slip for order #${orderId.slice(-6).toUpperCase()} has been approved.`,
-    html: slipApprovedHtml(customerName, orderId, customerPhone),
+    text: `สวัสดีคุณ ${customerName}, สลิปการชำระเงินของคุณผ่านการอนุมัติแล้ว เรากำลังเตรียมจัดส่งสินค้าให้คุณ`,
+    html: baseEmailHtml({
+      badge: "ชำระเงินสำเร็จ",
+      badgeBg: "#dcfce7",
+      badgeColor: "#166534",
+      alert: "เราได้รับการชำระเงินของคุณเรียบร้อยแล้ว",
+      icon: "check",
+      headline: "ยืนยันการชำระเงินเรียบร้อย",
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>เราได้รับการชำระเงินของคุณแล้ว ทางร้านกำลังเตรียมจัดส่งสินค้าให้โดยเร็วที่สุด`,
+      detailRows: [
+        { label: "สถานะ", value: "ชำระเงินสำเร็จ", color: "#166534" },
+      ],
+      customerPhone,
+    }),
   };
 }
 
-export function slipRejectedEmail(customerName: string, orderId: string, note?: string, to = "", customerPhone?: string): EmailPayload {
+export function slipRejectedEmail(customerName: string, note?: string, to = "", customerPhone?: string): EmailPayload {
+  const message = note?.trim();
   return {
     to,
     subject: "HLLC Store - กรุณาส่งสลิปใหม่",
-    text: `Hello ${customerName}, your payment slip for order #${orderId.slice(-6).toUpperCase()} was not approved.${note ? ` Reason: ${note}` : ""} Please upload a new payment slip.`,
-    html: statusEmailHtml({
-      badge: "Payment Rejected",
+    text: `สวัสดีคุณ ${customerName}, สลิปการชำระเงินของคุณไม่ผ่านการตรวจสอบ${message ? ` (${message})` : ""} กรุณาอัปโหลดสลิปใหม่อีกครั้ง`,
+    html: baseEmailHtml({
+      badge: "สลิปไม่ผ่าน",
       badgeBg: "#fee2e2",
       badgeColor: "#b91c1c",
-      buttonColor: "#dc2626",
-      customerName,
-      description: `ระบบ <b>HLLC Store</b> ตรวจสอบสลิปแล้วไม่ผ่าน กรุณาอัปโหลดสลิปใหม่อีกครั้ง${note ? `<br>เหตุผล: <b>${escapeHtml(note)}</b>` : ""}`,
+      alert: "เรายืนยันการชำระเงินจากสลิปไม่สำเร็จ",
+      icon: "alert",
+      headline: "ตรวจสอบสลิปไม่สำเร็จ",
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>ขออภัย เราไม่สามารถยืนยันการชำระเงินจากสลิปที่คุณส่งมาได้ รบกวนตรวจสอบและส่งใหม่อีกครั้ง`,
       detailRows: [
-        { label: "สถานะสลิป", value: "ไม่ผ่านการตรวจสอบ", color: "#dc2626" },
-        { label: "ประเภท", value: "Payment Slip" },
-        ...(note ? [{ label: "เหตุผล", value: note }] : []),
+        { label: "สถานะสลิป", value: "ไม่ผ่านการตรวจสอบ", color: "#b91c1c" },
       ],
-      headline: "สลิปไม่ผ่านการอนุมัติ",
-      orderId,
-      subtitle: "Slip Rejection Notification",
+      note: message ? { label: "ข้อความจากร้าน", text: message } : undefined,
       customerPhone,
     }),
   };
@@ -270,7 +266,6 @@ export function slipRejectedEmail(customerName: string, orderId: string, note?: 
 
 export function trackingNumberEmail(
   customerName: string,
-  orderId: string,
   trackingNumber: string,
   to = "",
   customerPhone?: string,
@@ -278,59 +273,70 @@ export function trackingNumberEmail(
   return {
     to,
     subject: "HLLC Store - จัดส่งสินค้าแล้ว",
-    text: `Hello ${customerName}, your order #${orderId.slice(-6).toUpperCase()} has been shipped. Tracking number: ${trackingNumber}`,
-    html: statusEmailHtml({
-      badge: "Order Shipped",
+    text: `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณถูกจัดส่งแล้ว เลขพัสดุ: ${trackingNumber}`,
+    html: baseEmailHtml({
+      badge: "จัดส่งแล้ว",
       badgeBg: "#dbeafe",
       badgeColor: "#1d4ed8",
-      buttonColor: "#2563eb",
-      customerName,
-      description: `ระบบ <b>HLLC Store</b> ได้จัดส่งคำสั่งซื้อของคุณแล้ว`,
+      alert: "พัสดุออกจากคลังแล้ว กำลังเดินทางถึงคุณ",
+      icon: "arrow",
+      headline: "พัสดุของคุณกำลังเดินทาง",
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณถูกจัดส่งเรียบร้อยแล้ว ติดตามสถานะพัสดุได้จากปุ่มด้านล่าง`,
       detailRows: [
-        { label: "สถานะ", value: "จัดส่งแล้ว", color: "#2563eb" },
+        { label: "สถานะ", value: "จัดส่งแล้ว", color: "#1d4ed8" },
         { label: "เลขพัสดุ", value: trackingNumber },
-        { label: "ประเภท", value: "Shipping" },
       ],
-      headline: "จัดส่งสินค้าแล้ว",
-      orderId,
-      subtitle: "Shipping Tracking Notification",
       customerPhone,
     }),
   };
 }
 
-export function slipResetEmail(customerName: string, orderId: string, note?: string, to = "", customerPhone?: string): EmailPayload {
-  const orderCode = orderId.slice(-6).toUpperCase();
-  const reason = note?.trim() || "ทีมงานไม่สามารถตรวจสอบรายละเอียดในสลิปเดิมได้ครบถ้วน";
-
+export function pickupReadyEmail(
+  customerName: string,
+  to = "",
+  customerPhone?: string,
+  location = "สาขาสยามสแควร์ ชั้น 2",
+): EmailPayload {
   return {
     to,
-    subject: "HLLC Store - กรุณาอัปโหลดสลิปใหม่",
-    text: `สวัสดีคุณ ${customerName}, สลิปชำระเงินของคำสั่งซื้อ #${orderCode} ต้องตรวจสอบใหม่ เนื่องจาก${reason} กรุณาอัปโหลดสลิปใหม่อีกครั้งผ่านหน้าติดตามคำสั่งซื้อ`,
-    html: statusEmailHtml({
-      badge: "Slip Needs Review",
+    subject: "HLLC Store - สินค้าพร้อมให้รับแล้ว",
+    text: `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณพร้อมให้มารับแล้วที่ ${location}`,
+    html: baseEmailHtml({
+      badge: "พร้อมให้รับ",
       badgeBg: "#fef3c7",
       badgeColor: "#92400e",
-      buttonColor: "#85241F",
-      customerName,
-      description: `สลิปชำระเงินของคุณยังตรวจสอบไม่สำเร็จ เนื่องจาก <b>${escapeHtml(reason)}</b> กรุณาอัปโหลดสลิปใหม่อีกครั้งเพื่อให้ทีมงานดำเนินการต่อ`,
+      alert: "สินค้าของคุณพร้อมให้เข้ารับที่ร้านแล้ว",
+      icon: "target",
+      headline: "สินค้าพร้อมให้เข้ารับแล้ว",
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณพร้อมให้เข้ารับแล้ว กรุณาแสดงเบอร์โทรที่ใช้สั่งซื้อกับเจ้าหน้าที่เมื่อมาถึง`,
       detailRows: [
-        { label: "สถานะสลิป", value: "รออัปโหลดสลิปใหม่", color: "#92400e" },
-        { label: "เหตุผล", value: reason },
-        { label: "ประเภท", value: "Payment Slip" },
+        { label: "สถานะ", value: "พร้อมให้รับ", color: "#92400e" },
+        { label: "จุดรับสินค้า", value: location },
       ],
-      headline: "สลิปชำระเงินต้องตรวจสอบใหม่",
-      orderId,
-      subtitle: "Payment Slip Review Notice",
       customerPhone,
     }),
   };
 }
 
-export function orderCancelledEmail(customerName: string, orderId: string, reason: string, to = ""): EmailPayload {
+export function orderCancelledEmail(customerName: string, reason: string, to = "", customerPhone?: string): EmailPayload {
+  const message = reason?.trim();
   return {
     to,
-    subject: "Order cancelled",
-    text: `Hello ${customerName}, order #${orderId.slice(-6).toUpperCase()} was cancelled. Reason: ${reason}`,
+    subject: "HLLC Store - คำสั่งซื้อถูกยกเลิก",
+    text: `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณถูกยกเลิกแล้ว${message ? ` เหตุผล: ${message}` : ""}`,
+    html: baseEmailHtml({
+      badge: "ยกเลิกแล้ว",
+      badgeBg: "#fee2e2",
+      badgeColor: "#b91c1c",
+      alert: "คำสั่งซื้อนี้ถูกยกเลิกเรียบร้อยแล้ว",
+      icon: "x",
+      headline: "คำสั่งซื้อถูกยกเลิก",
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณได้ถูกยกเลิกแล้ว หากมีการชำระเงินเข้ามา ทางร้านได้ดำเนินการคืนเงินเต็มจำนวน`,
+      detailRows: [
+        { label: "สถานะ", value: "ยกเลิกแล้ว", color: "#b91c1c" },
+      ],
+      note: message ? { label: "เหตุผลการยกเลิก", text: message } : undefined,
+      customerPhone,
+    }),
   };
 }

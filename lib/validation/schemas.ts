@@ -75,6 +75,9 @@ export const createOrderSchema = z.object({
     phone: z.string().min(1, "Phone is required"),
     email: emailSchema,
     address: z.string().min(1, "Address is required"),
+    province: z.string().optional(),
+    district: z.string().optional(),
+    postalCode: z.string().optional(),
   }),
   items: z.array(cartItemInputSchema).min(1, "At least one item is required"),
   deliveryMode: z.enum(["delivery", "pickup"]).optional(),
@@ -132,6 +135,10 @@ export const createProductSchema = z.object({
   stock: z.coerce.number().int().min(0, "Stock must be a non-negative integer"),
   shippingFirstItem: z.coerce.number().finite().min(0, "Shipping first item must be a positive number").optional(),
   shippingAdditionalItem: z.coerce.number().finite().min(0, "Shipping additional item must be a positive number").optional(),
+  remoteShippingFirstItem: z.coerce.number().finite().min(0).optional(),
+  remoteShippingAdditionalItem: z.coerce.number().finite().min(0).optional(),
+  islandShippingFirstItem: z.coerce.number().finite().min(0).optional(),
+  islandShippingAdditionalItem: z.coerce.number().finite().min(0).optional(),
   category: z.string().optional(),
   options: z.array(z.union([z.string(), productOptionSchema])).optional(),
   imageUrl: z.string().optional(),
@@ -203,6 +210,16 @@ export const paymentSettingsSchema = z.object({
   bankName: z.string().trim().min(1, "กรุณากรอกชื่อธนาคาร").max(60),
   bankAccountName: z.string().trim().min(1, "กรุณากรอกชื่อบัญชี").max(80),
   bankAccountNumber: z.string().trim().regex(/^[0-9-]{6,20}$/, "เลขบัญชีไม่ถูกต้อง"),
+});
+
+const shippingFee = z.coerce.number().min(0, "ค่าส่งต้องไม่ติดลบ").max(10000);
+export const shippingSettingsSchema = z.object({
+  normalFirstItem: shippingFee,
+  normalAdditionalItem: shippingFee,
+  remoteFirstItem: shippingFee,
+  remoteAdditionalItem: shippingFee,
+  islandFirstItem: shippingFee,
+  islandAdditionalItem: shippingFee,
 });
 
 /* ================================================================

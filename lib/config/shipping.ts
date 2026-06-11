@@ -1,42 +1,60 @@
-// Shipping is taken from each product's own first-item / additional-item fee,
-// set when the product is created. Shared by the cart UI and the order service
-// so totals always match.
+// Shipping = store-wide default rates (normal / remote / island), which each
+// product may override. Computed per product line: first item + additional × (qty-1).
+// Priority: island > remote > normal.
 
-export type ShippingDestination = {
-  province?: string;
-  postalCode?: string;
+export type ShippingRates = {
+  normalFirstItem: number;
+  normalAdditionalItem: number;
+  remoteFirstItem: number;
+  remoteAdditionalItem: number;
+  islandFirstItem: number;
+  islandAdditionalItem: number;
 };
 
+export const DEFAULT_SHIPPING_RATES: ShippingRates = {
+  normalFirstItem: 50,
+  normalAdditionalItem: 10,
+  remoteFirstItem: 80,
+  remoteAdditionalItem: 15,
+  islandFirstItem: 100,
+  islandAdditionalItem: 15,
+};
+
+// Per-product line. Any rate left 0/undefined falls back to the store default.
 export type ShippingLine = {
   quantity: number;
   shippingFirstItem?: number;
   shippingAdditionalItem?: number;
+  remoteShippingFirstItem?: number;
+  remoteShippingAdditionalItem?: number;
+  islandShippingFirstItem?: number;
+  islandShippingAdditionalItem?: number;
 };
 
-// Surcharge for remote / special areas (islands, 3 southern border provinces,
-// hard-to-reach zones, etc.), looked up by province or postal code.
-//
-// TODO(remote-area): not implemented yet — returns 0 so current behavior is
-// unchanged. When rules are defined, match `destination` here and return the
-// extra fee; `calcShippingFee` already passes the destination through.
-function remoteAreaSurcharge(destination?: ShippingDestination): number {
-  // TODO(remote-area): compute surcharge from destination.province / postalCode.
-  void destination;
-  return 0;
-}
-
-// Base shipping for a single product line: first unit + additional units.
-function lineShippingFee(line: ShippingLine): number {
-  if (line.quantity <= 0) return 0;
-  return (line.shippingFirstItem ?? 0) + (line.shippingAdditionalItem ?? 0) * Math.max(0, line.quantity - 1);
-}
+const effective = (override: number | undefined, fallback: number) =>
+  typeof override === "number" && override > 0 ? override : fallback;
 
 export function calcShippingFee(
   lines: ShippingLine[],
   deliveryMode: "delivery" | "pickup",
-  destination?: ShippingDestination,
+  options: { remote?: boolean; island?: boolean; rates: ShippingRates },
 ): number {
   if (deliveryMode === "pickup") return 0;
-  const base = lines.reduce((sum, line) => sum + lineShippingFee(line), 0);
-  return base + remoteAreaSurcharge(destination);
+  const { remote, island, rates } = options;
+  return lines.reduce((sum, line) => {
+    if (line.quantity <= 0) return sum;
+    let first: number;
+    let additional: number;
+    if (island) {
+      first = effective(line.islandShippingFirstItem, rates.islandFirstItem);
+      additional = effective(line.islandShippingAdditionalItem, rates.islandAdditionalItem);
+    } else if (remote) {
+      first = effective(line.remoteShippingFirstItem, rates.remoteFirstItem);
+      additional = effective(line.remoteShippingAdditionalItem, rates.remoteAdditionalItem);
+    } else {
+      first = effective(line.shippingFirstItem, rates.normalFirstItem);
+      additional = effective(line.shippingAdditionalItem, rates.normalAdditionalItem);
+    }
+    return sum + first + additional * (line.quantity - 1);
+  }, 0);
 }

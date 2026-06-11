@@ -4,7 +4,10 @@ import { createOrderSchema, imageUrlSchema, parseOrThrow } from "@/lib/validatio
 import { assertText, assertObjectId, now, normalizeOptions } from "@/lib/backend/validation-utils";
 import { publishOrdersUpdated } from "@/lib/backend/admin-realtime";
 import { calcShippingFee } from "@/lib/config/shipping";
-import { sendEmail, trackingNumberEmail } from "@/lib/backend/email-service";
+import { isRemoteArea } from "@/lib/data/remote-areas";
+import { isIslandArea } from "@/lib/data/island-areas";
+import { getShippingSettings } from "@/lib/backend/settings/settings-service";
+import { sendEmail, trackingNumberEmail, pickupReadyEmail, orderCancelledEmail } from "@/lib/backend/email-service";
 import { getOrdersCollection } from "./order-module";
 import type {
   CreateOrderInput,
@@ -27,7 +30,7 @@ export function toPublicOrder(order: Order): PublicOrder {
     deliveryMode: order.deliveryMode,
     total: order.total,
     status: order.status,
-    slip: { status: order.slip.status, imageUrl: order.slip.imageUrl },
+    slip: { status: order.slip.status, imageUrl: order.slip.imageUrl, reviewNote: order.slip.reviewNote },
     trackingNumber: order.trackingNumber,
     cancellationReason: order.cancellationReason,
     createdAt: order.createdAt,
@@ -81,6 +84,7 @@ function toOrder(doc: Document): Order {
     total: doc.total,
     status: doc.status,
     slip: doc.slip,
+    slipHistory: Array.isArray(doc.slipHistory) ? doc.slipHistory : [],
     trackingNumber: doc.trackingNumber,
     cancellationReason: doc.cancellationReason,
     adminNotes: doc.adminNotes ?? [],
@@ -156,20 +160,33 @@ export async function createOrder(input: CreateOrderInput) {
       quantity: item.quantity,
       selectedOption,
       _price: product.price,
-      _shippingFirstItem: Number(product.shippingFirstItem ?? product.shipping ?? 0),
+      _shippingFirstItem: Number(product.shippingFirstItem ?? 0),
       _shippingAdditionalItem: Number(product.shippingAdditionalItem ?? 0),
+      _remoteShippingFirstItem: Number(product.remoteShippingFirstItem ?? 0),
+      _remoteShippingAdditionalItem: Number(product.remoteShippingAdditionalItem ?? 0),
+      _islandShippingFirstItem: Number(product.islandShippingFirstItem ?? 0),
+      _islandShippingAdditionalItem: Number(product.islandShippingAdditionalItem ?? 0),
     };
   });
 
   const subtotal = storedItems.reduce((sum, item) => sum + item._price * item.quantity, 0);
   const deliveryMode = parsed.deliveryMode ?? "delivery";
+  const rates = await getShippingSettings();
+  const postalCode = parsed.customer.postalCode;
+  const island = deliveryMode === "delivery" && isIslandArea(postalCode);
+  const remote = deliveryMode === "delivery" && !island && isRemoteArea(postalCode);
   const shippingFee = calcShippingFee(
     storedItems.map((item) => ({
       quantity: item.quantity,
       shippingFirstItem: item._shippingFirstItem,
       shippingAdditionalItem: item._shippingAdditionalItem,
+      remoteShippingFirstItem: item._remoteShippingFirstItem,
+      remoteShippingAdditionalItem: item._remoteShippingAdditionalItem,
+      islandShippingFirstItem: item._islandShippingFirstItem,
+      islandShippingAdditionalItem: item._islandShippingAdditionalItem,
     })),
     deliveryMode,
+    { island, remote, rates },
   );
   const total = subtotal + shippingFee;
 
@@ -252,6 +269,16 @@ export async function getOrder(orderId: string) {
 
 export async function attachPaymentSlip(orderId: string, input: PaymentSlipInput) {
   const orders = await getOrdersCollection();
+  const order = await getOrder(orderId);
+
+  if (!order) {
+    throw new Error("order not found");
+  }
+
+  if (!["pending_payment", "payment_review"].includes(order.status)) {
+    throw new Error("this order cannot accept a new payment slip");
+  }
+
   const timestamp = now();
   const slip = {
     imageUrl: assertImageValue(input.imageUrl, "imageUrl"),
@@ -259,16 +286,27 @@ export async function attachPaymentSlip(orderId: string, input: PaymentSlipInput
     note: input.note,
     status: "pending",
   };
+  const previousSlip = order.slip.imageUrl?.trim()
+    ? {
+        ...order.slip,
+        replacedAt: timestamp,
+      }
+    : null;
+  const updateOp: Document = {
+    $set: {
+      slip,
+      status: "payment_review",
+      updatedAt: timestamp,
+    },
+  };
+
+  if (previousSlip) {
+    updateOp.$push = { slipHistory: previousSlip };
+  }
 
   const result = await orders.findOneAndUpdate(
     { _id: assertObjectId(orderId) },
-    {
-      $set: {
-        slip,
-        status: "payment_review",
-        updatedAt: timestamp,
-      },
-    },
+    updateOp,
     { returnDocument: "after" },
   );
 
@@ -302,7 +340,7 @@ export async function reviewPaymentSlip(orderId: string, input: ReviewSlipInput)
         "slip.reviewedBy": assertText(input.reviewedBy, "reviewedBy"),
         "slip.reviewedAt": timestamp,
         "slip.reviewNote": input.note,
-        status: input.approved ? "packing" : "cancelled",
+        status: input.approved ? "packing" : "pending_payment",
         updatedAt: timestamp,
       },
     },
@@ -372,6 +410,13 @@ export async function transitionOrderStatus(orderId: string, status: OrderStatus
 
   const updated = await updateOrderStatus(orderId, status);
 
+  // Pickup orders have no tracking number — tell the customer it's ready to collect.
+  if (status === "shipped" && updated.deliveryMode === "pickup") {
+    notifyEmail(
+      pickupReadyEmail(updated.customer.name, updated.customer.email, updated.customer.phone),
+    );
+  }
+
   publishOrdersUpdated();
   return updated;
 }
@@ -398,7 +443,6 @@ export async function setOrderTrackingNumber(orderId: string, trackingNumber: st
   notifyEmail(
     trackingNumberEmail(
       updated.customer.name,
-      updated.id,
       updated.trackingNumber ?? trackingNumber,
       updated.customer.email,
       updated.customer.phone,
@@ -458,8 +502,18 @@ export async function cancelOrder(orderId: string, reason: string, cancelledBy: 
     );
   }
 
+  const cancelled = toOrder(result);
+  notifyEmail(
+    orderCancelledEmail(
+      cancelled.customer.name,
+      cancelled.cancellationReason ?? reason,
+      cancelled.customer.email,
+      cancelled.customer.phone,
+    ),
+  );
+
   publishOrdersUpdated();
-  return toOrder(result);
+  return cancelled;
 }
 
 export async function addAdminNote(

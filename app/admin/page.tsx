@@ -17,8 +17,10 @@ import * as productsApi from "@/lib/modules/products";
 import * as adminUsersApi from "@/lib/modules/admin-users";
 import type { AdminRole, AdminUser, AuditLog, CurrentAdmin } from "@/lib/modules/admin-users";
 import * as settingsApi from "@/lib/modules/settings";
-import type { PaymentSettings } from "@/lib/modules/settings";
+import type { PaymentSettings, ShippingSettings } from "@/lib/modules/settings";
 import { PaymentAccountPanel } from "@/components/admin/payment-account-panel";
+import { ShippingSettingsPanel } from "@/components/admin/shipping-settings-panel";
+import { TestEmailPanel } from "@/components/admin/test-email-panel";
 import AddProductForm from "@/components/admin/add-product-form";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AppHeader, type NavItem } from "@/components/shared/app-header";
@@ -38,10 +40,11 @@ export default function AdminPage() {
   const [toast, setToast] = React.useState("");
   const [confirm, setConfirm] = React.useState<{ orderId: string; approved: boolean; note?: string } | null>(null);
   const [statusConfirm, setStatusConfirm] = React.useState<{ orderId: string; status: OrderStatus } | null>(null);
-  const [lightbox, setLightbox] = React.useState<string | null>(null);
+  const [lightbox, setLightbox] = React.useState<{ images: string[]; index: number } | null>(null);
   const [adminUsers, setAdminUsers] = React.useState<AdminUser[]>([]);
   const [auditLogs, setAuditLogs] = React.useState<AuditLog[]>([]);
   const [paymentSettings, setPaymentSettings] = React.useState<PaymentSettings | null>(null);
+  const [shippingSettings, setShippingSettings] = React.useState<ShippingSettings | null>(null);
   const { lang, t } = useLanguage();
 
   const [loading, setLoading] = React.useState(false);
@@ -78,14 +81,16 @@ export default function AdminPage() {
   const loadSuperAdminData = React.useCallback(async () => {
     if (currentUser?.role !== "superAdmin") return;
 
-    const [usersRes, logsRes, settingsRes] = await Promise.all([
+    const [usersRes, logsRes, settingsRes, shippingRes] = await Promise.all([
       adminUsersApi.fetchAdminUsers(),
       adminUsersApi.fetchAuditLogs(),
       settingsApi.fetchAdminPaymentSettings(),
+      settingsApi.fetchAdminShippingSettings(),
     ]);
     if (usersRes.data) setAdminUsers(usersRes.data);
     if (logsRes.data) setAuditLogs(logsRes.data);
     if (settingsRes.data) setPaymentSettings(settingsRes.data);
+    if (shippingRes.data) setShippingSettings(shippingRes.data);
   }, [currentUser]);
 
   const savePaymentSettings = React.useCallback(async (input: PaymentSettings) => {
@@ -95,6 +100,16 @@ export default function AdminPage() {
     if (res.error) { notify(res.error); return; }
     if (res.data) setPaymentSettings(res.data);
     notify(lang === "th" ? "บันทึกบัญชีรับเงินแล้ว" : "Payment account saved");
+    void loadSuperAdminData();
+  }, [lang, loadSuperAdminData]);
+
+  const saveShippingSettings = React.useCallback(async (input: ShippingSettings) => {
+    setLoading(true);
+    const res = await settingsApi.updateShippingSettings(input);
+    setLoading(false);
+    if (res.error) { notify(res.error); return; }
+    if (res.data) setShippingSettings(res.data);
+    notify(lang === "th" ? "บันทึกค่าจัดส่งแล้ว" : "Shipping rates saved");
     void loadSuperAdminData();
   }, [lang, loadSuperAdminData]);
 
@@ -109,8 +124,13 @@ export default function AdminPage() {
       setOrders(ordersRes.data.filter((order) => !order.id.startsWith("demo-")));
     } else {
       setOrders([]);
+      if (ordersRes.error) notify(ordersRes.error);
     }
-    if (productsRes.data) setProducts(productsRes.data);
+    if (productsRes.data) {
+      setProducts(productsRes.data);
+    } else if (productsRes.error) {
+      notify(productsRes.error);
+    }
     if (currentUser?.role === "superAdmin") {
       await loadSuperAdminData();
     }
@@ -404,7 +424,7 @@ export default function AdminPage() {
                 onSaveTracking={saveTracking}
                 onCancelOrder={cancelOrder}
                 t={t}
-                onViewSlip={setLightbox}
+                onViewSlip={(images, index) => setLightbox({ images, index })}
               />
             </TabsContent>
 
@@ -427,6 +447,13 @@ export default function AdminPage() {
                     loading={loading}
                     onSave={savePaymentSettings}
                   />
+                  <ShippingSettingsPanel
+                    key={shippingSettings ? "ship-loaded" : "ship-empty"}
+                    settings={shippingSettings}
+                    loading={loading}
+                    onSave={saveShippingSettings}
+                  />
+                  <TestEmailPanel onNotify={notify} />
                   <SuperAdminPanel
                     adminUsers={adminUsers}
                     auditLogs={auditLogs}

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { OrderStatus } from "@/components/admin/types";
 import { useLanguage } from "@/lib/client/language-context";
@@ -15,9 +15,52 @@ type ConfirmationModalProps = {
   setStatusConfirm: (val: null) => void;
   confirmStatusChange: () => void;
 
-  lightbox: string | null;
+  lightbox: { images: string[]; index: number } | null;
   setLightbox: (val: null) => void;
 };
+
+function SlipLightbox({ images, index, onClose }: { images: string[]; index: number; onClose: () => void }) {
+  const [i, setI] = React.useState(index);
+  const count = images.length;
+  const current = Math.min(Math.max(i, 0), count - 1);
+  const step = (delta: number) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setI((v) => (v + delta + count) % count);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/90 backdrop-blur-md z-70 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <button onClick={onClose} className="absolute top-4 right-4 w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white cursor-pointer transition-colors">
+        <XCircle className="w-5 h-5" />
+      </button>
+
+      {count > 1 && (
+        <>
+          <button onClick={step(-1)} className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white cursor-pointer transition-colors">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button onClick={step(1)} className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white cursor-pointer transition-colors">
+            <ChevronRight className="w-6 h-6" />
+          </button>
+          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 bg-white/15 text-white text-xs font-bold px-3 py-1.5 rounded-full">
+            {current + 1} / {count} · {current === 0 ? "ล่าสุด" : "สลิปเก่า"}
+          </div>
+        </>
+      )}
+
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={images[current]}
+        alt="slip"
+        onClick={(e) => e.stopPropagation()}
+        className="max-w-full max-h-[90vh] rounded-2xl object-contain shadow-2xl border border-white/10"
+      />
+    </div>
+  );
+}
 
 export function ConfirmationModal({
   confirm,
@@ -112,20 +155,12 @@ export function ConfirmationModal({
 
       {/* Lightbox */}
       {lightbox && (
-        <div
-          className="fixed inset-0 bg-black/90 backdrop-blur-md z-70 flex items-center justify-center p-4"
-          onClick={() => setLightbox(null)}
-        >
-          <button className="absolute top-4 right-4 w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white cursor-pointer transition-colors">
-            <XCircle className="w-5 h-5" />
-          </button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={lightbox}
-            alt="slip"
-            className="max-w-full max-h-[90vh] rounded-2xl object-contain shadow-2xl border border-white/10"
-          />
-        </div>
+        <SlipLightbox
+          key={`${lightbox.images[0] ?? ""}-${lightbox.index}`}
+          images={lightbox.images}
+          index={lightbox.index}
+          onClose={() => setLightbox(null)}
+        />
       )}
     </>
   );

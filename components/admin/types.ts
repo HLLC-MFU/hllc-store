@@ -14,6 +14,10 @@ export type Product = {
   description?: LocalizedText; price: number; stock: number;
   shippingFirstItem: number;
   shippingAdditionalItem: number;
+  remoteShippingFirstItem: number;
+  remoteShippingAdditionalItem: number;
+  islandShippingFirstItem: number;
+  islandShippingAdditionalItem: number;
   discount?: number; // percent 0-100
   category?: string;
   options?: ProductOption[];
@@ -44,7 +48,8 @@ export type Order = {
   deliveryMode?: "delivery" | "pickup";
   total: number;
   status: OrderStatus;
-  slip: { imageUrl?: string; status: SlipStatus; paidAt?: string | null };
+  slip: { imageUrl?: string; status: SlipStatus; paidAt?: string | null; reviewNote?: string };
+  slipHistory?: { imageUrl?: string; status: SlipStatus; paidAt?: string | null; reviewNote?: string; replacedAt?: string }[];
   trackingNumber?: string;
   cancellationReason?: string;
   adminNotes?: { text: string; by: string; at: string; action: string }[];

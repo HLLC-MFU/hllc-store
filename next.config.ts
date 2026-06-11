@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const isDev = process.env.NODE_ENV !== "production";
 
 const nextConfig: NextConfig = {
+  // Allow LAN access for mobile testing (pnpm dev --hostname 0.0.0.0)
+  allowedDevOrigins: ["172.25.43.136"],
   experimental: {
     viewTransition: true,
   },

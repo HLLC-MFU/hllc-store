@@ -23,6 +23,10 @@ export type Product = {
   stock: number;
   shippingFirstItem: number;
   shippingAdditionalItem: number;
+  remoteShippingFirstItem: number;
+  remoteShippingAdditionalItem: number;
+  islandShippingFirstItem: number;
+  islandShippingAdditionalItem: number;
   category?: string;
   options?: ProductOption[];
   imageUrl?: string;
@@ -78,6 +82,10 @@ export type PaymentSlip = {
   reviewNote?: string;
 };
 
+export type PaymentSlipHistoryEntry = PaymentSlip & {
+  replacedAt: string;
+};
+
 export type Order = {
   id: string;
   customer: CustomerInput;
@@ -88,6 +96,7 @@ export type Order = {
   total: number;
   status: OrderStatus;
   slip: PaymentSlip;
+  slipHistory?: PaymentSlipHistoryEntry[];
   trackingNumber?: string;
   cancellationReason?: string;
   adminNotes?: { text: string; by: string; at: string; action: string }[];
@@ -106,7 +115,7 @@ export type PublicOrder = {
   deliveryMode: "delivery" | "pickup";
   total: number;
   status: OrderStatus;
-  slip: { status: SlipStatus; imageUrl: string };
+  slip: { status: SlipStatus; imageUrl: string; reviewNote?: string };
   trackingNumber?: string;
   cancellationReason?: string;
   createdAt: string;
@@ -127,6 +136,10 @@ export type CreateProductInput = {
   stock: number;
   shippingFirstItem?: number;
   shippingAdditionalItem?: number;
+  remoteShippingFirstItem?: number;
+  remoteShippingAdditionalItem?: number;
+  islandShippingFirstItem?: number;
+  islandShippingAdditionalItem?: number;
   category?: string;
   options?: ProductOptionInput[] | string;
   imageUrl?: string;

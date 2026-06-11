@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronUp, Copy, Check, RefreshCw, Search, Truck, FileCheck2, Package, CheckCircle2, X as XIcon } from "lucide-react";
+import { AlertCircle, ChevronDown, ChevronUp, Copy, Check, RefreshCw, Search, Truck, FileCheck2, Package, CheckCircle2, Upload, X as XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/lib/client/language-context";
 import { LogisticsProgress } from "@/components/shop/logistics-progress";
-import { fetchOrdersByPhone } from "@/lib/modules/orders";
+import { attachPaymentSlip, fetchOrdersByPhone } from "@/lib/modules/orders";
 
 type OrderStatus =
   | "pending_payment" | "payment_review" | "paid"
@@ -27,7 +27,7 @@ type Order = {
   }[];
   total: number;
   status: OrderStatus;
-  slip: { imageUrl?: string; status: string };
+  slip: { imageUrl?: string; status: string; reviewNote?: string };
   trackingNumber?: string;
   createdAt: string;
   updatedAt: string;
@@ -35,6 +35,7 @@ type Order = {
 
 const fmt = new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 });
 const money = (v: number) => fmt.format(v);
+const MAX_SLIP_BYTES = 5 * 1024 * 1024;
 
 function itemName(name: string | { th: string; en?: string }, lang: "th" | "en") {
   if (typeof name === "string") return name;
@@ -51,6 +52,18 @@ const STATUS_LABEL: Record<string, { th: string; en: string; badge: string; icon
   pending_payment: { th: "รอชำระเงิน",      en: "Pending payment",       badge: "text-gray-500 bg-gray-100",     icon: "bg-gray-100 text-gray-400"     },
 };
 
+const RESUBMIT_STATUS = {
+  th: "รอสลิปใหม่",
+  en: "Awaiting new slip",
+  badge: "text-red-700 bg-red-50",
+  icon: "bg-red-100 text-red-500",
+};
+
+function statusMetaForOrder(order: Order) {
+  if (order.status === "pending_payment" && order.slip.status === "rejected") return RESUBMIT_STATUS;
+  return STATUS_LABEL[order.status] ?? STATUS_LABEL.pending_payment;
+}
+
 function StatusIcon({ status }: { status: string }) {
   const cls = "w-4 h-4";
   if (status === "payment_review" || status === "paid" || status === "pending_payment") return <FileCheck2 className={cls} />;
@@ -61,12 +74,19 @@ function StatusIcon({ status }: { status: string }) {
   return <FileCheck2 className={cls} />;
 }
 
-function OrderCard({ order, lang }: { order: Order; lang: "th" | "en" }) {
+function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" | "en"; onSlipUploaded: () => void | Promise<void> }) {
   const [open, setOpen] = useState(false);
   const [itemsOpen, setItemsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [uploadingSlip, setUploadingSlip] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [slipPreview, setSlipPreview] = useState("");
+  const [slipImage, setSlipImage] = useState("");
+  const [confirmSlip, setConfirmSlip] = useState(false);
+  const slipInputRef = useRef<HTMLInputElement>(null);
   const showTracking = ["shipped", "completed"].includes(order.status) && Boolean(order.trackingNumber?.trim());
-  const statusMeta = STATUS_LABEL[order.status] ?? STATUS_LABEL.pending_payment;
+  const statusMeta = statusMetaForOrder(order);
+  const needsNewSlip = order.status === "pending_payment" && order.slip.status === "rejected";
   const itemCount = order.items.reduce((s, i) => s + i.quantity, 0);
   const preview = order.items.map(i => `${itemName(i.name, lang)} ×${i.quantity}`).join(", ");
   const dateStr = new Date(order.createdAt).toLocaleDateString(lang === "th" ? "th-TH" : "en-US", { day: "numeric", month: "short" });
@@ -77,6 +97,68 @@ function OrderCard({ order, lang }: { order: Order; lang: "th" | "en" }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
+  }
+
+  function handleNewSlip(event: React.ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      setUploadError(lang === "th" ? "รองรับเฉพาะ JPG, PNG, WEBP" : "Only JPG, PNG, or WEBP is supported");
+      input.value = "";
+      return;
+    }
+
+    if (file.size > MAX_SLIP_BYTES) {
+      setUploadError(lang === "th" ? "รูปไฟล์ใหญ่เกินไป ขอไม่เกิน 5 MB" : "Image is too large. Please keep it under 5 MB");
+      input.value = "";
+      return;
+    }
+
+    setUploadError("");
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const image = String(e.target?.result ?? "");
+      setSlipPreview(image);
+      setSlipImage(image);
+      input.value = "";
+    };
+    reader.onerror = () => {
+      setUploadError(lang === "th" ? "อ่านไฟล์ไม่สำเร็จ" : "Unable to read file");
+      input.value = "";
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function submitNewSlip() {
+    if (!slipImage) {
+      setUploadError(lang === "th" ? "กรุณาอัปโหลดสลิปก่อน" : "Please upload a slip first");
+      setConfirmSlip(false);
+      return;
+    }
+
+    setUploadingSlip(true);
+    setUploadError("");
+    try {
+      await attachPaymentSlip(order.id, slipImage);
+      setSlipPreview("");
+      setSlipImage("");
+      setConfirmSlip(false);
+      await onSlipUploaded();
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : lang === "th" ? "อัปโหลดสลิปไม่สำเร็จ" : "Unable to upload slip");
+    } finally {
+      setUploadingSlip(false);
+    }
+  }
+
+  function clearNewSlip() {
+    setSlipPreview("");
+    setSlipImage("");
+    setUploadError("");
+    if (slipInputRef.current) slipInputRef.current.value = "";
   }
 
   return (
@@ -111,6 +193,67 @@ function OrderCard({ order, lang }: { order: Order; lang: "th" | "en" }) {
         <div className="border-t border-gray-100 flex flex-col gap-3 p-4 animate-in slide-in-from-top-2 duration-200">
 
           <LogisticsProgress order={order} lang={lang} />
+
+          {needsNewSlip && (
+            <div className="rounded-2xl border border-red-100 bg-red-50/60 p-4">
+              <div className="flex gap-3">
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600">
+                  <AlertCircle className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-black text-red-800">
+                    {lang === "th" ? "กรุณาส่งสลิปใหม่" : "Please upload a new slip"}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold leading-relaxed text-red-700/80">
+                    {order.slip.reviewNote?.trim()
+                      || (lang === "th"
+                        ? "สลิปเดิมยังไม่ผ่านการตรวจสอบ กรุณาอัปโหลดสลิปที่ถูกต้องอีกครั้ง"
+                        : "The previous slip could not be verified. Please upload the correct slip again.")}
+                  </p>
+                </div>
+              </div>
+
+              <div className={`mt-4 rounded-xl border border-dashed p-3 ${uploadError ? "border-red-300 bg-red-50/70" : "border-red-200 bg-white/70"}`}>
+                <input ref={slipInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleNewSlip} />
+                {slipPreview ? (
+                  <div className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={slipPreview} alt="payment slip" className="max-h-56 w-full rounded-lg object-contain" />
+                    <button
+                      type="button"
+                      onClick={clearNewSlip}
+                      className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-500 shadow"
+                    >
+                      <XIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => slipInputRef.current?.click()}
+                    className={`flex w-full flex-col items-center gap-2 py-9 ${uploadError ? "text-red-400" : "text-gray-400"}`}
+                  >
+                    <Upload className="h-7 w-7" />
+                    <span className="text-xs font-bold">{lang === "th" ? "แตะเพื่ออัปโหลดสลิปใหม่" : "Tap to upload a new slip"}</span>
+                  </button>
+                )}
+              </div>
+
+              {uploadError && <p className="mt-2 text-xs font-bold text-red-700">{uploadError}</p>}
+
+              <Button
+                type="button"
+                disabled={uploadingSlip || !slipImage}
+                onClick={() => setConfirmSlip(true)}
+                className="mt-3 h-10 w-full rounded-xl bg-[#85241F] px-4 text-xs font-black hover:bg-[#B72D2A] disabled:opacity-50"
+              >
+                {uploadingSlip
+                  ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  : <Check className="mr-2 h-4 w-4" />}
+                {lang === "th" ? "ยืนยันส่งสลิปใหม่" : "Confirm new slip"}
+              </Button>
+            </div>
+          )}
 
           {showTracking && (
             <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
@@ -169,6 +312,36 @@ function OrderCard({ order, lang }: { order: Order; lang: "th" | "en" }) {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {confirmSlip && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <FileCheck2 className="h-6 w-6" />
+            </div>
+            <h2 className="text-center text-base font-black text-gray-900">
+              {lang === "th" ? "ยืนยันส่งสลิปใหม่?" : "Submit new slip?"}
+            </h2>
+            <p className="mt-2 text-center text-sm font-semibold text-gray-500">
+              {lang === "th" ? "กดยืนยันเพื่อส่งสลิปนี้ให้ร้านตรวจสอบอีกครั้ง" : "Confirm to send this slip for review again"}
+            </p>
+            {slipPreview && (
+              <div className="mt-4 rounded-2xl bg-gray-50 p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={slipPreview} alt="payment slip preview" className="max-h-48 w-full rounded-xl object-contain" />
+              </div>
+            )}
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <Button type="button" variant="outline" disabled={uploadingSlip} onClick={() => setConfirmSlip(false)} className="h-11 rounded-xl font-black">
+                {lang === "th" ? "ยกเลิก" : "Cancel"}
+              </Button>
+              <Button type="button" onClick={submitNewSlip} disabled={uploadingSlip} className="h-11 rounded-xl bg-emerald-600 font-black hover:bg-emerald-700">
+                {uploadingSlip ? "..." : lang === "th" ? "ยืนยัน" : "Confirm"}
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -282,7 +455,7 @@ function ProfileContent() {
         ) : (
           <div className="flex flex-col gap-4">
             {orders.map((order) => (
-              <OrderCard key={order.id} order={order} lang={lang} />
+              <OrderCard key={order.id} order={order} lang={lang} onSlipUploaded={() => loadOrders(phone)} />
             ))}
           </div>
         )}

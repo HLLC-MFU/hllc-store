@@ -12,6 +12,9 @@ export const localizedTextResponseSchema = z.object({
   en: z.string().optional(),
 });
 
+const optionalStringResponseSchema = z.string().nullish().transform((value) => value ?? undefined);
+const stringWithDefaultResponseSchema = (fallback = "") => z.string().nullish().transform((value) => value ?? fallback);
+
 const orderStatusResponseSchema = z.enum([
   "pending_payment",
   "payment_review",
@@ -24,13 +27,21 @@ const orderStatusResponseSchema = z.enum([
 
 const slipStatusResponseSchema = z.enum(["none", "pending", "approved", "rejected"]);
 
+const paymentSlipResponseSchema = z.object({
+  imageUrl: optionalStringResponseSchema,
+  status: slipStatusResponseSchema,
+  paidAt: optionalStringResponseSchema,
+  reviewNote: optionalStringResponseSchema,
+  replacedAt: optionalStringResponseSchema,
+});
+
 const orderItemResponseSchema = z.object({
   productId: z.string(),
   name: localizedTextResponseSchema,
   price: z.number(),
   quantity: z.number(),
   subtotal: z.number(),
-  selectedOption: z.string().optional(),
+  selectedOption: optionalStringResponseSchema,
 });
 
 const orderCommonResponseSchema = z.object({
@@ -41,8 +52,8 @@ const orderCommonResponseSchema = z.object({
   deliveryMode: z.enum(["delivery", "pickup"]),
   total: z.number(),
   status: orderStatusResponseSchema,
-  trackingNumber: z.string().optional(),
-  cancellationReason: z.string().optional(),
+  trackingNumber: optionalStringResponseSchema,
+  cancellationReason: optionalStringResponseSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -50,7 +61,11 @@ const orderCommonResponseSchema = z.object({
 /** Anonymous customer-facing order shape (phone lookup, order confirmation). */
 export const publicOrderResponseSchema = orderCommonResponseSchema.extend({
   customer: z.object({ name: z.string(), phone: z.string() }),
-  slip: z.object({ status: slipStatusResponseSchema, imageUrl: z.string() }),
+  slip: z.object({
+    status: slipStatusResponseSchema,
+    imageUrl: stringWithDefaultResponseSchema(),
+    reviewNote: optionalStringResponseSchema,
+  }),
 });
 
 /** Full admin-facing order shape, including customer PII and review metadata. */
@@ -62,10 +77,12 @@ export const orderResponseSchema = orderCommonResponseSchema.extend({
     address: z.string(),
   }),
   slip: z.object({
-    imageUrl: z.string().optional(),
+    imageUrl: optionalStringResponseSchema,
     status: slipStatusResponseSchema,
-    paidAt: z.string().nullable().optional(),
+    paidAt: optionalStringResponseSchema,
+    reviewNote: optionalStringResponseSchema,
   }),
+  slipHistory: z.array(paymentSlipResponseSchema).optional(),
   adminNotes: z.array(z.object({ text: z.string(), by: z.string(), at: z.string(), action: z.string() })).optional(),
 });
 
@@ -84,6 +101,10 @@ export const productResponseSchema = z.object({
   stock: z.number(),
   shippingFirstItem: z.number(),
   shippingAdditionalItem: z.number(),
+  remoteShippingFirstItem: z.number(),
+  remoteShippingAdditionalItem: z.number(),
+  islandShippingFirstItem: z.number(),
+  islandShippingAdditionalItem: z.number(),
   category: z.string().optional(),
   options: z.array(productOptionResponseSchema).optional(),
   imageUrl: z.string().optional(),

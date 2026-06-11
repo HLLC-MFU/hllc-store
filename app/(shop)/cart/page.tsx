@@ -9,7 +9,10 @@ import { safeParseWithLang, checkoutFormSchema, normalizePhone, normalizeEmail }
 import type { Lang } from "@/lib/validation/schemas-i18n";
 import { attachPaymentSlip, cancelPublicOrder, createOrder } from "@/lib/modules/orders";
 import { fetchStoreProducts } from "@/lib/modules/products/api";
-import { calcShippingFee } from "@/lib/config/shipping";
+import { fetchShippingSettings, type ShippingSettings } from "@/lib/modules/settings";
+import { calcShippingFee, DEFAULT_SHIPPING_RATES } from "@/lib/config/shipping";
+import { isRemoteArea } from "@/lib/data/remote-areas";
+import { isIslandArea } from "@/lib/data/island-areas";
 import { SwipeableCartItem, itemKey } from "@/components/shop/cart/swipeable-cart-item";
 import { ReceiptView } from "@/components/shop/cart/receipt-view";
 import { CartSummaryPanel } from "./components/CartSummaryPanel";
@@ -53,6 +56,8 @@ export default function CartPage() {
     return { selectedItems: selected, selectedTotal: total, selectedCount: count };
   }, [items, selectedIds]);
 
+  const [shippingRates, setShippingRates] = useState<ShippingSettings>(DEFAULT_SHIPPING_RATES);
+
   const autoSelected = useRef(false);
   useEffect(() => {
     if (autoSelected.current || items.length === 0) return;
@@ -67,6 +72,7 @@ export default function CartPage() {
     if (synced.current) return;
     synced.current = true;
     fetchStoreProducts().then(syncFromProducts).catch(() => {});
+    fetchShippingSettings().then(setShippingRates).catch(() => {});
   }, [syncFromProducts]);
 
   const toggleSelectAll = useCallback(() => {
@@ -100,11 +106,31 @@ export default function CartPage() {
   const [postalCode, setPostalCode] = useState(() => { try { return localStorage.getItem("checkout-postalCode") ?? ""; } catch { return ""; } });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const selectedShippingFee = useMemo(() => calcShippingFee(selectedItems, deliveryMode, { province, postalCode }), [selectedItems, deliveryMode, province, postalCode]);
+  const selectedShippingLines = useMemo(
+    () => selectedItems.map((i) => ({
+      quantity: i.quantity,
+      shippingFirstItem: i.shippingFirstItem,
+      shippingAdditionalItem: i.shippingAdditionalItem,
+      remoteShippingFirstItem: i.remoteShippingFirstItem,
+      remoteShippingAdditionalItem: i.remoteShippingAdditionalItem,
+      islandShippingFirstItem: i.islandShippingFirstItem,
+      islandShippingAdditionalItem: i.islandShippingAdditionalItem,
+    })),
+    [selectedItems],
+  );
+
+  const selectedShippingFee = useMemo(() => {
+    const island = isIslandArea(postalCode);
+    return calcShippingFee(selectedShippingLines, deliveryMode, {
+      island,
+      remote: !island && isRemoteArea(postalCode),
+      rates: shippingRates,
+    });
+  }, [selectedShippingLines, deliveryMode, postalCode, shippingRates]);
   const selectedPayableTotal = selectedTotal + selectedShippingFee;
   // Cart preview: delivery-rate base from each product's own shipping fee, before
   // any special-area surcharge (which needs the province entered at checkout).
-  const baseShippingPreview = useMemo(() => calcShippingFee(selectedItems, "delivery"), [selectedItems]);
+  const baseShippingPreview = useMemo(() => calcShippingFee(selectedShippingLines, "delivery", { rates: shippingRates }), [selectedShippingLines, shippingRates]);
 
   const confirmRemoveText = useMemo(() => lang === "th" ? "ต้องการลบสินค้านี้ออกจากตะกร้าใช่ไหม?" : "Remove this item from cart?", [lang]);
 
@@ -196,7 +222,10 @@ export default function CartPage() {
       : [address, sub, district, prov, postal].filter(Boolean).join(" ");
     try {
       const order = await createOrder({
-        customer: { name, phone: rawPhone, email: rawEmail, address: fullAddress },
+        customer: {
+          name, phone: rawPhone, email: rawEmail, address: fullAddress,
+          ...(deliveryMode === "delivery" ? { province: prov, district, postalCode: postal } : {}),
+        },
         items: selectedItems.map((item) => ({ productId: item.productId, quantity: item.quantity, selectedOption: item.selectedOption || undefined })),
         deliveryMode,
       });

@@ -16,7 +16,7 @@ type OrdersPanelProps = {
   onApproveSlip: (orderId: string, approved: boolean, note?: string) => void;
   onSaveTracking: (orderId: string, trackingNumber: string) => void;
   onCancelOrder: (orderId: string, reason: string) => void;
-  onViewSlip: (imageUrl: string) => void;
+  onViewSlip: (images: string[], index: number) => void;
   t: (key: string) => string;
 };
 

@@ -35,7 +35,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
   onSaveTracking: (orderId: string, trackingNumber: string) => void;
   onCancel: (orderId: string, reason: string) => void;
   t: (key: string, replacements?: Record<string, string | number>) => string;
-  onViewSlip: (url: string) => void;
+  onViewSlip: (images: string[], index: number) => void;
   useModal?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
@@ -44,6 +44,9 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
   const [showCancel, setShowCancel] = React.useState(false);
   const [cancelReason, setCancelReason] = React.useState("");
   const { lang } = useLanguage();
+  const previousSlips = (order.slipHistory ?? []).filter((slip) => slip.imageUrl).slice(-4).reverse();
+  // Current slip first, then previous ones — for the swipeable slip viewer.
+  const slipImages = [order.slip.imageUrl, ...previousSlips.map((s) => s.imageUrl)].filter(Boolean) as string[];
 
   const canCancel = order.status !== "cancelled" && order.status !== "completed";
 
@@ -148,8 +151,18 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
           {/* Slip image — separate card */}
           {order.status === "payment_review" && order.slip.imageUrl && order.slip.status !== "none" && (
             <Card className="rounded-2xl shadow-3xs overflow-hidden">
+              <CardContent className="p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">สลิปล่าสุด</span>
+                  {previousSlips.length > 0 && (
+                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">
+                      มีสลิปเก่า {previousSlips.length}
+                    </span>
+                  )}
+                </div>
+              </CardContent>
               <button
-                onClick={() => order.slip.imageUrl && onViewSlip(order.slip.imageUrl)}
+                onClick={() => order.slip.imageUrl && onViewSlip(slipImages, 0)}
                 className="w-full h-48 bg-gray-100 relative group cursor-pointer overflow-hidden block"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -158,6 +171,28 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                   <span className="opacity-0 group-hover:opacity-100 text-white text-[9px] font-black bg-black/60 px-2 py-1 rounded-lg">ขยาย</span>
                 </div>
               </button>
+              {previousSlips.length > 0 && (
+                <CardContent className="border-t border-gray-100 p-3">
+                  <p className="mb-2 text-[10px] font-black uppercase tracking-wider text-gray-400">สลิปก่อนหน้า</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {previousSlips.map((slip, index) => (
+                      <button
+                        key={`${slip.imageUrl}-${slip.replacedAt ?? index}`}
+                        type="button"
+                        onClick={() => slip.imageUrl && onViewSlip(slipImages, index + 1)}
+                        className="overflow-hidden rounded-xl border border-gray-100 bg-gray-50 text-left"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={slip.imageUrl} alt="old payment slip" className="h-24 w-full object-cover" />
+                        <div className="p-2">
+                          <p className="text-[10px] font-black text-gray-500">สลิปเก่า #{previousSlips.length - index}</p>
+                          {slip.reviewNote && <p className="mt-0.5 line-clamp-2 text-[10px] font-semibold text-red-600">{slip.reviewNote}</p>}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              )}
             </Card>
           )}
 
@@ -514,13 +549,45 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
             {/* Slip image */}
             {order.status === "payment_review" && order.slip.imageUrl && order.slip.status !== "none" && (
               <Card className="rounded-2xl shadow-3xs overflow-hidden">
-                <button onClick={() => order.slip.imageUrl && onViewSlip(order.slip.imageUrl)} className="w-full h-48 bg-gray-100 relative group cursor-pointer block">
+                <CardContent className="p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">สลิปล่าสุด</span>
+                    {previousSlips.length > 0 && (
+                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">
+                        มีสลิปเก่า {previousSlips.length}
+                      </span>
+                    )}
+                  </div>
+                </CardContent>
+                <button onClick={() => order.slip.imageUrl && onViewSlip(slipImages, 0)} className="w-full h-48 bg-gray-100 relative group cursor-pointer block">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={order.slip.imageUrl} alt="slip" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-end px-3 pb-3">
                     <span className="opacity-0 group-hover:opacity-100 text-white text-[9px] font-black bg-black/60 px-2 py-1 rounded-lg">ขยาย</span>
                   </div>
                 </button>
+                {previousSlips.length > 0 && (
+                  <CardContent className="border-t border-gray-100 p-3">
+                    <p className="mb-2 text-[10px] font-black uppercase tracking-wider text-gray-400">สลิปก่อนหน้า</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {previousSlips.map((slip, index) => (
+                        <button
+                          key={`${slip.imageUrl}-${slip.replacedAt ?? index}`}
+                          type="button"
+                          onClick={() => slip.imageUrl && onViewSlip(slipImages, index + 1)}
+                          className="overflow-hidden rounded-xl border border-gray-100 bg-gray-50 text-left"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={slip.imageUrl} alt="old payment slip" className="h-24 w-full object-cover" />
+                          <div className="p-2">
+                            <p className="text-[10px] font-black text-gray-500">สลิปเก่า #{previousSlips.length - index}</p>
+                            {slip.reviewNote && <p className="mt-0.5 line-clamp-2 text-[10px] font-semibold text-red-600">{slip.reviewNote}</p>}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </CardContent>
+                )}
               </Card>
             )}
 

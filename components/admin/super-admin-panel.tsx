@@ -18,6 +18,7 @@ const ACTION_LABEL: Record<string, { th: string; en: string; color: string }> = 
   "product.updated":           { th: "แก้ไขสินค้า",              en: "Product updated",          color: "bg-gray-100 text-gray-600"   },
   "product.deleted":           { th: "ลบสินค้า",                 en: "Product deleted",          color: "bg-red-50 text-red-700"      },
   "payment_settings.updated":  { th: "แก้ไขบัญชีรับเงิน",        en: "Payment account updated",  color: "bg-indigo-50 text-indigo-700"},
+  "shipping_settings.updated": { th: "แก้ไขค่าจัดส่ง",            en: "Shipping rates updated",   color: "bg-teal-50 text-teal-700"    },
 };
 
 type AdminRole = "superAdmin" | "admin";

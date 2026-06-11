@@ -9,3 +9,12 @@ export const adminPaymentSettingsRouter = {
   GET: settingsController.getPaymentSettings,
   PATCH: (request: NextRequest) => settingsController.updatePaymentSettings(request),
 };
+
+export const shippingSettingsRouter = {
+  GET: settingsController.getShippingSettings,
+};
+
+export const adminShippingSettingsRouter = {
+  GET: settingsController.getShippingSettings,
+  PATCH: (request: NextRequest) => settingsController.updateShippingSettings(request),
+};

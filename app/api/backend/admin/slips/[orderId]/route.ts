@@ -33,8 +33,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
     // Fire-and-forget email notification
     const customerName = order.customer.name;
     const emailPayload = body.approved
-      ? slipApprovedEmail(customerName, orderId, order.customer.email, order.customer.phone)
-      : slipRejectedEmail(customerName, orderId, body.note, order.customer.email, order.customer.phone);
+      ? slipApprovedEmail(customerName, order.customer.email, order.customer.phone)
+      : slipRejectedEmail(customerName, body.note, order.customer.email, order.customer.phone);
     if (emailPayload.to) {
       void sendEmail(emailPayload).catch((error) => {
         console.error("[EMAIL_ERROR]", error instanceof Error ? error.message : "failed to send email");
