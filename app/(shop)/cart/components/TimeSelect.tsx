@@ -6,9 +6,10 @@ import { useLanguage } from "@/lib/client/language-context";
 
 type TimeSelectProps = {
   name: string;
+  error?: string;
 };
 
-export function TimeSelect({ name }: TimeSelectProps) {
+export function TimeSelect({ name, error }: TimeSelectProps) {
   const { lang } = useLanguage();
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
@@ -35,7 +36,9 @@ export function TimeSelect({ name }: TimeSelectProps) {
         type="button"
         onClick={() => setOpen((current) => !current)}
         className={`flex h-14 w-full items-center gap-3 rounded-2xl border bg-white px-3 text-left shadow-sm transition-all ${
-          open || value
+          error
+            ? "border-red-400 ring-4 ring-red-100"
+            : open || value
             ? "border-[#85241F] ring-4 ring-[#85241F]/10"
             : "border-[#85241F]/15 hover:border-[#85241F]/40"
         }`}
@@ -45,10 +48,10 @@ export function TimeSelect({ name }: TimeSelectProps) {
           <Clock3 className="h-5 w-5" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className={`block text-sm font-black ${value ? "text-gray-950" : "text-gray-400"}`}>
+          <span className={`block text-sm font-black ${error ? "text-red-600" : value ? "text-gray-950" : "text-gray-400"}`}>
             {value || placeholder}
           </span>
-          <span className="mt-0.5 block text-[10px] font-bold text-gray-400">{helper}</span>
+          <span className={`mt-0.5 block text-[10px] font-bold ${error ? "text-red-400" : "text-gray-400"}`}>{helper}</span>
         </span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>

@@ -127,30 +127,9 @@ export function ReceiptView({ lang, createdOrder, receiptItems }: ReceiptViewPro
           {/* Footer Info */}
           <div className="space-y-1 text-[10px] text-neutral-500">
             <div className="flex justify-between">
-              <span>{lang === "th" ? "เลขพัสดุ:" : "Tracking No.:"}</span>
-              <span className="font-bold text-neutral-700">{createdOrder.customer?.phone || "-"}</span>
-            </div>
-            <div className="flex justify-between">
               <span>{lang === "th" ? "วันที่:" : "Date:"}</span>
               <span>{new Date().toLocaleString(lang === "th" ? "th-TH" : "en-US", { dateStyle: "short", timeStyle: "short" })}</span>
             </div>
-          </div>
-
-          <div className="my-4 text-center text-neutral-400">
-            *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-          </div>
-
-          {/* Barcode */}
-          <div className="text-center space-y-3">
-            <div className="flex justify-center items-center h-8 w-full gap-[1px] opacity-75 mix-blend-multiply my-1 select-none">
-              {[2, 1, 3, 1, 2, 4, 1, 2, 1, 3, 2, 1, 4, 1, 2, 1, 3, 1, 2, 4, 1, 2, 1, 3, 2].map((w, i) => (
-                <div key={i} className="bg-neutral-800 h-full" style={{ width: `${w}px` }} />
-              ))}
-            </div>
-
-            <p className="text-[9px] text-neutral-400 tracking-widest font-mono">
-              *{createdOrder.customer?.phone}*
-            </p>
           </div>
 
           <div className="receipt-edge-bottom" />

@@ -77,7 +77,7 @@ export function toProduct(doc: Document): Product {
   return {
     id: doc._id.toString(),
     name: nameObj,
-    slug: doc.slug,
+    slug: typeof doc.slug === "string" && doc.slug ? doc.slug : createSlug(nameObj.th) || doc._id.toString(),
     description: descObj,
     price: Number(doc.price ?? 0),
     stock: Number(doc.stock ?? 0),

@@ -71,8 +71,8 @@ export default function CartPage() {
   useEffect(() => {
     if (synced.current) return;
     synced.current = true;
-    fetchStoreProducts().then(syncFromProducts).catch(() => {});
-    fetchShippingSettings().then(setShippingRates).catch(() => {});
+    fetchStoreProducts().then(syncFromProducts).catch(() => { });
+    fetchShippingSettings().then(setShippingRates).catch(() => { });
   }, [syncFromProducts]);
 
   const toggleSelectAll = useCallback(() => {
@@ -105,6 +105,14 @@ export default function CartPage() {
   const [subDistrict, setSubDistrict] = useState(() => { try { return localStorage.getItem("checkout-subDistrict") ?? ""; } catch { return ""; } });
   const [postalCode, setPostalCode] = useState(() => { try { return localStorage.getItem("checkout-postalCode") ?? ""; } catch { return ""; } });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const clearFieldError = useCallback((...fields: string[]) => {
+    setFieldErrors((current) => {
+      if (!fields.some((field) => current[field])) return current;
+      const next = { ...current };
+      fields.forEach((field) => { delete next[field]; });
+      return next;
+    });
+  }, []);
 
   const selectedShippingLines = useMemo(
     () => selectedItems.map((i) => ({
@@ -171,8 +179,12 @@ export default function CartPage() {
   }, [selectedItems.length, lang]);
 
   const confirmPayment = useCallback(() => {
-    if (!slipImage) { setMessage(lang === "th" ? "กรุณาอัปโหลดสลิปก่อน" : "Please upload a payment slip first."); return; }
-    setMessage(""); setShowConfirmModal(true);
+    if (!slipImage) {
+      setMessage("");
+      setSlipError(lang === "th" ? "กรุณาอัปโหลดสลิปก่อน" : "Please upload a payment slip first.");
+      return;
+    }
+    setMessage(""); setSlipError(""); setShowConfirmModal(true);
   }, [slipImage, lang]);
 
   const handleCheckout = useCallback((event: React.FormEvent<HTMLFormElement>) => {
@@ -185,7 +197,7 @@ export default function CartPage() {
       deliveryMode, name: String(raw.name ?? "").trim(),
       phone: normalizePhone(phone), email: normalizeEmail(email),
       address: String(raw.address ?? "").trim(), district: String(raw.district ?? "").trim(),
-      province, postalCode: String(raw.postalCode ?? "").trim(),
+      province, subDistrict: String(raw.subDistrict ?? "").trim(), postalCode: String(raw.postalCode ?? "").trim(),
       pickupTime: String(raw.pickupTime ?? "").trim(),
     };
     const errs: Record<string, string> = {};
@@ -200,7 +212,7 @@ export default function CartPage() {
       return;
     }
     pendingFormRef.current = formData;
-    setMessage(""); setStep("payment");
+    setMessage(""); setSlipError(""); setStep("payment");
   }, [loading, items.length, deliveryMode, lang, phone, email, province]);
 
   const submitOrder = useCallback(async () => {
@@ -256,12 +268,6 @@ export default function CartPage() {
           <ReceiptView lang={lang} createdOrder={createdOrder} receiptItems={receiptItems} />
         )}
 
-        {step !== "success" && message && (
-          <div className="mb-5 rounded-xl border border-[#85241F]/20 bg-[#85241F]/5 px-4 py-3 text-sm font-semibold text-[#85241F]">
-            {message}
-          </div>
-        )}
-
         {step === "cart" && !items.length && (
           <div className="flex flex-col items-center justify-center min-h-[70vh] gap-4 text-center">
             <div className="w-20 h-20 rounded-3xl bg-gray-100 flex items-center justify-center">
@@ -295,13 +301,13 @@ export default function CartPage() {
                 ))}
               </div>
 
-            <CartSummaryPanel
-              lang={lang}
-              allSelected={allSelected} onToggleSelectAll={toggleSelectAll}
-              selectedCount={selectedCount} selectedTotal={selectedTotal}
-              baseShipping={baseShippingPreview}
-              onPay={goInfo} items={items}
-            />
+              <CartSummaryPanel
+                lang={lang}
+                allSelected={allSelected} onToggleSelectAll={toggleSelectAll}
+                selectedCount={selectedCount} selectedTotal={selectedTotal}
+                baseShipping={baseShippingPreview}
+                onPay={goInfo} items={items}
+              />
             </section>
           </>
         )}
@@ -319,15 +325,15 @@ export default function CartPage() {
 
         {step === "info" && (
           <InfoStep
-            lang={lang} t={t} deliveryMode={deliveryMode} setDeliveryMode={setDeliveryMode}
-            name={name} setName={(v) => { setName(v); try { localStorage.setItem("checkout-name", v); } catch {} }}
-            phone={phone} setPhone={(v) => { setPhone(v); try { localStorage.setItem("checkout-phone", v); } catch {} }}
-            email={email} setEmail={(v) => { setEmail(v); try { localStorage.setItem("checkout-email", v); } catch {} }}
-            address={address} setAddress={(v) => { setAddress(v); try { localStorage.setItem("checkout-address", v); } catch {} }}
-            district={district} setDistrict={(v) => { setDistrict(v); try { localStorage.setItem("checkout-district", v); } catch {} }}
-            province={province} setProvince={(v) => { setProvince(v); try { localStorage.setItem("checkout-province", v); } catch {} }}
-            subDistrict={subDistrict} setSubDistrict={(v) => { setSubDistrict(v); try { localStorage.setItem("checkout-subDistrict", v); } catch {} }}
-            postalCode={postalCode} setPostalCode={(v) => { setPostalCode(v); try { localStorage.setItem("checkout-postalCode", v); } catch {} }}
+            lang={lang} t={t} deliveryMode={deliveryMode} setDeliveryMode={(v) => { setDeliveryMode(v); setFieldErrors({}); }}
+            name={name} setName={(v) => { setName(v); clearFieldError("name"); try { localStorage.setItem("checkout-name", v); } catch { } }}
+            phone={phone} setPhone={(v) => { setPhone(v); clearFieldError("phone"); try { localStorage.setItem("checkout-phone", v); } catch { } }}
+            email={email} setEmail={(v) => { setEmail(v); clearFieldError("email"); try { localStorage.setItem("checkout-email", v); } catch { } }}
+            address={address} setAddress={(v) => { setAddress(v); clearFieldError("address"); try { localStorage.setItem("checkout-address", v); } catch { } }}
+            district={district} setDistrict={(v) => { setDistrict(v); clearFieldError("district"); try { localStorage.setItem("checkout-district", v); } catch { } }}
+            province={province} setProvince={(v) => { setProvince(v); clearFieldError("province"); try { localStorage.setItem("checkout-province", v); } catch { } }}
+            subDistrict={subDistrict} setSubDistrict={(v) => { setSubDistrict(v); clearFieldError("subDistrict"); try { localStorage.setItem("checkout-subDistrict", v); } catch { } }}
+            postalCode={postalCode} setPostalCode={(v) => { setPostalCode(v); clearFieldError("postalCode"); try { localStorage.setItem("checkout-postalCode", v); } catch { } }}
             fieldErrors={fieldErrors} loading={loading}
             selectedCount={selectedCount} selectedTotal={selectedTotal}
             selectedShippingFee={selectedShippingFee} selectedPayableTotal={selectedPayableTotal}

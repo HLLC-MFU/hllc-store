@@ -349,17 +349,21 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
 
             {/* Modal */}
             {customNameOpen && (
-              <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={() => setCustomNameOpen(false)} />
-                <div className="relative w-full max-w-sm rounded-t-3xl bg-white px-5 pb-8 pt-5 shadow-xl sm:rounded-3xl">
-                  <div className="mb-4 flex items-center justify-between">
-                    <span className="text-base font-black text-gray-900">
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
+                <div className="absolute inset-0 bg-black/45 backdrop-blur-[3px]" onClick={() => setCustomNameOpen(false)} />
+                <div className="relative w-full max-w-sm rounded-[2rem] bg-white px-5 pb-5 pt-6 shadow-2xl ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="mb-6 px-10 text-center">
+                    <span className="text-xl font-black text-gray-950">
                       {lang === "th" ? "ชื่อบนสติกเกอร์" : "Name on sticker"}
                     </span>
+                    <p className="mt-1 text-xs font-semibold text-gray-400">
+                      {lang === "th" ? "ใส่ชื่อที่ต้องการพิมพ์บนสติกเกอร์" : "Enter the name for your sticker"}
+                    </p>
                     <button
                       type="button"
                       onClick={() => setCustomNameOpen(false)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-[0px] text-gray-500 transition-colors before:text-base before:font-semibold before:content-['x'] hover:bg-gray-200"
+                      aria-label={lang === "th" ? "ปิด" : "Close"}
                     >
                       ✕
                     </button>
@@ -372,7 +376,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                       maxLength={customNameMax}
                       onChange={(e) => setCustomName(e.target.value)}
                       placeholder={lang === "th" ? `เช่น สมชาย, หมูกรอบ` : `e.g. John, Lily`}
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 pr-14 text-base font-semibold text-gray-900 outline-none focus:border-[#85241F] focus:ring-2 focus:ring-[#85241F]/10"
+                      className="h-14 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 pr-14 text-base font-semibold text-gray-900 outline-none transition-all focus:border-[#85241F] focus:bg-white focus:ring-4 focus:ring-[#85241F]/10"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">
                       {customName.length}/{customNameMax}
@@ -381,7 +385,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                   <button
                     type="button"
                     onClick={() => setCustomNameOpen(false)}
-                    className="mt-4 flex h-12 w-full items-center justify-center rounded-2xl bg-[#85241F] text-sm font-black text-white active:scale-[0.98]"
+                    className="mt-4 flex h-12 w-full items-center justify-center rounded-2xl bg-[#85241F] text-sm font-black text-white shadow-lg shadow-[#85241F]/15 transition-transform active:scale-[0.98]"
                   >
                     {lang === "th" ? "ยืนยัน" : "Confirm"}
                   </button>

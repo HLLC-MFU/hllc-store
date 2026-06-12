@@ -1,9 +1,7 @@
 "use client";
 
-import { ArrowLeft, Mail, MapPin, Store, Truck, User } from "lucide-react";
+import { ArrowLeft, Mail, MapPin, Phone, Store, Truck, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { EmailInput } from "@/components/shared/email-input";
-import { PhoneInput } from "@/components/shared/phone-input";
 import { AddressSelect } from "@/components/shared/address-select";
 import { TimeSelect } from "./TimeSelect";
 import { CheckoutFooter } from "./CheckoutFooter";
@@ -13,11 +11,21 @@ const money = (v: number) => fmt.format(v);
 
 const inputCls = "h-12 rounded-none border-0 bg-transparent text-sm font-semibold shadow-none placeholder:text-gray-400 focus-visible:ring-0";
 
-function FieldRow({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+function formatPhoneDisplay(raw: string) {
+  const digits = raw.replace(/\D/g, "").slice(0, 10);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+function FieldRow({ icon, children, error }: { icon: React.ReactNode; children: React.ReactNode; error?: string }) {
   return (
-    <div className="relative flex items-center">
-      <span className="absolute left-3.5 z-10 text-gray-400 pointer-events-none">{icon}</span>
-      <div className="w-full [&>input]:pl-10 [&>textarea]:pl-10 [&>div>input]:pl-10">{children}</div>
+    <div className={`relative ${error ? "rounded-xl ring-1 ring-red-300" : ""}`}>
+      <div className="relative flex items-center">
+        <span className={`absolute left-3.5 z-10 pointer-events-none ${error ? "text-red-400" : "text-gray-400"}`}>{icon}</span>
+        <div className="w-full [&>input]:pl-10 [&>textarea]:pl-10 [&>div>input]:pl-10">{children}</div>
+      </div>
+      {error ? <p className="px-4 pb-2 text-xs font-bold text-red-500">{error}</p> : null}
     </div>
   );
 }
@@ -94,27 +102,42 @@ export function InfoStep({
           </p>
 
           <div className="divide-y divide-gray-100">
-            <FieldRow icon={<User className="h-4 w-4" />}>
+            <FieldRow icon={<User className="h-4 w-4" />} error={fieldErrors.name}>
               <Input
                 name="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={lang === "th" ? "ชื่อ-นามสกุล" : "Full name"}
-                className={inputCls}
+                aria-invalid={Boolean(fieldErrors.name)}
+                className={`${inputCls} ${fieldErrors.name ? "text-red-700 placeholder:text-red-300" : ""}`}
               />
             </FieldRow>
 
-            <PhoneInput
-              name="phone" value={phone} onChange={setPhone} lang={lang}
+            <FieldRow icon={<Phone className="h-4 w-4" />} error={fieldErrors.phone}>
+              <Input
+                name="phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={formatPhoneDisplay(phone)}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
               placeholder={lang === "th" ? "เบอร์โทรศัพท์" : "Phone number"}
-              className={inputCls}
-            />
+                aria-invalid={Boolean(fieldErrors.phone)}
+                className={`${inputCls} ${fieldErrors.phone ? "!text-red-700 placeholder:!text-red-300" : ""}`}
+              />
+            </FieldRow>
 
-            <FieldRow icon={<Mail className="h-4 w-4" />}>
-              <EmailInput
-                name="email" value={email} onChange={setEmail} lang={lang}
+            <FieldRow icon={<Mail className="h-4 w-4" />} error={fieldErrors.email}>
+              <Input
+                name="email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder={lang === "th" ? "อีเมล" : "Email"}
-                className={inputCls}
+                aria-invalid={Boolean(fieldErrors.email)}
+                className={`${inputCls} ${fieldErrors.email ? "!text-red-700 placeholder:!text-red-300" : ""}`}
               />
             </FieldRow>
           </div>
@@ -130,13 +153,14 @@ export function InfoStep({
               {lang === "th" ? "ที่อยู่จัดส่ง" : "Shipping address"}
             </p>
             <div className="divide-y divide-gray-100">
-              <FieldRow icon={<MapPin className="h-4 w-4" />}>
+              <FieldRow icon={<MapPin className="h-4 w-4" />} error={fieldErrors.address}>
                 <Input
                   name="address"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder={lang === "th" ? "บ้านเลขที่, อาคาร, หมู่, ถนน" : "House no., building, street"}
-                  className={inputCls}
+                  aria-invalid={Boolean(fieldErrors.address)}
+                  className={`${inputCls} ${fieldErrors.address ? "text-red-700 placeholder:text-red-300" : ""}`}
                 />
               </FieldRow>
               <AddressSelect
@@ -148,7 +172,7 @@ export function InfoStep({
                   if (v.subDistrict !== subDistrict) setSubDistrict(v.subDistrict);
                   if (v.postalCode !== postalCode) setPostalCode(v.postalCode);
                 }}
-                error={fieldErrors.district || fieldErrors.postalCode}
+                error={fieldErrors.province || fieldErrors.district || fieldErrors.subDistrict || fieldErrors.postalCode}
               />
             </div>
           </div>
@@ -161,8 +185,8 @@ export function InfoStep({
             <p className="text-xs font-semibold text-gray-400">
               {lang === "th" ? "กรุณาระบุเวลาที่สะดวกมารับสินค้า" : "Please select your preferred pickup time."}
             </p>
-            <TimeSelect name="pickupTime" />
-            {fieldErrors.pickupTime && <p className="mt-1.5 text-xs font-semibold text-red-500">{fieldErrors.pickupTime}</p>}
+            <TimeSelect name="pickupTime" error={fieldErrors.pickupTime} />
+            {fieldErrors.pickupTime && <p className="mt-1.5 text-xs font-bold text-red-500">{fieldErrors.pickupTime}</p>}
           </div>
         )}
 

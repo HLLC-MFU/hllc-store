@@ -24,6 +24,7 @@ export interface EmailInputProps
   error?: string;
   /** Label text above the input */
   label?: string;
+  inlineError?: boolean;
   /** ref forwarded to the underlying <input> */
 }
 
@@ -37,6 +38,7 @@ export const EmailInput = forwardRef<HTMLInputElement, EmailInputProps>(
       validateOnBlur = true,
       error: externalError,
       label,
+      inlineError = true,
       className,
       onBlur,
       ...props
@@ -87,7 +89,7 @@ export const EmailInput = forwardRef<HTMLInputElement, EmailInputProps>(
               "flex w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm outline-none transition-colors placeholder:text-gray-400 focus:border-[#85241F] focus:ring-2 focus:ring-[#85241F]/10",
               showIcon && "pl-10",
               hasError
-                ? "border-red-300 bg-red-50/30 focus:border-red-400 focus:ring-red-100"
+                ? "border-red-300 focus:border-red-400 focus:ring-red-100"
                 : "",
               className
             )}
@@ -97,7 +99,7 @@ export const EmailInput = forwardRef<HTMLInputElement, EmailInputProps>(
             <AlertCircle className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-red-400" />
           )}
         </div>
-        {hasError && (
+        {hasError && inlineError && (
           <p className="mt-1.5 text-xs font-semibold text-red-500">{visibleError}</p>
         )}
       </div>

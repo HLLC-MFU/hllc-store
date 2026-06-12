@@ -302,6 +302,10 @@ export default function AdminPage() {
       stock: Number(formData.get("stock")) || 0,
       shippingFirstItem: Number(formData.get("shippingFirstItem")) || 0,
       shippingAdditionalItem: Number(formData.get("shippingAdditionalItem")) || 0,
+      remoteShippingFirstItem: Number(formData.get("remoteShippingFirstItem")) || 0,
+      remoteShippingAdditionalItem: Number(formData.get("remoteShippingAdditionalItem")) || 0,
+      islandShippingFirstItem: Number(formData.get("islandShippingFirstItem")) || 0,
+      islandShippingAdditionalItem: Number(formData.get("islandShippingAdditionalItem")) || 0,
       discount: Number(formData.get("discount")) || undefined,
       ...(() => {
         const placement = placementByValue(String(formData.get("placement") ?? ""));

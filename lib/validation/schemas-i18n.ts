@@ -180,7 +180,9 @@ export function checkoutFormSchema(lang: Lang = "en") {
       phone: phoneSchema(lang),
       email: emailSchema(lang),
       address: z.string().min(1, { message: t("addressRequired", lang) }),
+      province: z.string().min(1, { message: t("provinceRequired", lang) }),
       district: z.string().min(1, { message: t("districtRequired", lang) }),
+      subDistrict: z.string().min(1, { message: t("districtRequired", lang) }),
       postalCode: postalCodeSchema(lang),
     }),
     z.object({

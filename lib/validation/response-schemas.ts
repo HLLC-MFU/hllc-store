@@ -157,7 +157,9 @@ export const adminAuthSessionResponseSchema = z.object({
 export function validateResponse<T>(schema: z.ZodType<T>, data: unknown): T {
   const result = schema.safeParse(data);
   if (!result.success) {
-    throw new Error(`unexpected API response shape: ${result.error.issues[0]?.message ?? "validation failed"}`);
+    const issue = result.error.issues[0];
+    const path = issue?.path.length ? `${issue.path.join(".")}: ` : "";
+    throw new Error(`unexpected API response shape: ${path}${issue?.message ?? "validation failed"}`);
   }
   return result.data;
 }

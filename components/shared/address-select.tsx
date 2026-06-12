@@ -143,10 +143,12 @@ export function AddressSelect({ lang, value, onChange, error }: Props) {
       <button
         type="button"
         onClick={openPicker}
-        className="flex w-full items-center gap-3 bg-transparent py-3 pl-10 pr-1 text-left"
+        className={`flex w-full items-center gap-3 rounded-xl py-3 pl-10 pr-1 text-left transition-colors ${
+          error ? "text-red-700 ring-1 ring-red-300" : "bg-transparent"
+        }`}
       >
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold text-gray-400">{placeholder}</p>
+          <p className={`text-[11px] font-semibold ${error ? "text-red-400" : "text-gray-400"}`}>{placeholder}</p>
           {filled ? (
             <div className="mt-0.5 text-sm font-bold text-gray-900 leading-snug">
               <p>{decoProvince(value.province)}</p>
@@ -160,9 +162,9 @@ export function AddressSelect({ lang, value, onChange, error }: Props) {
             </p>
           )}
         </div>
-        <ChevronRight className="h-5 w-5 shrink-0 text-gray-400" />
+        <ChevronRight className={`h-5 w-5 shrink-0 ${error ? "text-red-400" : "text-gray-400"}`} />
       </button>
-      {error && <p className="mt-1 px-1 text-xs font-semibold text-red-500">{error}</p>}
+      {error && <p className="mt-1 px-1 text-xs font-bold text-red-500">{error}</p>}
 
       {/* Hidden inputs for the form */}
       <input type="hidden" name="province" value={value.province} />

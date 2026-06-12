@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { PackagePlus, Pencil, Upload, XCircle } from "lucide-react";
+import { AlertCircle, PackagePlus, Pencil, Upload, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +22,13 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
   const [open, setOpen] = React.useState(false);
   const isControlled = controlledOpen !== undefined;
   const isOpen = isControlled ? controlledOpen : open;
-  const handleClose = () => { setOpen(false); onClose?.(); };
+  const [validationMissing, setValidationMissing] = React.useState<string[] | null>(null);
+  const handleClose = () => {
+    setValidationMissing(null);
+    setImageError(false);
+    setOpen(false);
+    onClose?.();
+  };
 
   const [imagePreviews, setImagePreviews] = React.useState<string[]>(() => {
     if (product?.imageUrls && product.imageUrls.length > 0) return product.imageUrls;
@@ -40,6 +46,46 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
 
   const MAX_IMAGES = 5;
   const [uploading, setUploading] = React.useState(false);
+
+  function formText(fd: FormData, name: string) {
+    return String(fd.get(name) ?? "").trim();
+  }
+
+  function hasValidNumber(fd: FormData, name: string) {
+    const raw = formText(fd, name);
+    if (!raw) return false;
+    const value = Number(raw);
+    return Number.isFinite(value) && value >= 0;
+  }
+
+  function getMissingFields(fd: FormData) {
+    const missing: string[] = [];
+    const requiredNumbers = [
+      ["price", "ราคา"],
+      ["stock", "จำนวนสต็อก"],
+      ["shippingFirstItem", "ค่าส่งชิ้นแรก"],
+      ["shippingAdditionalItem", "ค่าส่งชิ้นถัดไป"],
+      ["remoteShippingFirstItem", "ค่าส่งห่างไกล ชิ้นแรก"],
+      ["remoteShippingAdditionalItem", "ค่าส่งห่างไกล ชิ้นถัดไป"],
+      ["islandShippingFirstItem", "ค่าส่งพื้นที่พิเศษ ชิ้นแรก"],
+      ["islandShippingAdditionalItem", "ค่าส่งพื้นที่พิเศษ ชิ้นถัดไป"],
+    ] as const;
+
+    if (imagePreviews.length === 0) missing.push("รูปสินค้าอย่างน้อย 1 รูป");
+    if (!formText(fd, "name")) missing.push("ชื่อสินค้า (TH)");
+    if (!formText(fd, "nameEn")) missing.push("Product Name (GB)");
+    requiredNumbers.forEach(([name, label]) => {
+      if (!hasValidNumber(fd, name)) missing.push(label);
+    });
+    if (!placement || !placementByValue(placement)) missing.push("หมวดหมู่สินค้า");
+    if (!formText(fd, "description")) missing.push("รายละเอียด (TH)");
+    if (!formText(fd, "descriptionEn")) missing.push("Description (GB)");
+    if (allowCustomName && (!Number.isInteger(customNameMaxLength) || customNameMaxLength < 1 || customNameMaxLength > 40)) {
+      missing.push("จำนวนตัวอักษรสูงสุดของสติกเกอร์ชื่อ");
+    }
+
+    return missing;
+  }
 
   async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -78,12 +124,17 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (imagePreviews.length === 0) {
-      setImageError(true);
+    const fd = new FormData(e.currentTarget);
+    const missingFields = getMissingFields(fd);
+
+    if (missingFields.length > 0) {
+      setValidationMissing(missingFields);
+      setImageError(imagePreviews.length === 0);
       return;
     }
+
+    setValidationMissing(null);
     setImageError(false);
-    const fd = new FormData(e.currentTarget);
     if (imagePreviews[0]) fd.set("imageUrl", imagePreviews[0]);
     fd.set("imageUrls", JSON.stringify(imagePreviews));
     fd.set("options", JSON.stringify([]));
@@ -154,7 +205,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
 
         {/* Form */}
         <div className="overflow-y-auto flex-1 px-5 py-4">
-          <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-3.5">
+          <form ref={formRef} onSubmit={handleSubmit} noValidate className="flex flex-col gap-3.5">
 
             {/* Product images */}
             <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleFiles} className="hidden" disabled={uploading} />
@@ -322,6 +373,42 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
           </form>
         </div>
       </div>
+      {validationMissing && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-3xl border border-red-100 bg-white p-5 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-red-50 text-red-500">
+                <AlertCircle className="h-6 w-6" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-base font-black text-gray-950">กรอกข้อมูลยังไม่ครบ</h3>
+                <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                  กรุณาใส่ข้อมูลที่จำเป็นต่อไปนี้ก่อนบันทึกสินค้า
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-red-100 bg-red-50/60 p-3">
+              <ul className="space-y-2">
+                {validationMissing.map((field) => (
+                  <li key={field} className="flex items-center gap-2 text-xs font-bold text-red-700">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                    <span>{field}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <Button
+              type="button"
+              onClick={() => setValidationMissing(null)}
+              className="mt-4 h-11 w-full rounded-2xl bg-[#85241F] text-xs font-bold text-white shadow-md shadow-[#85241F]/10 hover:bg-[#B72D2A]"
+            >
+              กลับไปกรอกข้อมูล
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

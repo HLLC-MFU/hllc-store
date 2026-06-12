@@ -31,7 +31,7 @@ export function PaymentStep({
 
   useEffect(() => {
     let alive = true;
-    fetchPaymentSettings().then((s) => { if (alive) setSettings(s); }).catch(() => {});
+    fetchPaymentSettings().then((s) => { if (alive) setSettings(s); }).catch(() => { });
     return () => { alive = false; };
   }, []);
 
@@ -41,7 +41,7 @@ export function PaymentStep({
       await navigator.clipboard.writeText(settings.bankAccountNumber.replace(/-/g, ""));
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
-    } catch {}
+    } catch { }
   }
 
   return (
@@ -54,12 +54,7 @@ export function PaymentStep({
       <div className="mb-4 rounded-2xl bg-[#85241F]/5 p-4 text-center">
         <p className="text-xs font-bold text-gray-500">{t("checkout.payment_amount")}</p>
         <p className="mt-1 text-2xl font-black text-[#85241F]">{money(selectedPayableTotal)}</p>
-        {selectedShippingFee > 0 && (
-          <p className="mt-1 text-xs font-bold text-gray-500">
-            {lang === "th" ? "รวมค่าส่ง " : "Includes shipping "}
-            {money(selectedShippingFee)}
-          </p>
-        )}
+
       </div>
 
       {!settings ? (
@@ -94,7 +89,7 @@ export function PaymentStep({
       <p className="mb-1.5 px-1 text-xs font-black text-gray-400">
         {lang === "th" ? "แนบสลิปการโอน" : "Attach payment slip"}
       </p>
-      <div className={`rounded-xl border border-dashed p-3 ${slipError ? "border-red-300 bg-red-50/30" : "border-gray-200"}`}>
+      <div className={`rounded-xl border border-dashed p-3 transition-colors ${slipError ? "border-red-400 bg-red-50 ring-1 ring-red-200" : "border-gray-200"}`}>
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={onSlipFile} />
         {slipPreview ? (
           <div className="relative">
@@ -111,7 +106,7 @@ export function PaymentStep({
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className={`flex w-full flex-col items-center gap-2 py-10 ${slipError ? "text-red-400" : "text-gray-400"}`}
+            className={`flex w-full flex-col items-center gap-2 py-10 ${slipError ? "text-red-500" : "text-gray-400"}`}
           >
             <Upload className="h-7 w-7" />
             <span className="text-xs font-bold">{t("checkout.upload_tap")}</span>
@@ -119,8 +114,8 @@ export function PaymentStep({
         )}
       </div>
       {slipError && (
-        <p className="text-xs font-semibold text-red-500 flex items-center gap-1.5">
-          <span>⚠</span> {slipError}
+        <p className="mt-2 flex items-center gap-1.5 px-1 text-xs font-bold text-red-500">
+          {slipError}
         </p>
       )}
 

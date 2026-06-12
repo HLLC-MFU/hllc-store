@@ -17,6 +17,7 @@ export interface PhoneInputProps
   validateOnBlur?: boolean;
   error?: string;
   label?: string;
+  inlineError?: boolean;
 }
 
 function formatPhoneDisplay(raw: string) {
@@ -36,6 +37,7 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
       validateOnBlur = true,
       error: externalError,
       label,
+      inlineError = true,
       className,
       onBlur,
       ...props
@@ -86,7 +88,7 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
               "flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-400 focus:border-zinc-400 disabled:cursor-not-allowed disabled:opacity-50",
               showIcon && "pl-10",
               hasError
-                ? "border-red-300 bg-red-50/30 pr-10 focus:border-red-400"
+                ? "border-red-300 pr-10 focus:border-red-400"
                 : "",
               className
             )}
@@ -96,7 +98,7 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
             <AlertCircle className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-red-400" />
           )}
         </div>
-        {hasError && (
+        {hasError && inlineError && (
           <p className="mt-1.5 text-xs font-semibold text-red-500">{visibleError}</p>
         )}
       </div>
