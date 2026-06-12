@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ClipboardList, LayoutDashboard, LogOut, Package, User } from "lucide-react";
+import { ClipboardList, Images, LayoutDashboard, LogOut, Package, User } from "lucide-react";
 import { useLanguage } from "@/lib/client/language-context";
 import { LanguageChip } from "@/components/shared/language-chip";
 
@@ -45,6 +45,13 @@ export function AdminSidebar({ onLogout,
       icon: Package,
       label: t("admin.tab.products"),
       count: productCount,
+      badge: null,
+    },
+    {
+      key: "storefront",
+      icon: Images,
+      label: t("admin.tab.storefront"),
+      count: null,
       badge: null,
     },
     ...(isSuperAdmin

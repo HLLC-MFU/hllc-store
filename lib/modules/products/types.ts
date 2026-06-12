@@ -18,6 +18,11 @@ export type ProductInput = {
   islandShippingFirstItem?: number;
   islandShippingAdditionalItem?: number;
   discount?: number;
+  category?: string;
+  group?: string;
+  charmType?: string;
+  allowCustomName?: boolean;
+  customNameMaxLength?: number;
   imageUrl?: string;
   imageUrls?: string[];
   options?: unknown[];

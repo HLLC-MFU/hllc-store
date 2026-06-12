@@ -28,6 +28,10 @@ export type Product = {
   islandShippingFirstItem: number;
   islandShippingAdditionalItem: number;
   category?: string;
+  group?: string;
+  charmType?: string;
+  allowCustomName?: boolean;
+  customNameMaxLength?: number;
   options?: ProductOption[];
   imageUrl?: string;
   imageUrls?: string[];
@@ -48,6 +52,7 @@ export type CartItemInput = {
   productId: string;
   quantity: number;
   selectedOption?: string;
+  customName?: string;
 };
 
 export type CustomerInput = {
@@ -70,6 +75,7 @@ export type OrderItem = {
   quantity: number;
   subtotal: number;
   selectedOption?: string;
+  customName?: string;
 };
 
 export type PaymentSlip = {
@@ -141,6 +147,10 @@ export type CreateProductInput = {
   islandShippingFirstItem?: number;
   islandShippingAdditionalItem?: number;
   category?: string;
+  group?: string;
+  charmType?: string;
+  allowCustomName?: boolean;
+  customNameMaxLength?: number;
   options?: ProductOptionInput[] | string;
   imageUrl?: string;
   imageUrls?: string[];

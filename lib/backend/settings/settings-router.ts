@@ -18,3 +18,12 @@ export const adminShippingSettingsRouter = {
   GET: settingsController.getShippingSettings,
   PATCH: (request: NextRequest) => settingsController.updateShippingSettings(request),
 };
+
+export const homeContentRouter = {
+  GET: settingsController.getHomeContent,
+};
+
+export const adminHomeContentRouter = {
+  GET: settingsController.getHomeContent,
+  PATCH: (request: NextRequest) => settingsController.updateHomeContent(request),
+};

@@ -20,6 +20,10 @@ export type Product = {
   islandShippingAdditionalItem: number;
   discount?: number; // percent 0-100
   category?: string;
+  group?: string;
+  charmType?: string;
+  allowCustomName?: boolean;
+  customNameMaxLength?: number;
   options?: ProductOption[];
   imageUrl?: string;
   imageUrls?: string[];
@@ -42,6 +46,7 @@ export type Order = {
     quantity: number;
     subtotal: number;
     selectedOption?: string;
+    customName?: string;
   }[];
   subtotal?: number;
   shippingFee?: number;

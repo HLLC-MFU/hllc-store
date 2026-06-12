@@ -34,3 +34,20 @@ export async function updateShippingSettings(request: Request) {
     return badRequest(error);
   }
 }
+
+export async function getHomeContent() {
+  try {
+    return ok(await settingsService.getHomeContent());
+  } catch (error) {
+    return badRequest(error);
+  }
+}
+
+export async function updateHomeContent(request: Request) {
+  try {
+    const body = await request.json();
+    return ok(await settingsService.updateHomeContent(body));
+  } catch (error) {
+    return badRequest(error);
+  }
+}

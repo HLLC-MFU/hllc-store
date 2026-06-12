@@ -88,6 +88,7 @@ export function ReceiptView({ lang, createdOrder, receiptItems }: ReceiptViewPro
                     <span>
                       {item.quantity} x {money(item.price)}
                       {item.selectedOption ? ` (${item.selectedOption})` : ""}
+                      {item.customName ? ` [${item.customName}]` : ""}
                     </span>
                   </div>
                 </div>

@@ -21,6 +21,7 @@ export type CartItem = {
   islandShippingAdditionalItem?: number;
   imageUrl?: string;
   selectedOption?: string;
+  customName?: string;
   quantity: number;
 };
 
@@ -43,8 +44,8 @@ export type ProductSync = {
 type CartContextType = {
   items: CartItem[];
   addItem: (item: Omit<CartItem, "quantity">) => void;
-  removeItem: (productId: string, selectedOption?: string) => void;
-  updateQty: (productId: string, qty: number, selectedOption?: string) => void;
+  removeItem: (productId: string, selectedOption?: string, customName?: string) => void;
+  updateQty: (productId: string, qty: number, selectedOption?: string, customName?: string) => void;
   syncFromProducts: (products: ProductSync[]) => void;
   clearCart: () => void;
   total: number;
@@ -54,11 +55,16 @@ type CartContextType = {
 const CartContext = createContext<CartContextType | null>(null);
 
 function sameCartLine(
-  item: Pick<CartItem, "productId" | "selectedOption">,
+  item: Pick<CartItem, "productId" | "selectedOption" | "customName">,
   productId: string,
   selectedOption?: string,
+  customName?: string,
 ) {
-  return item.productId === productId && (item.selectedOption ?? "") === (selectedOption ?? "");
+  return (
+    item.productId === productId &&
+    (item.selectedOption ?? "") === (selectedOption ?? "") &&
+    (item.customName ?? "") === (customName ?? "")
+  );
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -81,16 +87,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   function addItem(item: Omit<CartItem, "quantity">) {
     setItems((prev) => {
-      const found = prev.find(
-        (i) =>
-          i.productId === item.productId &&
-          (i.selectedOption ?? "") === (item.selectedOption ?? ""),
+      const found = prev.find((i) =>
+        sameCartLine(i, item.productId, item.selectedOption, item.customName),
       );
       const maxQty = item.stock ?? Number.MAX_SAFE_INTEGER;
       if (found)
         return prev.map((i) =>
-          i.productId === item.productId &&
-          (i.selectedOption ?? "") === (item.selectedOption ?? "")
+          sameCartLine(i, item.productId, item.selectedOption, item.customName)
             ? { ...i, ...item, quantity: Math.min(i.quantity + 1, maxQty) }
             : i
         );
@@ -98,18 +101,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  function removeItem(productId: string, selectedOption?: string) {
-    setItems((prev) => prev.filter((i) => !sameCartLine(i, productId, selectedOption)));
+  function removeItem(productId: string, selectedOption?: string, customName?: string) {
+    setItems((prev) => prev.filter((i) => !sameCartLine(i, productId, selectedOption, customName)));
   }
 
-  function updateQty(productId: string, qty: number, selectedOption?: string) {
+  function updateQty(productId: string, qty: number, selectedOption?: string, customName?: string) {
     if (qty <= 0) {
-      removeItem(productId, selectedOption);
+      removeItem(productId, selectedOption, customName);
       return;
     }
     setItems((prev) =>
       prev.map((i) =>
-        sameCartLine(i, productId, selectedOption)
+        sameCartLine(i, productId, selectedOption, customName)
           ? { ...i, quantity: Math.min(qty, i.stock ?? qty) }
           : i,
       )

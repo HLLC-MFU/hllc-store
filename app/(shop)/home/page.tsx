@@ -1,101 +1,34 @@
-import { listStoreProducts } from "@/lib/backend/products/product-service";
+import { getHomeContent } from "@/lib/backend/settings/settings-service";
+import { getStoreProducts } from "@/lib/backend/products/store-display";
+import { CATEGORIES } from "@/lib/config/catalog";
 import { HomeClient } from "@/components/shop/home-client";
+import type { CategoryBlock } from "@/components/shop/category-blocks";
 
-// Always read fresh products so admin edits show up immediately (no build cache).
+// Always read fresh content so admin banner edits show up immediately.
 export const dynamic = "force-dynamic";
 
-type ProductOption = {
-  label: string;
-  imageUrl?: string;
-  stock?: number;
-};
-
-type LocalizedText = {
-  th: string;
-  en?: string;
-};
-
-type ApiProduct = {
-  id: string;
-  name: LocalizedText;
-  description?: LocalizedText;
-  price: number;
-  stock: number;
-  shippingFirstItem?: number;
-  shippingAdditionalItem?: number;
-  category?: string;
-  options?: Array<string | ProductOption>;
-  imageUrl?: string;
-  active: boolean;
-};
-
-type DisplayProduct = {
-  id: string;
-  name: LocalizedText;
-  description: LocalizedText;
-  price: number;
-  stock: number;
-  shippingFirstItem: number;
-  shippingAdditionalItem: number;
-  category: string;
-  options: ProductOption[];
-  imageUrl?: string;
-};
-
-function normalizeCategory(category?: string) {
-  const value = category?.trim().toLowerCase();
-
-  if (!value) return "others";
-  if (["umbrella", "umbrellas"].includes(value)) return "umbrella";
-  if (["raincoat", "raincoats"].includes(value)) return "raincoat";
-  if (["rainsuit", "rain-suit", "rain_suit"].includes(value)) return "rainsuit";
-  if (["shoe", "shoes", "boot", "boots"].includes(value)) return "shoes";
-
-  return value;
-}
-
-function normalizeOptions(options?: Array<string | ProductOption>) {
-  if (!Array.isArray(options)) return [];
-
-  return options
-    .map((option) => {
-      if (typeof option === "string") {
-        return { label: option.trim(), imageUrl: "" };
-      }
-
-      return {
-        label: option.label?.trim() ?? "",
-        imageUrl: option.imageUrl?.trim() ?? "",
-        stock: option.stock,
-      };
-    })
-    .filter((option) => option.label);
-}
-
-function apiToDisplay(product: ApiProduct): DisplayProduct {
-  const price = Number(product.price ?? 0);
-
-  return {
-    id: product.id,
-    name: product.name,
-    description: product.description ?? { th: "" },
-    price,
-    stock: Number(product.stock ?? 0),
-    shippingFirstItem: Number(product.shippingFirstItem ?? 0),
-    shippingAdditionalItem: Number(product.shippingAdditionalItem ?? 0),
-    category: normalizeCategory(product.category),
-    options: normalizeOptions(product.options),
-    imageUrl: product.imageUrl,
-  };
-}
-
 export default async function HomePage() {
-  const rawProducts = await listStoreProducts();
+  const [content, allProducts] = await Promise.all([getHomeContent(), getStoreProducts()]);
 
-  // Transform products on server side
-  const displayProducts = rawProducts
-    .filter((p) => p.active !== false) // Only show active products
-    .map((p) => apiToDisplay(p as unknown as ApiProduct));
+  const blocks: CategoryBlock[] = CATEGORIES.map((category) => {
+    const block = content.blocks[category.id];
 
-  return <HomeClient products={displayProducts} />;
+    // For leaf categories (no groups), jump directly to the product when there is only one.
+    let href = `/c/${category.id}`;
+    if (!category.groups) {
+      const categoryProducts = allProducts.filter((p) => p.category === category.id && !p.group);
+      if (categoryProducts.length === 1) {
+        href = `/products/${categoryProducts[0].id}`;
+      }
+    }
+
+    return {
+      href,
+      imageUrl: block?.imageUrl || undefined,
+      title: block?.title ?? category.label,
+      subtitle: block?.subtitle,
+    };
+  });
+
+  return <HomeClient blocks={blocks} />;
 }

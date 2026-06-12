@@ -69,6 +69,9 @@ function toOrder(doc: Document): Order {
       selectedOption: typeof item.selectedOption === "string" && item.selectedOption.trim()
         ? item.selectedOption.trim()
         : undefined,
+      customName: typeof item.customName === "string" && item.customName.trim()
+        ? item.customName.trim()
+        : undefined,
     };
   });
   const subtotal = Number(doc.subtotal ?? items.reduce((sum, item) => sum + item.subtotal, 0));
@@ -117,6 +120,7 @@ export async function createOrder(input: CreateOrderInput) {
     productId: item.productId,
     quantity: item.quantity,
     selectedOption: item.selectedOption ?? "",
+    customName: item.customName?.trim() ?? "",
   }));
 
   const products = await db
@@ -159,6 +163,7 @@ export async function createOrder(input: CreateOrderInput) {
       productId: product._id,
       quantity: item.quantity,
       selectedOption,
+      customName: item.customName,
       _price: product.price,
       _shippingFirstItem: Number(product.shippingFirstItem ?? 0),
       _shippingAdditionalItem: Number(product.shippingAdditionalItem ?? 0),
@@ -193,10 +198,11 @@ export async function createOrder(input: CreateOrderInput) {
   const timestamp = now();
   const order = {
     customer,
-    items: storedItems.map(({ productId, quantity, selectedOption }) => ({
+    items: storedItems.map(({ productId, quantity, selectedOption, customName }) => ({
       productId,
       quantity,
       selectedOption,
+      customName,
     })),
     subtotal,
     shippingFee,

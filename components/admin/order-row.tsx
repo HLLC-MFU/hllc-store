@@ -244,6 +244,11 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                           {item.selectedOption}
                         </span>
                       ) : null}
+                      {item.customName ? (
+                        <span className="max-w-40 truncate rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">
+                          ✎ {item.customName}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                 ))}

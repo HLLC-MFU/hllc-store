@@ -24,6 +24,7 @@ type Order = {
     quantity: number;
     subtotal: number;
     selectedOption?: string;
+    customName?: string;
   }[];
   total: number;
   status: OrderStatus;
@@ -303,6 +304,11 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
                         {item.selectedOption}
                       </span>
                     ) : null}
+                    {item.customName ? (
+                      <span className="max-w-28 truncate rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">
+                        ✎ {item.customName}
+                      </span>
+                    ) : null}
                     <span className="text-sm font-bold text-gray-600 shrink-0">{money(item.subtotal)}</span>
                   </div>
                 ))}
@@ -520,6 +526,11 @@ export default function ProfilePage() {
                         {item.selectedOption ? (
                           <span className="mt-0.5 block truncate text-[10px] font-black text-[#85241F]">
                             {item.selectedOption}
+                          </span>
+                        ) : null}
+                        {item.customName ? (
+                          <span className="mt-0.5 block truncate text-[10px] font-black text-amber-700">
+                            ✎ {item.customName}
                           </span>
                         ) : null}
                       </div>

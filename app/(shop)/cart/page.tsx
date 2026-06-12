@@ -136,13 +136,13 @@ export default function CartPage() {
 
   const confirmRemove = useCallback(() => {
     if (!removeTarget) return;
-    removeItem(removeTarget.productId, removeTarget.selectedOption);
+    removeItem(removeTarget.productId, removeTarget.selectedOption, removeTarget.customName);
     setRemoveTarget(null);
   }, [removeTarget, removeItem]);
 
   const decreaseQty = useCallback((item: CartItem) => {
     if (item.quantity <= 1) { setRemoveTarget(item); return; }
-    updateQty(item.productId, item.quantity - 1, item.selectedOption);
+    updateQty(item.productId, item.quantity - 1, item.selectedOption, item.customName);
   }, [updateQty]);
 
   const handleSlipFile = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -226,7 +226,7 @@ export default function CartPage() {
           name, phone: rawPhone, email: rawEmail, address: fullAddress,
           ...(deliveryMode === "delivery" ? { province: prov, district, postalCode: postal } : {}),
         },
-        items: selectedItems.map((item) => ({ productId: item.productId, quantity: item.quantity, selectedOption: item.selectedOption || undefined })),
+        items: selectedItems.map((item) => ({ productId: item.productId, quantity: item.quantity, selectedOption: item.selectedOption || undefined, customName: item.customName || undefined })),
         deliveryMode,
       });
 
@@ -289,8 +289,8 @@ export default function CartPage() {
                   <SwipeableCartItem
                     key={itemKey(item)} item={item} lang={lang}
                     selected={selectedIds.has(itemKey(item))} onSelect={toggleSelect}
-                    onDecrease={decreaseQty} onIncrease={(i) => updateQty(i.productId, i.quantity + 1, i.selectedOption)}
-                    onRemove={(i) => removeItem(i.productId, i.selectedOption)}
+                    onDecrease={decreaseQty} onIncrease={(i) => updateQty(i.productId, i.quantity + 1, i.selectedOption, i.customName)}
+                    onRemove={(i) => removeItem(i.productId, i.selectedOption, i.customName)}
                   />
                 ))}
               </div>

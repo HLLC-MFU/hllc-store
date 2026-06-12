@@ -107,6 +107,7 @@ const DICTIONARY: TranslationDict = {
   "admin.stats_summary": { th: "{orders} ออเดอร์ · {products} สินค้า", en: "{orders} orders · {products} products" },
   "admin.tab.orders": { th: "ออเดอร์", en: "Orders" },
   "admin.tab.products": { th: "สินค้า", en: "Products" },
+  "admin.tab.storefront": { th: "หน้าร้าน", en: "Storefront" },
 
   // Admin Stats Grid
   "admin.stats.revenue": { th: "ยอดขายรวม", en: "Revenue" },

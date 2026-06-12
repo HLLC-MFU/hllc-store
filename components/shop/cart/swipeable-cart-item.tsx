@@ -6,7 +6,7 @@ import { Check, Image as ImageIcon, Minus, Plus, Trash2 } from "lucide-react";
 import type { CartItem } from "@/lib/client/cart";
 
 export function itemKey(item: CartItem) {
-  return `${item.productId}-${item.selectedOption ?? ""}`;
+  return `${item.productId}-${item.selectedOption ?? ""}-${item.customName ?? ""}`;
 }
 
 const currencyFormatter = new Intl.NumberFormat("th-TH", {
@@ -142,6 +142,11 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
           </p>
           {item.selectedOption && (
             <p className="mt-0.5 text-[10px] font-bold text-gray-400">{item.selectedOption}</p>
+          )}
+          {item.customName && (
+            <p className="mt-0.5 inline-block rounded-md bg-[#fce8e7] px-1.5 py-0.5 text-[10px] font-bold text-[#85241F]">
+              {lang === "th" ? "ชื่อ" : "Name"}: {item.customName}
+            </p>
           )}
           <p className="mt-1.5 text-lg font-black text-[#85241F]">{money(item.price)}</p>
         </div>

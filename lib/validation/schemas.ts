@@ -30,6 +30,7 @@ export const cartItemInputSchema = z.object({
   productId: z.string().min(1, "Product ID is required"),
   quantity: z.number().int().min(1, "Quantity must be at least 1"),
   selectedOption: z.string().optional(),
+  customName: z.string().trim().max(40, "Custom name is too long").optional(),
 });
 
 export const deliveryInfoSchema = z.object({
@@ -140,6 +141,10 @@ export const createProductSchema = z.object({
   islandShippingFirstItem: z.coerce.number().finite().min(0).optional(),
   islandShippingAdditionalItem: z.coerce.number().finite().min(0).optional(),
   category: z.string().optional(),
+  group: z.string().optional(),
+  charmType: z.string().optional(),
+  allowCustomName: z.coerce.boolean().optional(),
+  customNameMaxLength: z.coerce.number().int().min(1).max(40).optional(),
   options: z.array(z.union([z.string(), productOptionSchema])).optional(),
   imageUrl: z.string().optional(),
   imageUrls: z.array(z.string()).optional(),
@@ -193,13 +198,16 @@ export const emailPayloadSchema = z.object({
 export const imageUrlSchema = z
   .string()
   .refine(
-    (val) =>
-      val.startsWith("data:")
-        ? /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(val) && val.length <= 3_000_000
-        : true,
-    {
-      message: "Image must be a valid PNG, JPG, WEBP, or GIF under 3MB",
-    }
+    (val) => {
+      if (val.startsWith("data:")) {
+        return /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(val) && val.length <= 3_000_000;
+      }
+      if (val.startsWith("/uploads/")) {
+        return /^\/uploads\/[a-f0-9-]+\.(jpg|jpeg|png|webp|gif)$/i.test(val);
+      }
+      return true;
+    },
+    { message: "Image must be a valid PNG, JPG, WEBP, or GIF under 3MB" }
   );
 
 /* ================================================================
@@ -220,6 +228,24 @@ export const shippingSettingsSchema = z.object({
   remoteAdditionalItem: shippingFee,
   islandFirstItem: shippingFee,
   islandAdditionalItem: shippingFee,
+});
+
+/* ================================================================
+   Home content (banner blocks)
+   ================================================================ */
+
+const looseLocalizedText = z.object({ th: z.string(), en: z.string().optional() });
+
+export const homeBlockSchema = z.object({
+  imageUrl: imageUrlSchema.optional(),
+  title: looseLocalizedText.partial().optional(),
+  subtitle: looseLocalizedText.partial().optional(),
+});
+
+// Keyed by HomeBlockId from lib/config/catalog.ts; all blocks optional so the
+// admin can save partial edits and unset blocks fall back to defaults.
+export const homeContentSchema = z.object({
+  blocks: z.record(z.string(), homeBlockSchema),
 });
 
 /* ================================================================

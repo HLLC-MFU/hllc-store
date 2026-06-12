@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useRef, useCallback, useMemo, type RefObject } from "react";
-import { ChevronLeft, ChevronRight, ShoppingCart, Plus, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShoppingCart, Plus, AlertCircle, Pencil } from "lucide-react";
 import { useCart } from "@/lib/client/cart";
 import { useCartFly } from "@/lib/client/cart-fly";
 import { vibrateTap } from "@/lib/client/haptics";
@@ -26,6 +26,8 @@ export type ProductDetailProduct = {
   price: number;
   stock: number;
   options?: ProductOption[];
+  allowCustomName?: boolean;
+  customNameMaxLength?: number;
   imageUrls?: string[];
   shippingFirstItem?: number;
   shippingAdditionalItem?: number;
@@ -59,6 +61,9 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   const [quantity, setQuantity] = useState(1);
   const [selectedOptionLabel, setSelectedOptionLabel] = useState("");
   const [expanded, setExpanded] = useState(false);
+  const customNameMax = product.customNameMaxLength && product.customNameMaxLength > 0 ? product.customNameMaxLength : 12;
+  const [customNameOpen, setCustomNameOpen] = useState(false);
+  const [customName, setCustomName] = useState("");
   const [toast, setToast] = useState<{ kind: "added" | "alert"; text: string } | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(null);
@@ -81,11 +86,17 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   }, []);
 
   // How many of this product/option are already in the cart.
+  const trimmedCustomName = customName.trim();
   const cartQty = useMemo(
     () => items
-      .filter((i) => i.productId === product.id && (i.selectedOption ?? "") === (selectedOption?.label ?? ""))
+      .filter(
+        (i) =>
+          i.productId === product.id &&
+          (i.selectedOption ?? "") === (selectedOption?.label ?? "") &&
+          (i.customName ?? "") === (product.allowCustomName ? trimmedCustomName : ""),
+      )
       .reduce((sum, i) => sum + i.quantity, 0),
-    [items, product.id, selectedOption],
+    [items, product.id, selectedOption, product.allowCustomName, trimmedCustomName],
   );
 
   function handleAddToCart(sourceEl?: HTMLElement | null) {
@@ -123,6 +134,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         islandShippingAdditionalItem: product.islandShippingAdditionalItem ?? 0,
         imageUrl: displayImages[0] ?? "",
         selectedOption: selectedOption?.label ?? "",
+        customName: product.allowCustomName ? trimmedCustomName : undefined,
       });
     }
     const flySource = sourceEl ?? addBtnRef.current;
@@ -308,6 +320,75 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
               })}
             </div>
           </div>
+        )}
+
+        {/* Card: Custom name sticker */}
+        {product.allowCustomName && (
+          <>
+            <div className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100">
+              <button
+                type="button"
+                onClick={() => setCustomNameOpen(true)}
+                className="flex w-full items-center justify-between gap-2 rounded-2xl border border-[#85241F]/30 bg-white px-4 py-3 text-sm font-black text-[#85241F] transition-colors hover:bg-[#fce8e7] active:scale-[0.98]"
+              >
+                <span className="flex items-center gap-2">
+                  <Pencil className="h-4 w-4" />
+                  {lang === "th" ? "ชื่อบนสติกเกอร์" : "Name on sticker"}
+                </span>
+                {customName.trim() ? (
+                  <span className="max-w-[140px] truncate rounded-lg bg-[#85241F]/10 px-2 py-0.5 text-xs font-bold text-[#85241F]">
+                    {customName.trim()}
+                  </span>
+                ) : (
+                  <span className="text-xs font-semibold text-gray-400">
+                    {lang === "th" ? "แตะเพื่อใส่ชื่อ" : "Tap to add"}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Modal */}
+            {customNameOpen && (
+              <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={() => setCustomNameOpen(false)} />
+                <div className="relative w-full max-w-sm rounded-t-3xl bg-white px-5 pb-8 pt-5 shadow-xl sm:rounded-3xl">
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="text-base font-black text-gray-900">
+                      {lang === "th" ? "ชื่อบนสติกเกอร์" : "Name on sticker"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCustomNameOpen(false)}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={customName}
+                      maxLength={customNameMax}
+                      onChange={(e) => setCustomName(e.target.value)}
+                      placeholder={lang === "th" ? `เช่น สมชาย, หมูกรอบ` : `e.g. John, Lily`}
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 pr-14 text-base font-semibold text-gray-900 outline-none focus:border-[#85241F] focus:ring-2 focus:ring-[#85241F]/10"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">
+                      {customName.length}/{customNameMax}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCustomNameOpen(false)}
+                    className="mt-4 flex h-12 w-full items-center justify-center rounded-2xl bg-[#85241F] text-sm font-black text-white active:scale-[0.98]"
+                  >
+                    {lang === "th" ? "ยืนยัน" : "Confirm"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Card: Quantity */}

@@ -42,6 +42,7 @@ const orderItemResponseSchema = z.object({
   quantity: z.number(),
   subtotal: z.number(),
   selectedOption: optionalStringResponseSchema,
+  customName: optionalStringResponseSchema,
 });
 
 const orderCommonResponseSchema = z.object({
@@ -106,6 +107,10 @@ export const productResponseSchema = z.object({
   islandShippingFirstItem: z.number(),
   islandShippingAdditionalItem: z.number(),
   category: z.string().optional(),
+  group: z.string().optional(),
+  charmType: z.string().optional(),
+  allowCustomName: z.boolean().optional(),
+  customNameMaxLength: z.number().optional(),
   options: z.array(productOptionResponseSchema).optional(),
   imageUrl: z.string().optional(),
   imageUrls: z.array(z.string()).optional(),

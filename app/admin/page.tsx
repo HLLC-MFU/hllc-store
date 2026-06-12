@@ -8,6 +8,7 @@ import {
   Package,
   PackagePlus,
   CheckCircle2,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useLanguage } from "@/lib/client/language-context";
@@ -18,6 +19,8 @@ import * as adminUsersApi from "@/lib/modules/admin-users";
 import type { AdminRole, AdminUser, AuditLog, CurrentAdmin } from "@/lib/modules/admin-users";
 import * as settingsApi from "@/lib/modules/settings";
 import type { PaymentSettings, ShippingSettings } from "@/lib/modules/settings";
+import { placementByValue } from "@/lib/config/catalog";
+import { HomeContentPanel } from "@/components/admin/home-content-panel";
 import { PaymentAccountPanel } from "@/components/admin/payment-account-panel";
 import { ShippingSettingsPanel } from "@/components/admin/shipping-settings-panel";
 import { TestEmailPanel } from "@/components/admin/test-email-panel";
@@ -300,6 +303,12 @@ export default function AdminPage() {
       shippingFirstItem: Number(formData.get("shippingFirstItem")) || 0,
       shippingAdditionalItem: Number(formData.get("shippingAdditionalItem")) || 0,
       discount: Number(formData.get("discount")) || undefined,
+      ...(() => {
+        const placement = placementByValue(String(formData.get("placement") ?? ""));
+        return { category: placement?.category, group: placement?.group, charmType: placement?.charmType };
+      })(),
+      allowCustomName: String(formData.get("allowCustomName") ?? "") === "true",
+      customNameMaxLength: Number(formData.get("customNameMaxLength")) || undefined,
       imageUrl: String(formData.get("imageUrl") ?? "").trim() || undefined,
       imageUrls: (() => {
         try {
@@ -395,6 +404,7 @@ export default function AdminPage() {
             { label: t("admin.tab.dashboard"), icon: LayoutDashboard, onClick: () => setActiveTab("dashboard") },
             { label: t("admin.tab.orders"),    icon: ClipboardList,   onClick: () => setActiveTab("orders"),   badge: pendingSlips.length },
             { label: t("admin.tab.products"),  icon: Package,         onClick: () => setActiveTab("products") },
+            { label: t("admin.tab.storefront"), icon: ImageIcon,      onClick: () => setActiveTab("storefront") },
             ...(currentUser?.role === "superAdmin"
               ? [{ label: "SuperAdmin", icon: LayoutDashboard, onClick: () => setActiveTab("superAdmin") } as NavItem]
               : []),
@@ -438,6 +448,10 @@ export default function AdminPage() {
                 t={t}
               />
             </TabsContent>
+            <TabsContent value="storefront" className="mt-4 animate-in fade-in duration-200">
+              <HomeContentPanel notify={notify} />
+            </TabsContent>
+
             {currentUser?.role === "superAdmin" ? (
               <TabsContent value="superAdmin" className="mt-4 animate-in fade-in duration-200">
                 <div className="flex flex-col gap-4">

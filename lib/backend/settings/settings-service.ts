@@ -1,8 +1,10 @@
 import { parseOrThrow } from "@/lib/validation/schemas";
-import { paymentSettingsSchema, shippingSettingsSchema } from "@/lib/validation/schemas";
-import { getSettingsCollection, PAYMENT_SETTINGS_KEY, SHIPPING_SETTINGS_KEY } from "./settings-module";
+import { paymentSettingsSchema, shippingSettingsSchema, homeContentSchema } from "@/lib/validation/schemas";
+import { getSettingsCollection, PAYMENT_SETTINGS_KEY, SHIPPING_SETTINGS_KEY, HOME_CONTENT_KEY } from "./settings-module";
 import { now } from "@/lib/backend/validation-utils";
 import { DEFAULT_SHIPPING_RATES, type ShippingRates } from "@/lib/config/shipping";
+import { CATEGORIES, HOME_BLOCK_IDS, type HomeBlockId } from "@/lib/config/catalog";
+import type { LocalizedText } from "@/lib/backend/types";
 
 export type PaymentSettings = {
   bankName: string;
@@ -64,4 +66,85 @@ export async function updateShippingSettings(input: unknown): Promise<ShippingRa
     { upsert: true },
   );
   return getShippingSettings();
+}
+
+/* ================================================================
+   Home content (editable banner blocks)
+   ================================================================ */
+
+export type HomeBlock = {
+  imageUrl: string;
+  title: LocalizedText;
+  subtitle: LocalizedText;
+};
+
+export type HomeContent = {
+  blocks: Record<HomeBlockId, HomeBlock>;
+};
+
+// Default title/subtitle come from the catalog labels so a fresh store already
+// shows sensible block headings before the admin uploads any banners.
+function defaultHomeContent(): HomeContent {
+  const blocks = {} as Record<HomeBlockId, HomeBlock>;
+  for (const category of CATEGORIES) {
+    blocks[category.id] = { imageUrl: "", title: category.label, subtitle: { th: "", en: "" } };
+    for (const group of category.groups ?? []) {
+      blocks[group.id] = { imageUrl: "", title: group.label, subtitle: { th: "", en: "" } };
+    }
+  }
+  return { blocks };
+}
+
+const asLocalized = (value: unknown, fallback: LocalizedText): LocalizedText => {
+  if (value && typeof value === "object") {
+    const v = value as { th?: unknown; en?: unknown };
+    return {
+      th: typeof v.th === "string" && v.th ? v.th : fallback.th,
+      en: typeof v.en === "string" ? v.en : fallback.en,
+    };
+  }
+  return fallback;
+};
+
+export async function getHomeContent(): Promise<HomeContent> {
+  const defaults = defaultHomeContent();
+  const collection = await getSettingsCollection();
+  const doc = await collection.findOne({ _id: HOME_CONTENT_KEY as unknown as never });
+  const stored = (doc?.blocks ?? {}) as Record<string, unknown>;
+
+  const blocks = {} as Record<HomeBlockId, HomeBlock>;
+  for (const id of HOME_BLOCK_IDS) {
+    const fallback = defaults.blocks[id];
+    const raw = (stored[id] ?? {}) as { imageUrl?: unknown; title?: unknown; subtitle?: unknown };
+    blocks[id] = {
+      imageUrl: typeof raw.imageUrl === "string" ? raw.imageUrl : "",
+      title: asLocalized(raw.title, fallback.title),
+      subtitle: asLocalized(raw.subtitle, fallback.subtitle),
+    };
+  }
+  return { blocks };
+}
+
+export async function updateHomeContent(input: unknown): Promise<HomeContent> {
+  const parsed = parseOrThrow(homeContentSchema, input);
+  // Merge onto current content so partial edits (one block) don't wipe the rest.
+  const current = await getHomeContent();
+  const merged = { ...current.blocks } as Record<HomeBlockId, HomeBlock>;
+  for (const [id, block] of Object.entries(parsed.blocks)) {
+    if (!(id in merged)) continue;
+    const key = id as HomeBlockId;
+    merged[key] = {
+      imageUrl: block.imageUrl ?? merged[key].imageUrl,
+      title: { th: block.title?.th ?? merged[key].title.th, en: block.title?.en ?? merged[key].title.en },
+      subtitle: { th: block.subtitle?.th ?? merged[key].subtitle.th, en: block.subtitle?.en ?? merged[key].subtitle.en },
+    };
+  }
+
+  const collection = await getSettingsCollection();
+  await collection.updateOne(
+    { _id: HOME_CONTENT_KEY as unknown as never },
+    { $set: { blocks: merged, updatedAt: now() } },
+    { upsert: true },
+  );
+  return getHomeContent();
 }

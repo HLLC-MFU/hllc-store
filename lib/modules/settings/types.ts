@@ -18,3 +18,21 @@ export const shippingSettingsResponseSchema = z.object({
 });
 
 export type ShippingSettings = z.infer<typeof shippingSettingsResponseSchema>;
+
+const localizedTextResponseSchema = z.object({
+  th: z.string(),
+  en: z.string().optional(),
+});
+
+export const homeBlockResponseSchema = z.object({
+  imageUrl: z.string(),
+  title: localizedTextResponseSchema,
+  subtitle: localizedTextResponseSchema,
+});
+
+export const homeContentResponseSchema = z.object({
+  blocks: z.record(z.string(), homeBlockResponseSchema),
+});
+
+export type HomeBlock = z.infer<typeof homeBlockResponseSchema>;
+export type HomeContent = z.infer<typeof homeContentResponseSchema>;

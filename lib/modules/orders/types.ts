@@ -12,7 +12,7 @@ export type OrderStatus = Order["status"];
 
 export type CreateOrderInput = {
   customer: { name: string; phone: string; email: string; address: string };
-  items: { productId: string; quantity: number; selectedOption?: string }[];
+  items: { productId: string; quantity: number; selectedOption?: string; customName?: string }[];
   deliveryMode: "delivery" | "pickup";
 };
 

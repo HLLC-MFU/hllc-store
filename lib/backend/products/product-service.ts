@@ -3,6 +3,23 @@ import { createProductSchema, imageUrlSchema, parseOrThrow } from "@/lib/validat
 import type { CreateProductInput, Product, LocalizedText } from "@/lib/backend/types";
 import { getProductCollection } from "./product-module";
 import { assertText, assertNumber, assertObjectId, now, normalizeOptions } from "@/lib/backend/validation-utils";
+import { isCategoryId, isGroupId, isCharmType } from "@/lib/config/catalog";
+
+// Taxonomy fields are validated against the fixed catalog; unknown values are
+// dropped so a product never lands in a non-existent category/group.
+function normalizeCategory(value: unknown) {
+  return typeof value === "string" && isCategoryId(value.trim()) ? value.trim() : "";
+}
+
+function normalizeGroup(value: unknown) {
+  return typeof value === "string" && isGroupId(value.trim()) ? value.trim() : "";
+}
+
+// charmType only meaningful when the product sits in the charm group.
+function normalizeCharmType(value: unknown, group: string) {
+  if (group !== "charm") return "";
+  return typeof value === "string" && isCharmType(value.trim()) ? value.trim() : "";
+}
 
 function normalizeImageValue(value: unknown) {
   if (value === undefined || value === null || value === "") return "";
@@ -71,6 +88,10 @@ export function toProduct(doc: Document): Product {
     islandShippingFirstItem: Number(doc.islandShippingFirstItem ?? 0),
     islandShippingAdditionalItem: Number(doc.islandShippingAdditionalItem ?? 0),
     category: doc.category ?? "",
+    group: doc.group ?? "",
+    charmType: doc.charmType ?? "",
+    allowCustomName: doc.allowCustomName === true,
+    customNameMaxLength: Number(doc.customNameMaxLength) > 0 ? Number(doc.customNameMaxLength) : 12,
     options: normalizeOptions(doc.options, normalizeOptionImageValue),
     imageUrl: doc.imageUrl || imageUrls[0] || "",
     imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
@@ -104,7 +125,11 @@ function buildCreateProduct(input: CreateProductInput) {
     remoteShippingAdditionalItem: parsed.remoteShippingAdditionalItem ?? 0,
     islandShippingFirstItem: parsed.islandShippingFirstItem ?? 0,
     islandShippingAdditionalItem: parsed.islandShippingAdditionalItem ?? 0,
-    category: parsed.category ?? "",
+    category: normalizeCategory(parsed.category),
+    group: normalizeGroup(parsed.group),
+    charmType: normalizeCharmType(parsed.charmType, normalizeGroup(parsed.group)),
+    allowCustomName: parsed.allowCustomName === true,
+    customNameMaxLength: parsed.customNameMaxLength ?? 12,
     options: normalizeOptions(input.options, normalizeOptionImageValue),
     imageUrl: normalizeImageValue(input.imageUrl),
     imageUrls: Array.isArray(input.imageUrls)
@@ -203,8 +228,25 @@ export async function updateProduct(
   }
 
   if (input.category !== undefined) {
-    updateData.category =
-      typeof input.category === "string" ? input.category.trim() : "";
+    updateData.category = normalizeCategory(input.category);
+  }
+
+  if (input.group !== undefined) {
+    updateData.group = normalizeGroup(input.group);
+  }
+
+  if (input.charmType !== undefined) {
+    // resolve against the group being set in this same update, else the stored group
+    const group = input.group !== undefined ? normalizeGroup(input.group) : "charm";
+    updateData.charmType = normalizeCharmType(input.charmType, group);
+  }
+
+  if (input.allowCustomName !== undefined) {
+    updateData.allowCustomName = input.allowCustomName === true;
+  }
+
+  if (input.customNameMaxLength !== undefined) {
+    updateData.customNameMaxLength = Number(input.customNameMaxLength) > 0 ? Number(input.customNameMaxLength) : 12;
   }
 
   if (input.options !== undefined) {
