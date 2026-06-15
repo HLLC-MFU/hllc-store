@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { type LucideIcon, ClipboardList, Home, LayoutDashboard, Mail, Menu, Package, ShoppingCart, User, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { type LucideIcon, ChevronLeft, ClipboardList, Home, LayoutDashboard, Mail, Menu, Package, ShoppingCart, User, X } from "lucide-react";
 import { useCart } from "@/lib/client/cart";
 import { useCartFly } from "@/lib/client/cart-fly";
 import { useLanguage } from "@/lib/client/language-context";
@@ -87,28 +88,43 @@ function CartButton({ count }: { count: number }) {
 type AppHeaderProps = {
   navItems?: NavItem[];
   showCart?: boolean;
+  showBack?: boolean;
   logoHref?: string;
   onLogoClick?: () => void;
 };
 
-export function AppHeader({ navItems = SHOP_NAV, showCart = true, logoHref = "/home", onLogoClick }: AppHeaderProps) {
+export function AppHeader({ navItems = SHOP_NAV, showCart = true, showBack = true, logoHref = "/home", onLogoClick }: AppHeaderProps) {
   const [open, setOpen] = React.useState(false);
   const { count } = useCart();
   const { t } = useLanguage();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const isSubPage = showBack && pathname !== "/home" && pathname !== "/cart";
 
   return (
     <>
       {/* Fixed bar */}
       <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-100 h-14 flex items-center px-5">
-        {/* Left — hamburger */}
+        {/* Left — back or hamburger */}
         <div className="flex-1 flex items-center">
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 active:scale-95 transition-all cursor-pointer"
-          >
-            {open ? <X className="w-4.5 h-4.5 text-gray-700" /> : <Menu className="w-4.5 h-4.5 text-gray-700" />}
-          </button>
+          {isSubPage ? (
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 active:scale-95 transition-all cursor-pointer"
+            >
+              <ChevronLeft className="w-5 h-5 text-gray-700" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 active:scale-95 transition-all cursor-pointer"
+            >
+              {open ? <X className="w-4.5 h-4.5 text-gray-700" /> : <Menu className="w-4.5 h-4.5 text-gray-700" />}
+            </button>
+          )}
         </div>
 
         {/* Center — logo */}

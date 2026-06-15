@@ -21,43 +21,79 @@ type ConfirmationModalProps = {
 
 function SlipLightbox({ images, index, onClose }: { images: string[]; index: number; onClose: () => void }) {
   const [i, setI] = React.useState(index);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const touchStartX = React.useRef<number | null>(null);
   const count = images.length;
   const current = Math.min(Math.max(i, 0), count - 1);
+
+  const scrollTo = React.useCallback((idx: number) => {
+    scrollRef.current?.scrollTo({ left: idx * (scrollRef.current.clientWidth), behavior: "smooth" });
+    setI(idx);
+  }, []);
+
   const step = (delta: number) => (e: React.MouseEvent) => {
     e.stopPropagation();
-    setI((v) => (v + delta + count) % count);
+    scrollTo((current + delta + count) % count);
   };
 
   return (
     <div
-      className="fixed inset-0 bg-black/90 backdrop-blur-md z-70 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/90 backdrop-blur-md z-70 flex flex-col items-center justify-center"
       onClick={onClose}
     >
-      <button onClick={onClose} className="absolute top-4 right-4 w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white cursor-pointer transition-colors">
+      <button onClick={onClose} className="absolute top-4 right-4 w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white cursor-pointer transition-colors z-10">
         <XCircle className="w-5 h-5" />
       </button>
 
+      {/* Swipeable container */}
+      <div
+        ref={scrollRef}
+        onClick={(e) => e.stopPropagation()}
+        onScroll={(e) => {
+          const idx = Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth);
+          if (idx !== current && idx >= 0 && idx < count) setI(idx);
+        }}
+        onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+        onTouchEnd={(e) => {
+          if (touchStartX.current === null) return;
+          const dx = e.changedTouches[0].clientX - touchStartX.current;
+          touchStartX.current = null;
+          if (Math.abs(dx) > 40) scrollTo((current + (dx < 0 ? 1 : -1) + count) % count);
+        }}
+        className="w-full flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none"
+        style={{ maxHeight: "90vh" }}
+      >
+        {images.map((src, idx) => (
+          <div key={idx} className="w-full shrink-0 snap-center flex items-center justify-center p-4" style={{ minWidth: "100vw" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={src}
+              alt={`slip ${idx + 1}`}
+              className="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl border border-white/10"
+            />
+          </div>
+        ))}
+      </div>
+
       {count > 1 && (
         <>
-          <button onClick={step(-1)} className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white cursor-pointer transition-colors">
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <button onClick={step(1)} className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white cursor-pointer transition-colors">
-            <ChevronRight className="w-6 h-6" />
-          </button>
-          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 bg-white/15 text-white text-xs font-bold px-3 py-1.5 rounded-full">
-            {current + 1} / {count} · {current === 0 ? "ล่าสุด" : "สลิปเก่า"}
+          {current > 0 && (
+            <button onClick={step(-1)} className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white cursor-pointer transition-colors">
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+          {current < count - 1 && (
+            <button onClick={step(1)} className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white cursor-pointer transition-colors">
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          )}
+          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-3">
+            <div className="bg-white/15 text-white text-xs font-bold px-3 py-1.5 rounded-full">
+              {current + 1} / {count} · {current === 0 ? "ล่าสุด" : "สลิปเก่า"}
+            </div>
           </div>
         </>
       )}
-
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={images[current]}
-        alt="slip"
-        onClick={(e) => e.stopPropagation()}
-        className="max-w-full max-h-[90vh] rounded-2xl object-contain shadow-2xl border border-white/10"
-      />
     </div>
   );
 }

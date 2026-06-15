@@ -1,6 +1,7 @@
 import { parseOrThrow } from "@/lib/validation/schemas";
 import { paymentSettingsSchema, shippingSettingsSchema, homeContentSchema } from "@/lib/validation/schemas";
-import { getSettingsCollection, PAYMENT_SETTINGS_KEY, SHIPPING_SETTINGS_KEY, HOME_CONTENT_KEY } from "./settings-module";
+import { getSettingsCollection, PAYMENT_SETTINGS_KEY, SHIPPING_SETTINGS_KEY, HOME_CONTENT_KEY, CHARM_SETTINGS_KEY } from "./settings-module";
+import { CHARM_COLORS } from "@/lib/config/catalog";
 import { now } from "@/lib/backend/validation-utils";
 import { DEFAULT_SHIPPING_RATES, type ShippingRates } from "@/lib/config/shipping";
 import { CATEGORIES, HOME_BLOCK_IDS, type HomeBlockId } from "@/lib/config/catalog";
@@ -147,4 +148,38 @@ export async function updateHomeContent(input: unknown): Promise<HomeContent> {
     { upsert: true },
   );
   return getHomeContent();
+}
+
+/* ================================================================
+   Charm settings (color images for the dangle add-on)
+   ================================================================ */
+
+export type CharmSettings = {
+  images: Record<string, string>;
+};
+
+export async function getCharmSettings(): Promise<CharmSettings> {
+  const collection = await getSettingsCollection();
+  const doc = await collection.findOne({ _id: CHARM_SETTINGS_KEY as unknown as never });
+  const stored = (doc?.images ?? {}) as Record<string, unknown>;
+  const images: Record<string, string> = {};
+  for (const { id } of CHARM_COLORS) {
+    images[id] = typeof stored[id] === "string" ? (stored[id] as string) : "";
+  }
+  return { images };
+}
+
+export async function updateCharmSettings(input: unknown): Promise<CharmSettings> {
+  const raw = (input as { images?: Record<string, unknown> })?.images ?? {};
+  const images: Record<string, string> = {};
+  for (const { id } of CHARM_COLORS) {
+    images[id] = typeof raw[id] === "string" ? (raw[id] as string) : "";
+  }
+  const collection = await getSettingsCollection();
+  await collection.updateOne(
+    { _id: CHARM_SETTINGS_KEY as unknown as never },
+    { $set: { images, updatedAt: now() } },
+    { upsert: true },
+  );
+  return getCharmSettings();
 }

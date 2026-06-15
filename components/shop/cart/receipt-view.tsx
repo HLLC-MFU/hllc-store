@@ -34,15 +34,15 @@ export function ReceiptView({ lang, createdOrder, receiptItems }: ReceiptViewPro
   const subtotal = createdOrder.subtotal ?? Math.max(0, createdOrder.total - shippingFee);
 
   return (
-    <div className="flex min-h-[80vh] flex-col items-center justify-center py-10 text-center">
+    <div className="flex min-h-[80vh] flex-col items-center justify-center px-4 pt-4 pb-10 text-center">
       <div className="w-full max-w-sm">
-        <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-100 success-pop">
-          <CheckCircle2 className="h-14 w-14 text-emerald-600" />
+        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 success-pop">
+          <CheckCircle2 className="h-8 w-8 text-emerald-600" />
         </div>
-        <h1 className="text-2xl font-black text-gray-900">
+        <h1 className="text-base font-black text-gray-900">
           {lang === "th" ? "คำสั่งซื้อสำเร็จ!" : "Order placed!"}
         </h1>
-        <p className="mt-2 text-sm font-semibold text-gray-500">
+        <p className="mt-1 text-xs font-semibold text-gray-400">
           {lang === "th" ? "เราได้รับคำสั่งซื้อของคุณแล้ว" : "We have received your order"}
         </p>
 

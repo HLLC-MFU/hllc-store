@@ -21,6 +21,7 @@ import * as settingsApi from "@/lib/modules/settings";
 import type { PaymentSettings, ShippingSettings } from "@/lib/modules/settings";
 import { placementByValue } from "@/lib/config/catalog";
 import { HomeContentPanel } from "@/components/admin/home-content-panel";
+import { CharmSettingsPanel } from "@/components/admin/charm-settings-panel";
 import { PaymentAccountPanel } from "@/components/admin/payment-account-panel";
 import { ShippingSettingsPanel } from "@/components/admin/shipping-settings-panel";
 import { TestEmailPanel } from "@/components/admin/test-email-panel";
@@ -294,10 +295,11 @@ export default function AdminPage() {
         en: String(formData.get("nameEn") ?? "").trim() || undefined,
       },
       slug: nameTh.toLowerCase().replace(/\s+/g, "-"),
-      description: {
-        th: String(formData.get("description") ?? "").trim(),
-        en: String(formData.get("descriptionEn") ?? "").trim() || undefined,
-      },
+      description: (() => {
+        const th = String(formData.get("description") ?? "").trim();
+        const en = String(formData.get("descriptionEn") ?? "").trim() || undefined;
+        return th ? { th, en } : { th: "" };
+      })(),
       price: Number(formData.get("price")) || 0,
       stock: Number(formData.get("stock")) || 0,
       shippingFirstItem: Number(formData.get("shippingFirstItem")) || 0,
@@ -333,6 +335,7 @@ export default function AdminPage() {
     setLoading(false);
     if (res.error) {
       notify(res.error);
+      throw new Error(res.error);
     } else {
       notify(t("admin.toast.product_added"));
       loadData();
@@ -345,6 +348,7 @@ export default function AdminPage() {
     setLoading(false);
     if (res.error) {
       notify(res.error);
+      throw new Error(res.error);
     } else {
       notify(t("admin.toast.product_updated"));
       loadData();
@@ -399,9 +403,10 @@ export default function AdminPage() {
         onLogout={handleLogout}
       />
 
-      <div className="lg:hidden">
+      <div className="md:hidden">
         <AppHeader
           showCart={false}
+          showBack={false}
           logoHref="/admin"
           onLogoClick={() => setActiveTab("dashboard")}
           navItems={[
@@ -417,7 +422,7 @@ export default function AdminPage() {
         />
       </div>
 
-      <div className="lg:pl-56 xl:pl-64 pt-14 lg:pt-0">
+      <div className="pt-14 md:pt-0 md:pl-56 lg:pl-64">
         <div className="max-w-240 mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
 
@@ -453,7 +458,7 @@ export default function AdminPage() {
               />
             </TabsContent>
             <TabsContent value="storefront" className="mt-4 animate-in fade-in duration-200">
-              <HomeContentPanel notify={notify} />
+              <StorefrontPanel notify={notify} />
             </TabsContent>
 
             {currentUser?.role === "superAdmin" ? (
@@ -518,5 +523,64 @@ export default function AdminPage() {
         />
       )}
     </main>
+  );
+}
+
+function StorefrontPanel({ notify }: { notify: (msg: string) => void }) {
+  const [section, setSection] = React.useState<"home" | "charm">("home");
+  const [saving, setSaving] = React.useState(false);
+  const homeRef = React.useRef<(() => Promise<void>) | null>(null);
+  const charmRef = React.useRef<(() => Promise<void>) | null>(null);
+
+  async function handleSave() {
+    const fn = section === "home" ? homeRef.current : charmRef.current;
+    if (!fn) return;
+    setSaving(true);
+    await fn();
+    setSaving(false);
+  }
+
+  return (
+    <div className="flex flex-col gap-4 pb-24">
+      {/* Full-width toggle */}
+      <div className="flex gap-1 rounded-2xl bg-gray-100 p-1">
+        {(["home", "charm"] as const).map((id) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setSection(id)}
+            className={`flex-1 rounded-xl py-2.5 text-xs font-black transition-all cursor-pointer ${
+              section === id ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {id === "home" ? "หน้าหลัก" : "ที่ห้อย"}
+          </button>
+        ))}
+      </div>
+
+      {/* Panel content */}
+      {section === "home" && (
+        <div className="animate-in fade-in duration-200">
+          <HomeContentPanel notify={notify} saveRef={homeRef} />
+        </div>
+      )}
+      {section === "charm" && (
+        <div className="animate-in fade-in duration-200 rounded-2xl border border-gray-100 bg-white p-4">
+          <CharmSettingsPanel notify={notify} saveRef={charmRef} />
+        </div>
+      )}
+
+      {/* Sticky footer */}
+      <div className="fixed bottom-0 left-0 right-0 md:pl-56 lg:pl-64 z-30 bg-white/90 backdrop-blur-md border-t border-gray-100 px-4 py-3 flex justify-end">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="flex items-center gap-2 rounded-2xl bg-[#85241F] hover:bg-[#B72D2A] disabled:opacity-50 text-white px-8 py-2.5 text-sm font-black transition-colors cursor-pointer"
+        >
+          {saving ? "กำลังบันทึก..." : "บันทึก"}
+        </button>
+      </div>
+    </div>
   );
 }

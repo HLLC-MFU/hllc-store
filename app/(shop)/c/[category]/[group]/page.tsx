@@ -3,7 +3,6 @@ import { getStoreProducts } from "@/lib/backend/products/store-display";
 import { getGroup, isCategoryId } from "@/lib/config/catalog";
 import { CategoryGrid } from "@/components/shop/category-grid";
 import { CharmGrid } from "@/components/shop/charm-grid";
-import { ShopPageHeader } from "@/components/shop/shop-page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +21,6 @@ export default async function GroupPage({ params }: Props) {
   return (
     <div className="min-h-screen bg-white">
       <div className="px-4 md:px-6 py-4 pb-24">
-        <ShopPageHeader title={def.label} backHref={`/c/${category}`} />
         {def.hasCharmFilter ? (
           <CharmGrid products={filtered} />
         ) : (

@@ -51,3 +51,20 @@ export async function updateHomeContent(request: Request) {
     return badRequest(error);
   }
 }
+
+export async function getCharmSettings() {
+  try {
+    return ok(await settingsService.getCharmSettings());
+  } catch (error) {
+    return badRequest(error);
+  }
+}
+
+export async function updateCharmSettings(request: Request) {
+  try {
+    const body = await request.json();
+    return ok(await settingsService.updateCharmSettings(body));
+  } catch (error) {
+    return badRequest(error);
+  }
+}

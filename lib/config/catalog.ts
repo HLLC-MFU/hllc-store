@@ -16,7 +16,7 @@ import type { LocalizedText } from "@/lib/backend/types";
 
 export type CategoryId = "bottle" | "bracelet-charm";
 export type GroupId = "secret-set" | "bracelet" | "charm";
-export type CharmType = "clip" | "dangle";
+export type CharmType = "clip" | "dangle" | "spacer";
 
 // Block ids that have an editable banner (image + title + subtitle) in settings.
 export type HomeBlockId = CategoryId | GroupId;
@@ -51,9 +51,20 @@ export const CATEGORIES: CategoryDef[] = [
   },
 ];
 
+export const CHARM_COLORS: { id: string; label: string; hex: string }[] = [
+  { id: "white",  label: "ขาว",     hex: "#F5F2EF" },
+  { id: "brown",  label: "น้ำตาล", hex: "#8B6347" },
+  { id: "green",  label: "เขียว",   hex: "#6BAE75" },
+  { id: "pink",   label: "ชมพู",    hex: "#F4A0BF" },
+  { id: "black",  label: "ดำ",      hex: "#2C2C2C" },
+  { id: "blue",   label: "ฟ้า",     hex: "#6AB0DC" },
+  { id: "gold",   label: "ทอง",     hex: "#CBA135" },
+];
+
 export const CHARM_TYPES: { id: CharmType; label: LocalizedText }[] = [
-  { id: "clip", label: { th: "ที่ lock", en: "Clip-on" } },
-  { id: "dangle", label: { th: "ที่ห้อย", en: "Dangle" } },
+  { id: "clip",   label: { th: "ที่ล็อค",  en: "Clip-on" } },
+  { id: "dangle", label: { th: "ที่ห้อย",  en: "Dangle"  } },
+  { id: "spacer", label: { th: "ที่กั้น",  en: "Spacer"  } },
 ];
 
 // A "placement" is a single admin-facing choice that resolves to the trio of
@@ -83,7 +94,7 @@ export const PLACEMENTS: Placement[] = [
   },
   {
     value: "charm-clip",
-    label: { th: "Charm — ที่ lock", en: "Charm — Clip-on" },
+    label: { th: "Charm — ที่ล็อค", en: "Charm — Clip-on" },
     category: "bracelet-charm",
     group: "charm",
     charmType: "clip",
@@ -95,11 +106,18 @@ export const PLACEMENTS: Placement[] = [
     group: "charm",
     charmType: "dangle",
   },
+  {
+    value: "charm-spacer",
+    label: { th: "Charm — ที่กั้น", en: "Charm — Spacer" },
+    category: "bracelet-charm",
+    group: "charm",
+    charmType: "spacer",
+  },
 ];
 
 const CATEGORY_IDS = CATEGORIES.map((c) => c.id);
 const GROUP_IDS: GroupId[] = ["secret-set", "bracelet", "charm"];
-const CHARM_TYPE_IDS: CharmType[] = ["clip", "dangle"];
+const CHARM_TYPE_IDS: CharmType[] = ["clip", "dangle", "spacer"];
 
 export function isCategoryId(value: unknown): value is CategoryId {
   return typeof value === "string" && (CATEGORY_IDS as string[]).includes(value);

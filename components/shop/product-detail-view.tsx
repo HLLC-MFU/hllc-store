@@ -1,12 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useRef, useCallback, useMemo, type RefObject } from "react";
-import { ChevronLeft, ChevronRight, ShoppingCart, Plus, AlertCircle, Pencil } from "lucide-react";
+import { useState, useRef, useCallback, useMemo, useEffect, type RefObject } from "react";
+import { ChevronLeft, ChevronRight, ShoppingCart, Plus, AlertCircle, X, Delete } from "lucide-react";
 import { useCart } from "@/lib/client/cart";
 import { useCartFly } from "@/lib/client/cart-fly";
 import { vibrateTap } from "@/lib/client/haptics";
 import { useLanguage } from "@/lib/client/language-context";
+import { CHARM_COLORS } from "@/lib/config/catalog";
+import { ShopFooter } from "@/components/shop/shop-footer";
 
 export type LocalizedText = {
   th: string;
@@ -29,6 +31,7 @@ export type ProductDetailProduct = {
   allowCustomName?: boolean;
   customNameMaxLength?: number;
   imageUrls?: string[];
+  charmImages?: Record<string, string>;
   shippingFirstItem?: number;
   shippingAdditionalItem?: number;
   remoteShippingFirstItem?: number;
@@ -47,6 +50,14 @@ function money(value: number) {
   return currencyFormatter.format(value);
 }
 
+type CharmColorId = string;
+
+const CHARM_PRICE = 30;
+const FREE_LETTERS = 2;
+const LETTER_PRICE = 10;
+const MAX_LETTERS = 12;
+const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
 export function ProductDetailView({ product }: { product: ProductDetailProduct }) {
   const router = useRouter();
   const { addItem, items } = useCart();
@@ -60,10 +71,15 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   const [currentIndex, setCurrentIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedOptionLabel, setSelectedOptionLabel] = useState("");
-  const [expanded, setExpanded] = useState(false);
-  const customNameMax = product.customNameMaxLength && product.customNameMaxLength > 0 ? product.customNameMaxLength : 12;
-  const [customNameOpen, setCustomNameOpen] = useState(false);
-  const [customName, setCustomName] = useState("");
+  const [charmOpen, setCharmOpen] = useState(false);
+  const [charmStep, setCharmStep] = useState<"color" | "letters">("color");
+  const [charmColor, setCharmColor] = useState<CharmColorId | "">("");
+  const [charmLetters, setCharmLetters] = useState<string[]>([]);
+  const [charmPrompt, setCharmPrompt] = useState<"cart" | "buy" | null>(null);
+  const pendingSourceEl = useRef<HTMLElement | null>(null);
+  const pendingAction = useRef<{ type: "cart" | "buy"; sourceEl: HTMLElement | null } | null>(null);
+  const [tempColor, setTempColor] = useState<CharmColorId | "">("");
+  const [tempLetters, setTempLetters] = useState<string[]>([]);
   const [toast, setToast] = useState<{ kind: "added" | "alert"; text: string } | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(null);
@@ -85,21 +101,70 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
     toastTimer.current = setTimeout(() => setToast(null), 2000);
   }, []);
 
+  // Charm add-on derived values
+  const charmExtraLetters = Math.max(0, charmLetters.length - FREE_LETTERS);
+  const charmAddon = charmColor ? CHARM_PRICE + charmExtraLetters * LETTER_PRICE : 0;
+  const unitPrice = product.price + charmAddon;
+  const charmCustomName = charmColor ? `charm:${charmColor}:${charmLetters.join("")}` : undefined;
+  const tempExtraLetters = Math.max(0, tempLetters.length - FREE_LETTERS);
+  const tempCharmAddon = tempColor ? CHARM_PRICE + tempExtraLetters * LETTER_PRICE : 0;
+  const selectedCharmMeta = CHARM_COLORS.find((c) => c.id === charmColor);
+  const tempCharmMeta = CHARM_COLORS.find((c) => c.id === tempColor);
+
+  // Cycle through charm images in the "add" button when no charm is selected
+  const charmImageValues = Object.values(product.charmImages ?? {}).filter(Boolean);
+  const [cycleIdx, setCycleIdx] = useState(0);
+  useEffect(() => {
+    if (charmImageValues.length < 2 || charmColor) return;
+    const id = setInterval(() => setCycleIdx((i) => (i + 1) % charmImageValues.length), 2200);
+    return () => clearInterval(id);
+  }, [charmImageValues.length, charmColor]);
+
+  function openCharmModal() {
+    setTempColor(charmColor);
+    setTempLetters([...charmLetters]);
+    setCharmStep(charmColor ? "letters" : "color");
+    setCharmOpen(true);
+  }
+  function cancelCharmModal() {
+    setCharmOpen(false);
+    pendingAction.current = null;
+  }
+  function confirmCharm() {
+    setCharmColor(tempColor);
+    setCharmLetters([...tempLetters]);
+    setCharmOpen(false);
+    // pendingAction is handled by useEffect below after state settles
+  }
+  function removeCharm() {
+    setCharmColor("");
+    setCharmLetters([]);
+  }
+
+  // After charm is confirmed, trigger any pending cart/buy action
+  useEffect(() => {
+    if (!pendingAction.current || !charmColor) return;
+    const action = pendingAction.current;
+    pendingAction.current = null;
+    handleAddToCart(action.sourceEl ?? undefined, true);
+    if (action.type === "buy") router.push("/cart?selectAll=1");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [charmColor]);
+
   // How many of this product/option are already in the cart.
-  const trimmedCustomName = customName.trim();
   const cartQty = useMemo(
     () => items
       .filter(
         (i) =>
           i.productId === product.id &&
           (i.selectedOption ?? "") === (selectedOption?.label ?? "") &&
-          (i.customName ?? "") === (product.allowCustomName ? trimmedCustomName : ""),
+          (i.customName ?? "") === (product.allowCustomName ? (charmCustomName ?? "") : ""),
       )
       .reduce((sum, i) => sum + i.quantity, 0),
-    [items, product.id, selectedOption, product.allowCustomName, trimmedCustomName],
+    [items, product.id, selectedOption, product.allowCustomName, charmCustomName],
   );
 
-  function handleAddToCart(sourceEl?: HTMLElement | null) {
+  function handleAddToCart(sourceEl?: HTMLElement | null, skipCharmPrompt = false): boolean {
     vibrateTap();
     if (mustSelectOption) {
       showToast("alert", lang === "th" ? "กรุณาเลือกตัวเลือกสินค้าก่อน" : "Please choose an option first");
@@ -115,6 +180,12 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
       showToast("alert", lang === "th"
         ? `เพิ่มไม่ได้แล้ว มีในสต็อกสูงสุด ${selectedOptionStock} ชิ้น`
         : `Can't add more — only ${selectedOptionStock} in stock`);
+      return false;
+    }
+
+    if (!skipCharmPrompt && product.allowCustomName && !charmColor) {
+      pendingSourceEl.current = sourceEl ?? addBtnRef.current;
+      setCharmPrompt("cart");
       return false;
     }
 
@@ -134,7 +205,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         islandShippingAdditionalItem: product.islandShippingAdditionalItem ?? 0,
         imageUrl: displayImages[0] ?? "",
         selectedOption: selectedOption?.label ?? "",
-        customName: product.allowCustomName ? trimmedCustomName : undefined,
+        customName: product.allowCustomName ? charmCustomName : undefined,
       });
     }
     const flySource = sourceEl ?? addBtnRef.current;
@@ -146,7 +217,20 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   }
 
   function handleBuyNow() {
-    if (!handleAddToCart()) return;
+    vibrateTap();
+    if (mustSelectOption) {
+      showToast("alert", lang === "th" ? "กรุณาเลือกตัวเลือกสินค้าก่อน" : "Please choose an option first");
+      return;
+    }
+    if (selectedOptionOutOfStock || outOfStock) {
+      showToast("alert", lang === "th" ? "สินค้าหมดแล้ว" : "Out of stock");
+      return;
+    }
+    if (product.allowCustomName && !charmColor) {
+      setCharmPrompt("buy");
+      return;
+    }
+    if (!handleAddToCart(undefined, true)) return;
     router.push("/cart?selectAll=1");
   }
 
@@ -180,6 +264,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
     : "";
 
   return (
+    <>
     <div className="min-h-screen bg-white animate-in fade-in slide-in-from-bottom-3 duration-300">
       {/* Toast */}
       <div className={`fixed inset-0 z-50 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${toast ? "opacity-100" : "opacity-0"}`}>
@@ -213,6 +298,8 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                     src={src}
                     alt={`${product.name[lang] || product.name.th} ${i + 1}`}
                     className="w-full h-full object-contain"
+                    loading={i === 0 ? "eager" : "lazy"}
+                    fetchPriority={i === 0 ? "high" : "auto"}
                   />
                 </div>
               ))}
@@ -261,191 +348,374 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
       {/* Info section */}
       <div className="pt-4 lg:pt-0 flex flex-col gap-3">
 
-        {/* Card: Name + Price */}
-        <div className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100 flex items-center justify-between gap-3">
-          <h1 className="flex-1 min-w-0 text-base font-bold text-gray-900 leading-snug">
-            {product.name[lang] || product.name.th}
-          </h1>
-          <p className="shrink-0 text-lg font-black text-[#85241F]">
-            {money(product.price)}
-          </p>
-        </div>
+        {/* Unified info card */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
-        {options.length > 0 && (
-          <div className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100">
-            <p className="mb-3 text-sm font-bold text-gray-900">
-              {lang === "th" ? "ตัวเลือกสินค้า" : "Options"}
-            </p>
-            {mustSelectOption ? (
-              <p className="mb-3 text-xs font-bold text-[#85241F]">
-                {lang === "th" ? "กรุณาเลือกก่อนสั่งซื้อ" : "Please choose before checkout"}
-              </p>
-            ) : null}
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {options.map((option) => {
-                const selected = option.label === selectedOptionLabel;
-                const optionStock = option.stock ?? product.stock;
-                const optionOutOfStock = optionStock < 1;
-
-                return (
-                  <button
-                    key={option.label}
-                    type="button"
-                    onClick={() => selectOption(option.label)}
-                    disabled={optionOutOfStock}
-                    className={`flex h-16 min-w-0 items-center gap-2 rounded-xl border px-2 text-left transition-all ${
-                      selected
-                        ? "border-[#85241F] bg-white text-[#85241F] shadow-sm ring-2 ring-[#85241F]/10"
-                        : optionOutOfStock
-                          ? "cursor-not-allowed border-gray-100 bg-gray-100 text-gray-300 opacity-70"
-                          : "border-gray-200 bg-white text-gray-700 hover:border-[#85241F]/30"
-                    }`}
-                  >
-                    {option.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={option.imageUrl} alt={option.label} className="h-11 w-11 shrink-0 rounded-lg object-cover" />
-                    ) : (
-                      <span className="h-11 w-11 shrink-0 rounded-lg bg-gray-100" />
-                    )}
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-xs font-black">{option.label}</span>
-                      <span className={`mt-0.5 block truncate text-[10px] font-bold ${optionOutOfStock ? "text-red-400" : "text-gray-400"}`}>
-                        {optionOutOfStock
-                          ? (lang === "th" ? "สินค้าหมด" : "Out of stock")
-                          : (lang === "th" ? `เหลือ ${optionStock}` : `${optionStock} left`)}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+          {/* Name + Price */}
+          <div className="flex items-start justify-between gap-3 px-4 py-4">
+            <h1 className="flex-1 min-w-0 text-xl font-black text-gray-900 leading-snug">
+              {product.name[lang] || product.name.th}
+              <span className="ml-1.5 text-[#85241F]">✦</span>
+            </h1>
+            <span className="shrink-0 bg-[#85241F] text-white text-sm font-black px-3 py-1 rounded-full whitespace-nowrap">
+              {money(product.price)}
+            </span>
           </div>
-        )}
 
-        {/* Card: Custom name sticker */}
-        {product.allowCustomName && (
-          <>
-            <div className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100">
+          {/* Description */}
+          {descriptionText && (
+            <>
+              <div className="border-t border-gray-100" />
+              <div className="px-4 py-4">
+                <p className="text-sm font-bold text-gray-900 mb-3">รายละเอียดสินค้า</p>
+                <ul className="space-y-1.5">
+                  {descriptionText.split("\n").filter((line) => line.trim()).map((line, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-gray-500 leading-relaxed">
+                      <span className="text-[#85241F] shrink-0 mt-0.5">•</span>
+                      <span>{line.replace(/^[•\-*]\s*/, "")}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          )}
+
+          {options.length > 0 && (
+            <>
+              <div className="border-t border-gray-100" />
+              <div className="px-4 py-4">
+                <p className="mb-3 text-sm font-bold text-gray-900">
+                  {lang === "th" ? "ตัวเลือกสินค้า" : "Options"}
+                </p>
+                {mustSelectOption && (
+                  <p className="mb-3 text-xs font-bold text-[#85241F]">
+                    {lang === "th" ? "กรุณาเลือกก่อนสั่งซื้อ" : "Please choose before checkout"}
+                  </p>
+                )}
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {options.map((option) => {
+                    const selected = option.label === selectedOptionLabel;
+                    const optionStock = option.stock ?? product.stock;
+                    const optionOutOfStock = optionStock < 1;
+                    return (
+                      <button
+                        key={option.label}
+                        type="button"
+                        onClick={() => selectOption(option.label)}
+                        disabled={optionOutOfStock}
+                        className={`flex h-16 min-w-0 items-center gap-2 rounded-xl border px-2 text-left transition-all ${
+                          selected
+                            ? "border-[#85241F] bg-white text-[#85241F] shadow-sm ring-2 ring-[#85241F]/10"
+                            : optionOutOfStock
+                              ? "cursor-not-allowed border-gray-100 bg-gray-100 text-gray-300 opacity-70"
+                              : "border-gray-200 bg-white text-gray-700 hover:border-[#85241F]/30"
+                        }`}
+                      >
+                        {option.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={option.imageUrl} alt={option.label} className="h-11 w-11 shrink-0 rounded-lg object-cover" />
+                        ) : (
+                          <span className="h-11 w-11 shrink-0 rounded-lg bg-gray-100" />
+                        )}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-xs font-black">{option.label}</span>
+                          <span className={`mt-0.5 block truncate text-[10px] font-bold ${optionOutOfStock ? "text-red-400" : "text-gray-400"}`}>
+                            {optionOutOfStock
+                              ? (lang === "th" ? "สินค้าหมด" : "Out of stock")
+                              : (lang === "th" ? `เหลือ ${optionStock}` : `${optionStock} left`)}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Charm add-on */}
+          {product.allowCustomName && (
+            <>
+              <div className="border-t border-gray-100" />
+              {charmColor && selectedCharmMeta ? (
+                <div className="flex items-center gap-3 px-4 py-3.5">
+                  <div className="h-9 w-9 shrink-0 rounded-xl overflow-hidden border border-gray-200 shadow-sm flex items-center justify-center">
+                    {product.charmImages?.[charmColor] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={product.charmImages[charmColor]} alt={selectedCharmMeta.label} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="h-full w-full" style={{ backgroundColor: selectedCharmMeta.hex }} />
+                    )}
+                  </div>
+                  <button type="button" onClick={openCharmModal} className="flex-1 min-w-0 text-left">
+                    <p className="text-[11px] font-black text-gray-900">
+                      {lang === "th" ? "สายห้อย" : "Keychain"} — {selectedCharmMeta.label}
+                    </p>
+                    {charmLetters.length > 0 ? (
+                      <p className="mt-0.5 text-[11px] font-black tracking-widest text-[#85241F]">
+                        {charmLetters.join(" ")}
+                      </p>
+                    ) : (
+                      <p className="mt-0.5 text-[10px] font-semibold text-gray-400">
+                        {lang === "th" ? "แตะเพื่อเพิ่มตัวอักษร" : "Tap to add letters"}
+                      </p>
+                    )}
+                  </button>
+                  <span className="shrink-0 text-sm font-black text-[#85241F]">+{charmAddon}฿</span>
+                  <button
+                    type="button"
+                    onClick={removeCharm}
+                    className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-gray-500 hover:bg-red-100 hover:text-red-500 transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={openCharmModal}
+                    className="flex w-full items-center gap-3 px-3 py-3 rounded-2xl bg-[#fdf3f3] border border-[#85241F]/20 hover:bg-[#fce8e7] hover:border-[#85241F]/40 active:scale-[0.98] transition-all duration-150 cursor-pointer"
+                  >
+                    <div className="relative h-11 w-11 shrink-0">
+                      <div className="h-full w-full rounded-xl overflow-hidden border border-[#85241F]/20 bg-white flex items-center justify-center shadow-sm">
+                        {charmImageValues[cycleIdx] ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img key={cycleIdx} src={charmImageValues[cycleIdx]} alt="keychain" className="h-full w-full object-cover animate-in fade-in duration-700" />
+                        ) : (
+                          <Plus className="h-4 w-4 text-[#85241F]" />
+                        )}
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-[#85241F] flex items-center justify-center shadow-sm">
+                        <Plus className="h-2.5 w-2.5 text-white" />
+                      </div>
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="text-sm font-black text-[#85241F]">
+                        {lang === "th" ? "เพิ่มสายห้อย" : "Add keychain"}
+                      </p>
+                      <p className="text-[10px] font-semibold text-[#85241F]/60">
+                        {lang === "th" ? "เลือกสี + ตัวอักษร" : "Pick color + letters"}
+                      </p>
+                    </div>
+                    <span className="text-xs font-black text-white bg-[#85241F] px-3 py-1.5 rounded-xl shadow-sm shadow-[#85241F]/30">+{CHARM_PRICE}฿</span>
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Quantity */}
+          <div className="border-t border-gray-100 flex items-center justify-between px-4 py-4">
+            <span className="text-sm font-semibold text-gray-700">
+              {lang === "th" ? "จำนวน" : "Quantity"}
+            </span>
+            <div className="flex items-center gap-5">
               <button
                 type="button"
-                onClick={() => setCustomNameOpen(true)}
-                className="flex w-full items-center justify-between gap-2 rounded-2xl border border-[#85241F]/30 bg-white px-4 py-3 text-sm font-black text-[#85241F] transition-colors hover:bg-[#fce8e7] active:scale-[0.98]"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors text-lg leading-none"
               >
-                <span className="flex items-center gap-2">
-                  <Pencil className="h-4 w-4" />
-                  {lang === "th" ? "ชื่อบนสติกเกอร์" : "Name on sticker"}
-                </span>
-                {customName.trim() ? (
-                  <span className="max-w-[140px] truncate rounded-lg bg-[#85241F]/10 px-2 py-0.5 text-xs font-bold text-[#85241F]">
-                    {customName.trim()}
-                  </span>
-                ) : (
-                  <span className="text-xs font-semibold text-gray-400">
-                    {lang === "th" ? "แตะเพื่อใส่ชื่อ" : "Tap to add"}
-                  </span>
-                )}
+                −
+              </button>
+              <span className="w-4 text-center text-base font-bold text-gray-900">
+                {quantity}
+              </span>
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => Math.min(selectedOptionStock, q + 1))}
+                disabled={mustSelectOption || selectedOptionOutOfStock || quantity >= selectedOptionStock}
+                className="w-8 h-8 rounded-full bg-[#85241F] flex items-center justify-center text-white hover:bg-[#6b1c18] transition-colors text-lg leading-none disabled:bg-gray-200 disabled:text-gray-400"
+              >
+                +
               </button>
             </div>
+          </div>
+        </div>
 
-            {/* Modal */}
-            {customNameOpen && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
-                <div className="absolute inset-0 bg-black/45 backdrop-blur-[3px]" onClick={() => setCustomNameOpen(false)} />
-                <div className="relative w-full max-w-sm rounded-[2rem] bg-white px-5 pb-5 pt-6 shadow-2xl ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-200">
-                  <div className="mb-6 px-10 text-center">
-                    <span className="text-xl font-black text-gray-950">
-                      {lang === "th" ? "ชื่อบนสติกเกอร์" : "Name on sticker"}
-                    </span>
-                    <p className="mt-1 text-xs font-semibold text-gray-400">
-                      {lang === "th" ? "ใส่ชื่อที่ต้องการพิมพ์บนสติกเกอร์" : "Enter the name for your sticker"}
-                    </p>
+        {/* Charm Modal */}
+        {product.allowCustomName && charmOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={cancelCharmModal} />
+                <div className="relative w-full max-w-md bg-white rounded-4xl shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden max-h-[85vh] overflow-y-auto">
+
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-5 pt-5 pb-4">
+                    {/* Step indicator */}
+                    <div className="flex items-center gap-2">
+                      <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black transition-colors ${charmStep === "color" ? "bg-[#85241F] text-white" : "bg-emerald-500 text-white"}`}>
+                        {charmStep === "color" ? "1" : "✓"}
+                      </div>
+                      <span className={`text-[11px] font-black ${charmStep === "color" ? "text-gray-900" : "text-emerald-600"}`}>
+                        {lang === "th" ? "สี" : "Color"}
+                      </span>
+                      <div className={`h-px w-6 ${charmStep === "color" ? "bg-gray-200" : "bg-emerald-300"}`} />
+                      <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black transition-colors ${charmStep === "letters" ? "bg-[#85241F] text-white" : "bg-gray-100 text-gray-400"}`}>
+                        2
+                      </div>
+                      <span className={`text-[11px] font-black ${charmStep === "letters" ? "text-gray-900" : "text-gray-400"}`}>
+                        {lang === "th" ? "ตัวอักษร" : "Letters"}
+                      </span>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => setCustomNameOpen(false)}
-                      className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-[0px] text-gray-500 transition-colors before:text-base before:font-semibold before:content-['x'] hover:bg-gray-200"
-                      aria-label={lang === "th" ? "ปิด" : "Close"}
+                      onClick={cancelCharmModal}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
                     >
-                      ✕
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      autoFocus
-                      value={customName}
-                      maxLength={customNameMax}
-                      onChange={(e) => setCustomName(e.target.value)}
-                      placeholder={lang === "th" ? `เช่น สมชาย, หมูกรอบ` : `e.g. John, Lily`}
-                      className="h-14 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 pr-14 text-base font-semibold text-gray-900 outline-none transition-all focus:border-[#85241F] focus:bg-white focus:ring-4 focus:ring-[#85241F]/10"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">
-                      {customName.length}/{customNameMax}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setCustomNameOpen(false)}
-                    className="mt-4 flex h-12 w-full items-center justify-center rounded-2xl bg-[#85241F] text-sm font-black text-white shadow-lg shadow-[#85241F]/15 transition-transform active:scale-[0.98]"
-                  >
-                    {lang === "th" ? "ยืนยัน" : "Confirm"}
-                  </button>
+
+                  {/* Step 1: Color */}
+                  {charmStep === "color" && (
+                    <div className="px-5 pb-5">
+                      <p className="mb-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                        {lang === "th" ? `เลือกสีสายห้อย — +${CHARM_PRICE}฿` : `Choose keychain color — +${CHARM_PRICE}฿`}
+                      </p>
+                      <div className="grid grid-cols-4 gap-3">
+                        {CHARM_COLORS.map((color) => {
+                          const selected = tempColor === color.id;
+                          return (
+                            <button
+                              key={color.id}
+                              type="button"
+                              onClick={() => setTempColor(color.id)}
+                              className="flex flex-col items-center gap-1.5 p-1 transition-all cursor-pointer"
+                            >
+                              <span className={`text-[9px] font-black ${selected ? "text-[#85241F]" : "text-gray-400"}`}>
+                                {color.label}
+                              </span>
+                              {product.charmImages?.[color.id] ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={product.charmImages[color.id]}
+                                  alt={color.label}
+                                  className={`h-16 w-16 rounded-2xl object-cover border-2 transition-all ${selected ? "border-[#85241F] scale-105" : "border-transparent"}`}
+                                />
+                              ) : (
+                                <div
+                                  className={`h-14 w-14 rounded-2xl border-2 transition-all ${selected ? "border-[#85241F] scale-105" : "border-transparent"}`}
+                                  style={{ backgroundColor: color.hex }}
+                                />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCharmStep("letters")}
+                        disabled={!tempColor}
+                        className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#85241F] text-sm font-black text-white shadow-lg shadow-[#85241F]/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
+                      >
+                        {lang === "th" ? "ถัดไป — เพิ่มตัวอักษร" : "Next — Add letters"}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Step 2: Letters */}
+                  {charmStep === "letters" && (
+                    <div className="px-5 pb-5">
+                      {/* Free letters info */}
+                      <div className="mb-3 flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: FREE_LETTERS }).map((_, i) => (
+                            <span key={i} className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black ${i < tempLetters.length ? "bg-[#85241F] text-white" : "bg-gray-900 text-white opacity-20"}`}>
+                              {tempLetters[i] ?? "•"}
+                            </span>
+                          ))}
+                        </div>
+                        <span className="text-[11px] font-black text-gray-900">
+                          {lang === "th" ? `${FREE_LETTERS} ตัวแรกฟรี` : `First ${FREE_LETTERS} free`}
+                        </span>
+                        <span className="text-[10px] font-semibold text-gray-400">
+                          · {lang === "th" ? `ตัวต่อไป +${LETTER_PRICE}฿` : `+${LETTER_PRICE}฿ each after`}
+                        </span>
+                      </div>
+
+                      {/* Selected letters display */}
+                      <div className="mb-3 flex min-h-[2.5rem] items-center gap-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
+                          {tempLetters.length > 0 ? (
+                            tempLetters.map((letter, idx) => (
+                              <span
+                                key={idx}
+                                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#85241F] text-sm font-black text-white shadow-sm"
+                              >
+                                {letter}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs font-semibold text-gray-400">
+                              {lang === "th" ? "แตะตัวอักษรด้านล่างเพื่อเพิ่ม" : "Tap letters below to add"}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setTempLetters((prev) => prev.slice(0, -1))}
+                          disabled={tempLetters.length === 0}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-500 disabled:opacity-30 transition-colors"
+                        >
+                          <Delete className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Price breakdown */}
+                      <div className="mb-4 flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5 text-[11px]">
+                        <div className="flex items-center gap-1.5">
+                          {tempCharmMeta && (
+                            <div className="h-4 w-4 rounded-full border border-white shadow-sm" style={{ backgroundColor: tempCharmMeta.hex }} />
+                          )}
+                          <span className="font-semibold text-gray-500">
+                            {lang === "th" ? "ที่ห้อย" : "Charm"} +{CHARM_PRICE}฿
+                            {tempExtraLetters > 0 && ` · ตัวอักษร +${tempExtraLetters}×${LETTER_PRICE}฿`}
+                          </span>
+                        </div>
+                        <span className="font-black text-[#85241F]">+{tempCharmAddon}฿</span>
+                      </div>
+
+                      {/* A–Z grid */}
+                      <div className="grid grid-cols-7 gap-1.5">
+                        {ALPHABET.map((letter) => (
+                          <button
+                            key={letter}
+                            type="button"
+                            onClick={() => {
+                              if (tempLetters.length < MAX_LETTERS) {
+                                setTempLetters((prev) => [...prev, letter]);
+                              }
+                            }}
+                            disabled={tempLetters.length >= MAX_LETTERS}
+                            className="flex h-10 w-full items-center justify-center rounded-xl bg-gray-100 text-sm font-black text-gray-700 transition-all hover:bg-[#fce8e7] hover:text-[#85241F] active:scale-90 disabled:opacity-30"
+                          >
+                            {letter}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="mt-4 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setCharmStep("color")}
+                          className="flex h-12 flex-1 items-center justify-center rounded-2xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 active:scale-[0.98] transition-all"
+                        >
+                          ← {lang === "th" ? "เปลี่ยนสี" : "Change color"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={confirmCharm}
+                          className="flex h-12 flex-1 items-center justify-center rounded-2xl bg-[#85241F] text-sm font-black text-white shadow-lg shadow-[#85241F]/20 active:scale-[0.98] transition-all"
+                        >
+                          {lang === "th" ? "ยืนยัน" : "Confirm"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
-          </>
-        )}
-
-        {/* Card: Quantity */}
-        <div className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100 flex items-center justify-between">
-          <span className="text-sm font-semibold text-gray-700">
-            {lang === "th" ? "จำนวน" : "Quantity"}
-          </span>
-          <div className="flex items-center gap-5">
-            <button
-              type="button"
-              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors text-lg leading-none"
-            >
-              −
-            </button>
-            <span className="w-4 text-center text-base font-bold text-gray-900">
-              {quantity}
-            </span>
-            <button
-              type="button"
-              onClick={() => setQuantity((q) => Math.min(selectedOptionStock, q + 1))}
-              disabled={mustSelectOption || selectedOptionOutOfStock || quantity >= selectedOptionStock}
-              className="w-8 h-8 rounded-full bg-[#85241F] flex items-center justify-center text-white hover:bg-[#6b1c18] transition-colors text-lg leading-none disabled:bg-gray-200 disabled:text-gray-400"
-            >
-              +
-            </button>
-          </div>
-        </div>
-
-        {/* Card: Description */}
-        {descriptionText && (
-          <div className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100">
-            <p className="text-sm font-bold text-gray-900 mb-2">
-              {lang === "th" ? "รายละเอียด" : "Description"}
-            </p>
-            <p className="text-sm leading-relaxed text-gray-500">
-              {expanded ? descriptionText : descriptionText.slice(0, 120)}
-              {!expanded && descriptionText.length > 120 && (
-                <>
-                  {"... "}
-                  <button
-                    type="button"
-                    onClick={() => setExpanded(true)}
-                    className="text-[#85241F] font-semibold hover:underline"
-                  >
-                    {lang === "th" ? "อ่านเพิ่มเติม" : "Learn More"}
-                  </button>
-                </>
-              )}
-            </p>
-          </div>
-        )}
-
         {/* Action bar — desktop only (mobile uses fixed bar below) */}
         <div className="mt-2 hidden lg:block">
           {outOfStock ? (
@@ -456,7 +726,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
             <div className="flex items-center gap-3">
               <div className="flex flex-col justify-center shrink-0">
                 <span className="text-xs text-gray-400 font-medium">{lang === "th" ? "ราคารวม" : "Total"}</span>
-                <span className="text-base font-black text-[#85241F] leading-tight">{money(product.price * quantity)}</span>
+                <span className="text-base font-black text-[#85241F] leading-tight">{money(unitPrice * quantity)}</span>
               </div>
               <div className="w-px h-8 bg-gray-200 shrink-0" />
               <button
@@ -496,7 +766,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
           <div className="flex items-center gap-3">
             <div className="flex flex-col justify-center shrink-0">
               <span className="text-xs text-gray-400 font-medium">{lang === "th" ? "ราคารวม" : "Total"}</span>
-              <span className="text-base font-black text-[#85241F] leading-tight">{money(product.price * quantity)}</span>
+              <span className="text-base font-black text-[#85241F] leading-tight">{money(unitPrice * quantity)}</span>
             </div>
             <div className="w-px h-8 bg-gray-200 shrink-0" />
             <button
@@ -522,5 +792,63 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         )}
       </div>
     </div>
+
+    <ShopFooter />
+
+    {/* Charm prompt modal */}
+    {charmPrompt && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center px-6 bg-black/40 backdrop-blur-sm"
+        onClick={() => setCharmPrompt(null)}
+      >
+        <div
+          className="w-full max-w-sm rounded-3xl bg-white px-5 pt-6 pb-5 shadow-2xl animate-in zoom-in-95 duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Preview image row */}
+          {charmImageValues.length > 0 && (
+            <div className="flex justify-center gap-2 mb-4">
+              {charmImageValues.slice(0, 4).map((url, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={i} src={url} alt="keychain" className="h-12 w-12 rounded-xl object-cover border border-gray-100" />
+              ))}
+            </div>
+          )}
+          <p className="text-base font-black text-gray-900 text-center">เพิ่มสายห้อยไหม?</p>
+          <p className="mt-1 text-xs text-gray-400 text-center font-medium">
+            {lang === "th" ? "เพิ่มสายห้อยชื่อพร้อมกับสินค้านี้ได้เลย" : "You can add a keychain charm with this item"}
+          </p>
+          <div className="mt-5 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                pendingAction.current = { type: charmPrompt, sourceEl: pendingSourceEl.current };
+                setCharmPrompt(null);
+                openCharmModal();
+              }}
+              className="w-full rounded-2xl bg-[#85241F] py-3.5 text-sm font-black text-white cursor-pointer active:scale-[0.98] transition-transform"
+            >
+              {lang === "th" ? "เพิ่มสายห้อย +30฿" : "Add keychain +30฿"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCharmPrompt(null);
+                if (charmPrompt === "buy") {
+                  handleAddToCart(undefined, true);
+                  router.push("/cart?selectAll=1");
+                } else {
+                  handleAddToCart(pendingSourceEl.current, true);
+                }
+              }}
+              className="w-full rounded-2xl border border-gray-200 py-3 text-sm font-bold text-gray-600 cursor-pointer"
+            >
+              {lang === "th" ? "ไม่เพิ่ม" : "No thanks"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

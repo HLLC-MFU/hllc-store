@@ -4,7 +4,6 @@ import { getHomeContent } from "@/lib/backend/settings/settings-service";
 import { getCategory, isCategoryId } from "@/lib/config/catalog";
 import { CategoryGrid } from "@/components/shop/category-grid";
 import { CategoryBlocks, type CategoryBlock } from "@/components/shop/category-blocks";
-import { ShopPageHeader } from "@/components/shop/shop-page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +19,6 @@ export default async function CategoryPage({ params }: Props) {
   return (
     <div className="min-h-screen bg-white">
       <div className="px-4 md:px-6 py-4 pb-24">
-        <ShopPageHeader title={def.label} backHref="/home" />
         {def.groups ? (
           <GroupBlocks category={category} />
         ) : (

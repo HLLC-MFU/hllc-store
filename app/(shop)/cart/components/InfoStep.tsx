@@ -9,7 +9,7 @@ import { CheckoutFooter } from "./CheckoutFooter";
 const fmt = new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 });
 const money = (v: number) => fmt.format(v);
 
-const inputCls = "h-12 rounded-none border-0 bg-transparent text-sm font-semibold shadow-none placeholder:text-gray-400 focus-visible:ring-0";
+const inputCls = "h-14 rounded-none border-0 bg-transparent text-sm font-semibold shadow-none placeholder:text-gray-400 focus-visible:ring-0";
 
 function formatPhoneDisplay(raw: string) {
   const digits = raw.replace(/\D/g, "").slice(0, 10);
@@ -25,7 +25,7 @@ function FieldRow({ icon, children, error }: { icon: React.ReactNode; children: 
         <span className={`absolute left-3.5 z-10 pointer-events-none ${error ? "text-red-400" : "text-gray-400"}`}>{icon}</span>
         <div className="w-full [&>input]:pl-10 [&>textarea]:pl-10 [&>div>input]:pl-10">{children}</div>
       </div>
-      {error ? <p className="px-4 pb-2 text-xs font-bold text-red-500">{error}</p> : null}
+      {error ? <p className="px-4 pt-0.5 pb-3 text-xs font-bold text-red-500">{error}</p> : null}
     </div>
   );
 }
@@ -64,22 +64,26 @@ export function InfoStep({
   itemsLength, onBack, onSubmit,
 }: Props) {
   return (
-    <section className="mx-auto max-w-xl pb-24 animate-in fade-in slide-in-from-bottom-2 duration-200">
-      <button onClick={onBack} className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-gray-700 transition-colors">
+    <section className="min-h-screen bg-gray-50 mx-auto max-w-xl pb-24 animate-in fade-in slide-in-from-bottom-2 duration-200">
+      <div className="px-4 pt-4 flex flex-col gap-4">
+
+      <button onClick={onBack} className="inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-gray-700 transition-colors">
         <ArrowLeft className="h-4 w-4" />
         {lang === "th" ? "กลับ" : "Back"}
       </button>
 
       <form id="checkout-info-form" onSubmit={onSubmit} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <p className="px-1 text-xs font-black uppercase tracking-wider text-gray-400">
+
+        {/* Delivery mode */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3">
+          <p className="text-xs font-black uppercase tracking-wider text-gray-400">
             {lang === "th" ? "วิธีรับสินค้า" : "Fulfillment"}
           </p>
-          <div className="grid grid-cols-2 rounded-2xl bg-gray-100 p-1">
+          <div className="grid grid-cols-2 rounded-xl bg-gray-100 p-1">
             <button
               type="button"
               onClick={() => setDeliveryMode("delivery")}
-              className={`flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-black transition-colors ${deliveryMode === "delivery" ? "bg-white text-[#85241F] shadow-sm" : "text-gray-500"}`}
+              className={`flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-black transition-all ${deliveryMode === "delivery" ? "bg-white text-[#85241F] shadow-sm" : "text-gray-500"}`}
             >
               <Truck className="h-4 w-4" />
               {lang === "th" ? "จัดส่ง" : "Delivery"}
@@ -87,7 +91,7 @@ export function InfoStep({
             <button
               type="button"
               onClick={() => setDeliveryMode("pickup")}
-              className={`flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-black transition-colors ${deliveryMode === "pickup" ? "bg-white text-[#85241F] shadow-sm" : "text-gray-500"}`}
+              className={`flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-black transition-all ${deliveryMode === "pickup" ? "bg-white text-[#85241F] shadow-sm" : "text-gray-500"}`}
             >
               <Store className="h-4 w-4" />
               {lang === "th" ? "รับเอง" : "Pickup"}
@@ -96,12 +100,11 @@ export function InfoStep({
         </div>
 
         {/* Recipient */}
-        <div className="flex flex-col gap-2">
-          <p className="text-xs font-black text-gray-400 uppercase tracking-wider px-1">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3">
+          <p className="text-xs font-black text-gray-400 uppercase tracking-wider">
             {lang === "th" ? "ข้อมูลผู้รับ" : "Recipient"}
           </p>
-
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100 rounded-xl border border-gray-100 ">
             <FieldRow icon={<User className="h-4 w-4" />} error={fieldErrors.name}>
               <Input
                 name="name"
@@ -112,7 +115,6 @@ export function InfoStep({
                 className={`${inputCls} ${fieldErrors.name ? "text-red-700 placeholder:text-red-300" : ""}`}
               />
             </FieldRow>
-
             <FieldRow icon={<Phone className="h-4 w-4" />} error={fieldErrors.phone}>
               <Input
                 name="phone"
@@ -121,12 +123,11 @@ export function InfoStep({
                 autoComplete="tel"
                 value={formatPhoneDisplay(phone)}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-              placeholder={lang === "th" ? "เบอร์โทรศัพท์" : "Phone number"}
+                placeholder={lang === "th" ? "เบอร์โทรศัพท์" : "Phone number"}
                 aria-invalid={Boolean(fieldErrors.phone)}
                 className={`${inputCls} ${fieldErrors.phone ? "!text-red-700 placeholder:!text-red-300" : ""}`}
               />
             </FieldRow>
-
             <FieldRow icon={<Mail className="h-4 w-4" />} error={fieldErrors.email}>
               <Input
                 name="email"
@@ -141,18 +142,18 @@ export function InfoStep({
               />
             </FieldRow>
           </div>
-          <p className="px-1 text-[11px] font-semibold text-gray-400">
+          <p className="text-[11px] font-semibold text-gray-400">
             {lang === "th" ? "ใช้อีเมลนี้เพื่อรับการแจ้งเตือนสถานะคำสั่งซื้อ" : "We use this email for order status notifications."}
           </p>
         </div>
 
         {/* Address / Pickup */}
         {deliveryMode === "delivery" ? (
-          <div className="flex flex-col gap-2">
-            <p className="text-xs font-black text-gray-400 uppercase tracking-wider px-1">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3">
+            <p className="text-xs font-black text-gray-400 uppercase tracking-wider">
               {lang === "th" ? "ที่อยู่จัดส่ง" : "Shipping address"}
             </p>
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-gray-100 rounded-xl border border-gray-100 mb-0.5">
               <FieldRow icon={<MapPin className="h-4 w-4" />} error={fieldErrors.address}>
                 <Input
                   name="address"
@@ -177,7 +178,7 @@ export function InfoStep({
             </div>
           </div>
         ) : (
-          <div className="rounded-2xl border-2 border-[#85241F]/15 bg-[#85241F]/5 p-4 flex flex-col gap-2">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <Store className="h-4 w-4 text-[#85241F]" />
               <p className="text-sm font-black text-[#85241F]">{lang === "th" ? "รับสินค้าเองที่ D1" : "Pickup at D1"}</p>
@@ -191,7 +192,7 @@ export function InfoStep({
         )}
 
         {/* Summary */}
-        <div className="mt-2 space-y-2 rounded-2xl bg-gray-50 px-4 py-3 text-sm font-bold">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3 space-y-2 text-sm font-bold">
           <div className="flex items-center justify-between text-gray-500">
             <span>{selectedCount} {t("shop.items_count")}</span>
             <span className="text-[#85241F]">{money(selectedTotal)}</span>
@@ -200,7 +201,7 @@ export function InfoStep({
             <span>{t("checkout.shipping")}</span>
             <span>{selectedShippingFee > 0 ? money(selectedShippingFee) : t("checkout.shipping.free")}</span>
           </div>
-          <div className="flex items-center justify-between border-t border-gray-200 pt-2 text-gray-900">
+          <div className="flex items-center justify-between border-t border-gray-100 pt-2 text-gray-900">
             <span>{t("checkout.total")}</span>
             <span className="text-[#85241F]">{money(selectedPayableTotal)}</span>
           </div>
@@ -208,10 +209,11 @@ export function InfoStep({
 
       </form>
 
+      </div>
+
       <CheckoutFooter
         lang={lang}
         total={selectedPayableTotal}
-        shippingFee={selectedShippingFee}
         buttonLabel={lang === "th" ? "ไปหน้าชำระเงิน" : "Proceed to pay"}
         buttonType="submit"
         formId="checkout-info-form"

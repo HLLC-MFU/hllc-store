@@ -30,7 +30,7 @@ const STATUS_META: Record<OrderStatus, { th: string; en: string; color: string; 
   payment_review: { th: "รอยืนยันชำระเงิน", en: "Awaiting confirmation", color: "text-amber-700",  bg: "bg-amber-50 border-amber-200",  icon: Clock        },
   paid:           { th: "ชำระเงินแล้ว",      en: "Payment confirmed",    color: "text-blue-700",   bg: "bg-blue-50 border-blue-200",     icon: FileCheck2   },
   packing:        { th: "กำลังแพ็คสินค้า",   en: "Packing your order",   color: "text-blue-700",   bg: "bg-blue-50 border-blue-200",     icon: Package      },
-  shipped:        { th: "กำลังจัดส่ง",        en: "On the way",           color: "text-sky-700",    bg: "bg-sky-50 border-sky-200",       icon: Truck        },
+  shipped:        { th: "จัดส่งแล้ว",          en: "Shipped",              color: "text-emerald-700",bg: "bg-emerald-50 border-emerald-200",icon: Truck        },
   completed:      { th: "ส่งถึงมือแล้ว",     en: "Delivered",            color: "text-emerald-700",bg: "bg-emerald-50 border-emerald-200",icon: CheckCircle2 },
   cancelled:      { th: "ยกเลิกแล้ว",         en: "Cancelled",            color: "text-red-700",    bg: "bg-red-50 border-red-200",       icon: XCircle      },
   pending_payment:{ th: "รอชำระเงิน",         en: "Pending payment",      color: "text-gray-600",   bg: "bg-gray-50 border-gray-200",     icon: Clock        },
@@ -84,8 +84,8 @@ export function LogisticsProgress({ order, lang }: { order: Order; lang: "th" | 
         <div className="rounded-2xl border border-gray-100 bg-white p-4">
           <div className="flex flex-col">
             {STEPS.map(({ status, th, en, Icon }, idx) => {
-              const done   = idx < currentIdx || order.status === "completed";
-              const active = idx === currentIdx && !cancelled;
+              const done   = idx < currentIdx || order.status === "completed" || (order.status === "shipped" && idx === currentIdx);
+              const active = idx === currentIdx && !cancelled && !done;
               const future = idx > currentIdx;
               const isLast = idx === STEPS.length - 1;
               return (
@@ -114,7 +114,7 @@ export function LogisticsProgress({ order, lang }: { order: Order; lang: "th" | 
                     }`}>
                       {lang === "th" ? th : en}
                     </p>
-                    {active && !future && (
+                    {active && !future && !done && (
                       <p className="mt-0.5 text-[10px] font-semibold text-gray-400">
                         {lang === "th" ? "สถานะปัจจุบัน" : "Current status"}
                       </p>

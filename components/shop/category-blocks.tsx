@@ -11,13 +11,14 @@ export type CategoryBlock = {
   imageUrl?: string;
   title: LocalizedText;
   subtitle?: LocalizedText;
+  hasSubBlocks?: boolean;
 };
 
 export function CategoryBlocks({ blocks, fullPage = false }: { blocks: CategoryBlock[]; fullPage?: boolean }) {
   const { lang } = useLanguage();
   const pick = (text?: LocalizedText) => (text ? text[lang] || text.th : "");
   const wrapperClass = fullPage
-    ? "flex h-[calc(100svh-3.5rem)] flex-col gap-2 overflow-hidden bg-white p-2 md:h-screen md:gap-3 md:p-3"
+    ? "flex h-full flex-col gap-2 overflow-hidden bg-white p-2 md:gap-3 md:p-3"
     : "flex flex-col gap-4";
   const linkClass = fullPage
     ? "group relative flex min-h-0 flex-1 overflow-hidden rounded-[1.75rem] border border-white bg-white shadow-[0_8px_24px_rgba(15,23,42,0.12)] ring-1 ring-gray-900/5 transition-all duration-300 active:scale-[0.99]"
@@ -63,7 +64,9 @@ export function CategoryBlocks({ blocks, fullPage = false }: { blocks: CategoryB
 
             <div className="absolute bottom-5 right-5">
               <span className="inline-flex h-9 items-center justify-center gap-1.5 rounded-2xl bg-[#85241F] px-4 text-xs font-black text-white shadow-lg shadow-black/20">
-                {lang === "th" ? "ช้อปเลย" : "Shop now"}
+                {block.hasSubBlocks
+                  ? (lang === "th" ? "เลือกดู" : "Browse")
+                  : (lang === "th" ? "ช้อปเลย" : "Shop now")}
                 <ArrowRight className="h-3.5 w-3.5" />
               </span>
             </div>

@@ -9,7 +9,7 @@ import { safeParseWithLang, checkoutFormSchema, normalizePhone, normalizeEmail }
 import type { Lang } from "@/lib/validation/schemas-i18n";
 import { attachPaymentSlip, cancelPublicOrder, createOrder } from "@/lib/modules/orders";
 import { fetchStoreProducts } from "@/lib/modules/products/api";
-import { fetchShippingSettings, type ShippingSettings } from "@/lib/modules/settings";
+import { fetchShippingSettings, fetchCharmSettings, type ShippingSettings } from "@/lib/modules/settings";
 import { calcShippingFee, DEFAULT_SHIPPING_RATES } from "@/lib/config/shipping";
 import { isRemoteArea } from "@/lib/data/remote-areas";
 import { isIslandArea } from "@/lib/data/island-areas";
@@ -33,7 +33,7 @@ type Order = {
   customer?: { name: string; phone: string; email: string; address: string };
 };
 
-const MAX_SLIP_BYTES = 5 * 1024 * 1024;
+const MAX_SLIP_BYTES = 2 * 1024 * 1024;
 
 function saveOrderLookup(orderId: string, phone: string) {
   try {
@@ -51,12 +51,20 @@ export default function CartPage() {
   const allSelected = useMemo(() => items.length > 0 && items.every(i => selectedIds.has(itemKey(i))), [items, selectedIds]);
   const { selectedItems, selectedTotal, selectedCount } = useMemo(() => {
     const selected = items.filter(i => selectedIds.has(itemKey(i)));
-    const total = selected.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    const total = selected.reduce((sum, i) => {
+      let charm = 0;
+      if (i.customName?.startsWith("charm:")) {
+        const letters = i.customName.slice(6).split(":")[1] ?? "";
+        charm = 30 + Math.max(0, letters.length - 2) * 10;
+      }
+      return sum + (i.price + charm) * i.quantity;
+    }, 0);
     const count = selected.reduce((sum, i) => sum + i.quantity, 0);
     return { selectedItems: selected, selectedTotal: total, selectedCount: count };
   }, [items, selectedIds]);
 
   const [shippingRates, setShippingRates] = useState<ShippingSettings>(DEFAULT_SHIPPING_RATES);
+  const [charmImages, setCharmImages] = useState<Record<string, string>>({});
 
   const autoSelected = useRef(false);
   useEffect(() => {
@@ -73,6 +81,7 @@ export default function CartPage() {
     synced.current = true;
     fetchStoreProducts().then(syncFromProducts).catch(() => { });
     fetchShippingSettings().then(setShippingRates).catch(() => { });
+    fetchCharmSettings().then(r => setCharmImages(r.images ?? {})).catch(() => { });
   }, [syncFromProducts]);
 
   const toggleSelectAll = useCallback(() => {
@@ -163,13 +172,21 @@ export default function CartPage() {
       return;
     }
     if (file.size > MAX_SLIP_BYTES) {
-      setSlipError(lang === "th" ? "รูปไฟล์ใหญ่เกินไป ขอไม่เกิน 5 MB นะ" : "Image is too large, please keep it under 5 MB");
+      setSlipError(lang === "th" ? "รูปไฟล์ใหญ่เกินไป" : "Image is too large, please keep it under 2 MB");
       event.target.value = "";
       return;
     }
     setSlipError("");
     const reader = new FileReader();
-    reader.onload = (e) => { const r = String(e.target?.result ?? ""); setSlipPreview(r); setSlipImage(r); };
+    reader.onload = (e) => {
+      const r = String(e.target?.result ?? "");
+      if (r.length > 2_900_000) {
+        setSlipError(lang === "th" ? "รูปไฟล์ใหญ่เกินไป ขอไม่เกิน 2 MB นะ" : "Image is too large, please keep it under 2 MB");
+        return;
+      }
+      setSlipPreview(r);
+      setSlipImage(r);
+    };
     reader.readAsDataURL(file);
   }, [lang]);
 
@@ -219,6 +236,16 @@ export default function CartPage() {
     if (loading) return;
     const formData = pendingFormRef.current;
     if (!formData || !selectedItems.length) return;
+    if (!slipImage) {
+      setSlipError(lang === "th" ? "กรุณาอัปโหลดสลิปก่อน" : "Please upload a payment slip first.");
+      setShowConfirmModal(false);
+      return;
+    }
+    if (slipImage.length > 2_900_000) {
+      setSlipError(lang === "th" ? "รูปไฟล์ใหญ่เกินไป ขอไม่เกิน 2 MB นะ" : "Image is too large, please keep it under 2 MB");
+      setShowConfirmModal(false);
+      return;
+    }
     setShowConfirmModal(false); setLoading(true); setCreatedOrder(null);
     const name = String(formData.get("name") ?? "").trim();
     const rawPhone = String(formData.get("phone") ?? "").replace(/\D/g, "");
@@ -261,7 +288,7 @@ export default function CartPage() {
   }, [loading, selectedItems, deliveryMode, slipImage, clearCart, lang]);
 
   return (
-    <main className="min-h-screen bg-white px-5 py-6 pb-24 lg:px-10">
+    <main className="min-h-screen bg-[#f5f5f5]">
       <div className="mx-auto max-w-5xl">
 
         {step === "success" && createdOrder && (
@@ -286,10 +313,7 @@ export default function CartPage() {
         {step === "cart" && !!items.length && (
           <>
             {/* Item list */}
-            <section className="space-y-3">
-              <div className="mb-3 flex items-center justify-end">
-                <span className="text-sm text-gray-400">{items.length} {lang === "th" ? "รายการ" : `item${items.length > 1 ? "s" : ""}`}</span>
-              </div>
+            <section className="px-4 pt-4 space-y-3">
               <div className="space-y-3">
                 {items.map((item) => (
                   <SwipeableCartItem
@@ -297,6 +321,7 @@ export default function CartPage() {
                     selected={selectedIds.has(itemKey(item))} onSelect={toggleSelect}
                     onDecrease={decreaseQty} onIncrease={(i) => updateQty(i.productId, i.quantity + 1, i.selectedOption, i.customName)}
                     onRemove={(i) => removeItem(i.productId, i.selectedOption, i.customName)}
+                    charmImages={charmImages}
                   />
                 ))}
               </div>
