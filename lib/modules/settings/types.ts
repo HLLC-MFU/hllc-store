@@ -36,3 +36,9 @@ export const homeContentResponseSchema = z.object({
 
 export type HomeBlock = z.infer<typeof homeBlockResponseSchema>;
 export type HomeContent = z.infer<typeof homeContentResponseSchema>;
+
+export const charmSettingsResponseSchema = z.object({
+  images: z.record(z.string(), z.string()),
+});
+
+export type CharmSettings = z.infer<typeof charmSettingsResponseSchema>;

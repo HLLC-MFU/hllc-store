@@ -23,7 +23,7 @@ export function ShopPageHeader({
     <div className="mb-4 flex items-center gap-3">
       <Link
         href={backHref}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gray-100 bg-white text-gray-500 shadow-sm transition-colors hover:text-[#85241F]"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 active:scale-95 transition-all cursor-pointer text-gray-600"
         aria-label="Back"
       >
         <ChevronLeft className="h-5 w-5" />

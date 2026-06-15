@@ -27,6 +27,7 @@ export default async function HomePage() {
       imageUrl: block?.imageUrl || undefined,
       title: block?.title ?? category.label,
       subtitle: block?.subtitle,
+      hasSubBlocks: !!category.groups,
     };
   });
 

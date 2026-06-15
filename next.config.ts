@@ -4,7 +4,7 @@ const isDev = process.env.NODE_ENV !== "production";
 
 const nextConfig: NextConfig = {
   // Allow LAN access for mobile testing (pnpm dev --hostname 0.0.0.0)
-  allowedDevOrigins: ["172.25.43.136"],
+  allowedDevOrigins: ["172.25.59.105"],
   experimental: {
     viewTransition: true,
   },

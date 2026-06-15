@@ -4,6 +4,7 @@ import {
   type ProductDetailProduct,
 } from "@/components/shop/product-detail-view";
 import { listStoreProducts } from "@/lib/backend/products/product-service";
+import { getCharmSettings } from "@/lib/backend/settings/settings-service";
 
 // Always read fresh products so admin edits show up immediately (no build cache).
 export const dynamic = "force-dynamic";
@@ -16,7 +17,10 @@ type ProductPageProps = {
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { productId } = await params;
-  const products = await listStoreProducts();
+  const [products, charmSettings] = await Promise.all([
+    listStoreProducts(),
+    getCharmSettings().catch(() => ({ images: {} })),
+  ]);
   const product = products.find((item) => item.id === productId);
 
   if (!product) {
@@ -32,6 +36,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     options: product.options,
     allowCustomName: product.allowCustomName,
     customNameMaxLength: product.customNameMaxLength,
+    charmImages: product.allowCustomName ? charmSettings.images : undefined,
     shippingFirstItem: product.shippingFirstItem,
     shippingAdditionalItem: product.shippingAdditionalItem,
     imageUrls: product.imageUrls,

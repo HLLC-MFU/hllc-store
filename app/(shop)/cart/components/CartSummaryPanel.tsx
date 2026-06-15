@@ -25,7 +25,6 @@ export function CartSummaryPanel({
     <CheckoutFooter
       lang={lang}
       total={selectedTotal}
-      shippingFee={baseShipping}
       buttonLabel={lang === "th" ? "ดำเนินการต่อ" : "Continue"}
       count={selectedCount}
       onButtonClick={onPay}

@@ -27,3 +27,12 @@ export const adminHomeContentRouter = {
   GET: settingsController.getHomeContent,
   PATCH: (request: NextRequest) => settingsController.updateHomeContent(request),
 };
+
+export const charmSettingsRouter = {
+  GET: settingsController.getCharmSettings,
+};
+
+export const adminCharmSettingsRouter = {
+  GET: settingsController.getCharmSettings,
+  PATCH: (request: NextRequest) => settingsController.updateCharmSettings(request),
+};

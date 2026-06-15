@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/lib/client/language-context";
 import { LogisticsProgress } from "@/components/shop/logistics-progress";
+import { ShopFooter } from "@/components/shop/shop-footer";
 import { attachPaymentSlip, fetchOrdersByPhone } from "@/lib/modules/orders";
 
 type OrderStatus =
@@ -36,7 +37,7 @@ type Order = {
 
 const fmt = new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 });
 const money = (v: number) => fmt.format(v);
-const MAX_SLIP_BYTES = 5 * 1024 * 1024;
+const MAX_SLIP_BYTES = 2 * 1024 * 1024;
 
 function itemName(name: string | { th: string; en?: string }, lang: "th" | "en") {
   if (typeof name === "string") return name;
@@ -47,7 +48,7 @@ const STATUS_LABEL: Record<string, { th: string; en: string; badge: string; icon
   payment_review:  { th: "รอยืนยันชำระ",  en: "Awaiting confirmation", badge: "text-amber-700 bg-amber-50",    icon: "bg-amber-100 text-amber-600"   },
   paid:            { th: "ชำระแล้ว",        en: "Paid",                  badge: "text-blue-700 bg-blue-50",      icon: "bg-blue-100 text-blue-600"     },
   packing:         { th: "กำลังแพ็ค",       en: "Packing",               badge: "text-blue-700 bg-blue-50",      icon: "bg-blue-100 text-blue-600"     },
-  shipped:         { th: "กำลังจัดส่ง",     en: "On the way",            badge: "text-sky-700 bg-sky-50",        icon: "bg-sky-100 text-sky-600"       },
+  shipped:         { th: "จัดส่งแล้ว",       en: "Shipped",               badge: "text-emerald-700 bg-emerald-50", icon: "bg-emerald-100 text-emerald-600"},
   completed:       { th: "ส่งถึงมือแล้ว",  en: "Delivered",             badge: "text-emerald-700 bg-emerald-50", icon: "bg-emerald-100 text-emerald-600"},
   cancelled:       { th: "ยกเลิกแล้ว",      en: "Cancelled",             badge: "text-red-700 bg-red-50",        icon: "bg-red-100 text-red-500"       },
   pending_payment: { th: "รอชำระเงิน",      en: "Pending payment",       badge: "text-gray-500 bg-gray-100",     icon: "bg-gray-100 text-gray-400"     },
@@ -113,7 +114,7 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
     }
 
     if (file.size > MAX_SLIP_BYTES) {
-      setUploadError(lang === "th" ? "รูปไฟล์ใหญ่เกินไป ขอไม่เกิน 5 MB" : "Image is too large. Please keep it under 5 MB");
+      setUploadError(lang === "th" ? "รูปไฟล์ใหญ่เกินไป" : "Image is too large. Please keep it under 5 MB");
       input.value = "";
       return;
     }
@@ -122,6 +123,11 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
     const reader = new FileReader();
     reader.onload = (e) => {
       const image = String(e.target?.result ?? "");
+      if (image.length > 2_900_000) {
+        setUploadError(lang === "th" ? "รูปไฟล์ใหญ่เกินไป ขอไม่เกิน 2 MB นะ" : "Image is too large, please keep it under 2 MB");
+        input.value = "";
+        return;
+      }
       setSlipPreview(image);
       setSlipImage(image);
       input.value = "";
@@ -409,6 +415,7 @@ function ProfileContent() {
   }, [customerPhone]);
 
   return (
+    <>
     <main className="min-h-screen bg-[#f8fafc] px-4 py-6 pb-24">
       <div className="mx-auto max-w-lg">
 
@@ -467,6 +474,8 @@ function ProfileContent() {
         )}
       </div>
     </main>
+    <ShopFooter />
+    </>
   );
 }
 

@@ -21,16 +21,16 @@ export function CharmGrid({ products }: { products: ShopProduct[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-none">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setFilter(tab.id)}
-            className={`shrink-0 rounded-2xl px-4 py-2 text-xs font-black transition-colors ${
+            className={`shrink-0 rounded-full px-4 py-2 text-[11px] font-black transition-all duration-200 ${
               filter === tab.id
-                ? "bg-[#85241F] text-white"
-                : "border border-gray-200 bg-white text-gray-500 hover:border-[#85241F]/30"
+                ? "bg-[#85241F] text-white shadow-md shadow-[#85241F]/30 scale-[1.04]"
+                : "bg-gray-100 text-gray-500 hover:bg-gray-200 active:scale-95"
             }`}
           >
             {tab.label}

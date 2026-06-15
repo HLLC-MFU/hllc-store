@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Check, ChevronRight, Search, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, MapPin, Search, X } from "lucide-react";
 import {
   loadAddressData,
   findProvince,
@@ -143,10 +143,11 @@ export function AddressSelect({ lang, value, onChange, error }: Props) {
       <button
         type="button"
         onClick={openPicker}
-        className={`flex w-full items-center gap-3 rounded-xl py-3 pl-10 pr-1 text-left transition-colors ${
-          error ? "text-red-700 ring-1 ring-red-300" : "bg-transparent"
+        className={`relative flex w-full items-center gap-3 rounded-xl py-3 pl-10 pr-1 text-left transition-colors ${
+          error ? "ring-1 ring-red-300" : "bg-transparent"
         }`}
       >
+        <MapPin className={`absolute left-3.5 h-4 w-4 shrink-0 ${error ? "text-red-400" : "text-gray-400"}`} />
         <div className="min-w-0 flex-1">
           <p className={`text-[11px] font-semibold ${error ? "text-red-400" : "text-gray-400"}`}>{placeholder}</p>
           {filled ? (
@@ -161,10 +162,10 @@ export function AddressSelect({ lang, value, onChange, error }: Props) {
               {lang === "th" ? "แตะเพื่อเลือกที่อยู่" : "Tap to choose address"}
             </p>
           )}
+          {error && <p className="mt-1.5 pb-1 text-xs font-bold text-red-500">{error}</p>}
         </div>
         <ChevronRight className={`h-5 w-5 shrink-0 ${error ? "text-red-400" : "text-gray-400"}`} />
       </button>
-      {error && <p className="mt-1 px-1 text-xs font-bold text-red-500">{error}</p>}
 
       {/* Hidden inputs for the form */}
       <input type="hidden" name="province" value={value.province} />

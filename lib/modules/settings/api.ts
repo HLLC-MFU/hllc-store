@@ -3,9 +3,11 @@ import {
   paymentSettingsResponseSchema,
   shippingSettingsResponseSchema,
   homeContentResponseSchema,
+  charmSettingsResponseSchema,
   type PaymentSettings,
   type ShippingSettings,
   type HomeContent,
+  type CharmSettings,
 } from "./types";
 
 /** Storefront (anonymous): read the active payment account. */
@@ -60,6 +62,25 @@ export function fetchAdminHomeContent() {
 
 export function updateHomeContent(input: { blocks: Record<string, unknown> }) {
   return apiValidated(homeContentResponseSchema, "/api/backend/admin/home-content", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Storefront: read charm color images. */
+export async function fetchCharmSettings(): Promise<CharmSettings> {
+  const response = await fetch("/api/backend/charm-settings", { cache: "no-store" });
+  const payload = (await response.json()) as { data?: unknown; error?: string };
+  if (!response.ok) throw new Error(payload.error ?? "Unable to load charm settings");
+  return charmSettingsResponseSchema.parse(payload.data ?? { images: {} });
+}
+
+export function fetchAdminCharmSettings() {
+  return apiValidated(charmSettingsResponseSchema, "/api/backend/admin/charm-settings");
+}
+
+export function updateCharmSettings(input: CharmSettings) {
+  return apiValidated(charmSettingsResponseSchema, "/api/backend/admin/charm-settings", {
     method: "PATCH",
     body: JSON.stringify(input),
   });

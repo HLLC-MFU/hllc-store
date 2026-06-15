@@ -8,6 +8,8 @@ import {
   Check,
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   FileCheck2,
   Mail,
@@ -43,6 +45,8 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
   const [tracking, setTracking] = React.useState(order.trackingNumber ?? "");
   const [showCancel, setShowCancel] = React.useState(false);
   const [cancelReason, setCancelReason] = React.useState("");
+  const [slipIndex, setSlipIndex] = React.useState(0);
+  const slipScrollRef = React.useRef<HTMLDivElement>(null);
   const { lang } = useLanguage();
   const previousSlips = (order.slipHistory ?? []).filter((slip) => slip.imageUrl).slice(-4).reverse();
   // Current slip first, then previous ones — for the swipeable slip viewer.
@@ -148,49 +152,101 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
             </Card>
           )}
 
-          {/* Slip image — separate card */}
+          {/* Slip image — carousel */}
           {order.status === "payment_review" && order.slip.imageUrl && order.slip.status !== "none" && (
             <Card className="rounded-2xl shadow-3xs overflow-hidden">
-              <CardContent className="p-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">สลิปล่าสุด</span>
-                  {previousSlips.length > 0 && (
-                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">
-                      มีสลิปเก่า {previousSlips.length}
+              <CardContent className="p-3 pb-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                    {slipImages.length > 1
+                      ? slipIndex === 0
+                        ? "สลิปล่าสุด"
+                        : `สลิปเก่า #${slipImages.length - slipIndex}`
+                      : "สลิปล่าสุด"}
+                  </span>
+                  {slipImages.length > 1 && (
+                    <span className="text-[10px] font-black text-gray-400">
+                      {slipIndex + 1} / {slipImages.length}
                     </span>
                   )}
                 </div>
               </CardContent>
-              <button
-                onClick={() => order.slip.imageUrl && onViewSlip(slipImages, 0)}
-                className="w-full h-48 bg-gray-100 relative group cursor-pointer overflow-hidden block"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={order.slip.imageUrl} alt="slip" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 flex items-end px-3 pb-3 transition-colors">
-                  <span className="opacity-0 group-hover:opacity-100 text-white text-[9px] font-black bg-black/60 px-2 py-1 rounded-lg">ขยาย</span>
+              {/* Carousel */}
+              <div className="relative h-48 bg-gray-100">
+                <div
+                  ref={slipScrollRef}
+                  onScroll={(e) => {
+                    const container = e.currentTarget;
+                    const index = Math.round(container.scrollLeft / container.clientWidth);
+                    if (index !== slipIndex && index >= 0 && index < slipImages.length) {
+                      setSlipIndex(index);
+                    }
+                  }}
+                  className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none"
+                >
+                  {slipImages.map((src, i) => (
+                    <button
+                      key={`${src}-${i}`}
+                      type="button"
+                      onClick={() => onViewSlip(slipImages, i)}
+                      className="w-full h-full shrink-0 snap-center relative group cursor-pointer block"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={src} alt={`slip ${i + 1}`} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 flex items-end px-3 pb-3 transition-colors">
+                        <span className="opacity-0 group-hover:opacity-100 text-white text-[9px] font-black bg-black/60 px-2 py-1 rounded-lg">ขยาย</span>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-              </button>
-              {previousSlips.length > 0 && (
-                <CardContent className="border-t border-gray-100 p-3">
-                  <p className="mb-2 text-[10px] font-black uppercase tracking-wider text-gray-400">สลิปก่อนหน้า</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {previousSlips.map((slip, index) => (
+                {slipImages.length > 1 && (
+                  <>
+                    {slipIndex > 0 && (
                       <button
-                        key={`${slip.imageUrl}-${slip.replacedAt ?? index}`}
                         type="button"
-                        onClick={() => slip.imageUrl && onViewSlip(slipImages, index + 1)}
-                        className="overflow-hidden rounded-xl border border-gray-100 bg-gray-50 text-left"
+                        onClick={() => {
+                          const next = slipIndex - 1;
+                          slipScrollRef.current?.scrollTo({ left: next * (slipScrollRef.current.clientWidth), behavior: "smooth" });
+                          setSlipIndex(next);
+                        }}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm shadow-md flex items-center justify-center text-gray-700 hover:bg-white active:scale-90 transition-all"
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={slip.imageUrl} alt="old payment slip" className="h-24 w-full object-cover" />
-                        <div className="p-2">
-                          <p className="text-[10px] font-black text-gray-500">สลิปเก่า #{previousSlips.length - index}</p>
-                          {slip.reviewNote && <p className="mt-0.5 line-clamp-2 text-[10px] font-semibold text-red-600">{slip.reviewNote}</p>}
-                        </div>
+                        <ChevronLeft className="w-4 h-4" />
                       </button>
-                    ))}
-                  </div>
+                    )}
+                    {slipIndex < slipImages.length - 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = slipIndex + 1;
+                          slipScrollRef.current?.scrollTo({ left: next * (slipScrollRef.current.clientWidth), behavior: "smooth" });
+                          setSlipIndex(next);
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm shadow-md flex items-center justify-center text-gray-700 hover:bg-white active:scale-90 transition-all"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    )}
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+                      {slipImages.map((_, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => {
+                            slipScrollRef.current?.scrollTo({ left: i * (slipScrollRef.current.clientWidth), behavior: "smooth" });
+                            setSlipIndex(i);
+                          }}
+                          className={`rounded-full transition-all ${i === slipIndex ? "w-4 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/60"}`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+              {/* Review note for old slips */}
+              {slipIndex > 0 && previousSlips[slipIndex - 1]?.reviewNote && (
+                <CardContent className="border-t border-gray-100 p-3 pt-2">
+                  <p className="text-[10px] font-semibold text-red-600 leading-relaxed">{previousSlips[slipIndex - 1].reviewNote}</p>
                 </CardContent>
               )}
             </Card>
@@ -335,9 +391,31 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                     </Button>
                   </div>
                 </div>
+              ) : order.status === "packing" ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-xs font-black text-gray-500">หมายเลขพัสดุ / Tracking</span>
+                    <input
+                      value={tracking}
+                      onChange={(e) => setTracking(e.target.value)}
+                      placeholder="EG123456789TH"
+                      className="w-full text-xs font-mono text-gray-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-[#85241F]/40 focus:ring-2 focus:ring-[#85241F]/10 placeholder:text-gray-400 transition-all"
+                    />
+                  </div>
+                  <Button
+                    disabled={!tracking.trim()}
+                    onClick={() => {
+                      onSaveTracking(order.id, tracking.trim());
+                      onStatusChange(order.id, "shipped");
+                    }}
+                    className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-[#85241F]/15 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Truck className="w-4 h-4" />
+                    <span className="font-black">ยืนยันจัดส่ง</span>
+                  </Button>
+                </div>
               ) : order.status === "shipped" ? (
                 <div className="flex flex-col gap-3">
-                  {/* Tracking number input */}
                   <div className="flex flex-col gap-1.5">
                     <span className="text-xs font-black text-gray-500">หมายเลขพัสดุ / Tracking</span>
                     <input
@@ -353,30 +431,18 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       </p>
                     )}
                   </div>
-
-                  {/* Next / Prev */}
-                  <div className="flex flex-col gap-2">
-                    {!tracking.trim() && !order.trackingNumber && (
-                      <p className="text-[10px] font-bold text-amber-600 flex items-center gap-1">
-                        <span>⚠</span> กรุณากรอกหมายเลขพัสดุก่อนเปลี่ยนสถานะ
-                      </p>
-                    )}
-                    <Button
-                      disabled={!tracking.trim() && !order.trackingNumber}
-                      onClick={() => {
-                        if (tracking.trim() && tracking.trim() !== (order.trackingNumber ?? "")) {
-                          onSaveTracking(order.id, tracking.trim());
-                        }
-                        if (tracking.trim() && tracking.trim() !== (order.trackingNumber ?? "")) {
-                          onSaveTracking(order.id, tracking.trim());
-                        }
-                      }}
-                      className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-[#85241F]/15 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <Check className="w-4 h-4" />
-                      <span className="font-black">{lang === "th" ? "บันทึกหมายเลขพัสดุ" : "Save Tracking"}</span>
-                    </Button>
-                  </div>
+                  <Button
+                    disabled={!tracking.trim() || tracking.trim() === (order.trackingNumber ?? "")}
+                    onClick={() => {
+                      if (tracking.trim() && tracking.trim() !== (order.trackingNumber ?? "")) {
+                        onSaveTracking(order.id, tracking.trim());
+                      }
+                    }}
+                    className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-[#85241F]/15 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span className="font-black">{lang === "th" ? "บันทึกหมายเลขพัสดุ" : "Save Tracking"}</span>
+                  </Button>
                 </div>
               ) : order.status === "cancelled" ? (
                 <div className="bg-red-50/50 border border-red-100 rounded-xl p-3.5 flex items-center gap-2.5 text-red-700 text-xs font-bold">
@@ -551,46 +617,100 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
               </Card>
             )}
 
-            {/* Slip image */}
+            {/* Slip image — carousel */}
             {order.status === "payment_review" && order.slip.imageUrl && order.slip.status !== "none" && (
               <Card className="rounded-2xl shadow-3xs overflow-hidden">
-                <CardContent className="p-3">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">สลิปล่าสุด</span>
-                    {previousSlips.length > 0 && (
-                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">
-                        มีสลิปเก่า {previousSlips.length}
+                <CardContent className="p-3 pb-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                      {slipImages.length > 1
+                        ? slipIndex === 0
+                          ? "สลิปล่าสุด"
+                          : `สลิปเก่า #${slipImages.length - slipIndex}`
+                        : "สลิปล่าสุด"}
+                    </span>
+                    {slipImages.length > 1 && (
+                      <span className="text-[10px] font-black text-gray-400">
+                        {slipIndex + 1} / {slipImages.length}
                       </span>
                     )}
                   </div>
                 </CardContent>
-                <button onClick={() => order.slip.imageUrl && onViewSlip(slipImages, 0)} className="w-full h-48 bg-gray-100 relative group cursor-pointer block">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={order.slip.imageUrl} alt="slip" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-end px-3 pb-3">
-                    <span className="opacity-0 group-hover:opacity-100 text-white text-[9px] font-black bg-black/60 px-2 py-1 rounded-lg">ขยาย</span>
+                {/* Carousel */}
+                <div className="relative h-48 bg-gray-100">
+                  <div
+                    ref={slipScrollRef}
+                    onScroll={(e) => {
+                      const container = e.currentTarget;
+                      const index = Math.round(container.scrollLeft / container.clientWidth);
+                      if (index !== slipIndex && index >= 0 && index < slipImages.length) {
+                        setSlipIndex(index);
+                      }
+                    }}
+                    className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none"
+                  >
+                    {slipImages.map((src, i) => (
+                      <button
+                        key={`${src}-${i}`}
+                        type="button"
+                        onClick={() => onViewSlip(slipImages, i)}
+                        className="w-full h-full shrink-0 snap-center relative group cursor-pointer block"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt={`slip ${i + 1}`} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 flex items-end px-3 pb-3 transition-colors">
+                          <span className="opacity-0 group-hover:opacity-100 text-white text-[9px] font-black bg-black/60 px-2 py-1 rounded-lg">ขยาย</span>
+                        </div>
+                      </button>
+                    ))}
                   </div>
-                </button>
-                {previousSlips.length > 0 && (
-                  <CardContent className="border-t border-gray-100 p-3">
-                    <p className="mb-2 text-[10px] font-black uppercase tracking-wider text-gray-400">สลิปก่อนหน้า</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {previousSlips.map((slip, index) => (
+                  {slipImages.length > 1 && (
+                    <>
+                      {slipIndex > 0 && (
                         <button
-                          key={`${slip.imageUrl}-${slip.replacedAt ?? index}`}
                           type="button"
-                          onClick={() => slip.imageUrl && onViewSlip(slipImages, index + 1)}
-                          className="overflow-hidden rounded-xl border border-gray-100 bg-gray-50 text-left"
+                          onClick={() => {
+                            const next = slipIndex - 1;
+                            slipScrollRef.current?.scrollTo({ left: next * (slipScrollRef.current.clientWidth), behavior: "smooth" });
+                            setSlipIndex(next);
+                          }}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm shadow-md flex items-center justify-center text-gray-700 hover:bg-white active:scale-90 transition-all"
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={slip.imageUrl} alt="old payment slip" className="h-24 w-full object-cover" />
-                          <div className="p-2">
-                            <p className="text-[10px] font-black text-gray-500">สลิปเก่า #{previousSlips.length - index}</p>
-                            {slip.reviewNote && <p className="mt-0.5 line-clamp-2 text-[10px] font-semibold text-red-600">{slip.reviewNote}</p>}
-                          </div>
+                          <ChevronLeft className="w-4 h-4" />
                         </button>
-                      ))}
-                    </div>
+                      )}
+                      {slipIndex < slipImages.length - 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = slipIndex + 1;
+                            slipScrollRef.current?.scrollTo({ left: next * (slipScrollRef.current.clientWidth), behavior: "smooth" });
+                            setSlipIndex(next);
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm shadow-md flex items-center justify-center text-gray-700 hover:bg-white active:scale-90 transition-all"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      )}
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+                        {slipImages.map((_, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => {
+                              slipScrollRef.current?.scrollTo({ left: i * (slipScrollRef.current.clientWidth), behavior: "smooth" });
+                              setSlipIndex(i);
+                            }}
+                            className={`rounded-full transition-all ${i === slipIndex ? "w-4 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/60"}`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+                {slipIndex > 0 && previousSlips[slipIndex - 1]?.reviewNote && (
+                  <CardContent className="border-t border-gray-100 p-3 pt-2">
+                    <p className="text-[10px] font-semibold text-red-600 leading-relaxed">{previousSlips[slipIndex - 1].reviewNote}</p>
                   </CardContent>
                 )}
               </Card>
@@ -675,6 +795,26 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       </Button>
                     </div>
                   </div>
+                ) : order.status === "packing" ? (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-xs font-black text-gray-500">หมายเลขพัสดุ / Tracking</span>
+                      <input value={tracking} onChange={(e) => setTracking(e.target.value)}
+                        placeholder="EG123456789TH"
+                        className="w-full text-xs font-mono text-gray-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-[#85241F]/40 placeholder:text-gray-400 transition-all" />
+                    </div>
+                    <Button
+                      disabled={!tracking.trim()}
+                      onClick={() => {
+                        onSaveTracking(order.id, tracking.trim());
+                        onStatusChange(order.id, "shipped");
+                      }}
+                      className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl gap-2 disabled:opacity-40"
+                    >
+                      <Truck className="w-4 h-4" />
+                      ยืนยันจัดส่ง
+                    </Button>
+                  </div>
                 ) : order.status === "shipped" ? (
                   <div className="flex flex-col gap-3">
                     <div className="flex flex-col gap-1.5">
@@ -685,7 +825,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       {order.trackingNumber && <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1"><Check className="w-3 h-3" strokeWidth={3} />{order.trackingNumber}</p>}
                     </div>
                     <Button
-                      disabled={!tracking.trim() && !order.trackingNumber}
+                      disabled={!tracking.trim() || tracking.trim() === (order.trackingNumber ?? "")}
                       onClick={() => {
                         if (tracking.trim() && tracking.trim() !== (order.trackingNumber ?? "")) {
                           onSaveTracking(order.id, tracking.trim());
