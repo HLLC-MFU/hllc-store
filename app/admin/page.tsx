@@ -8,6 +8,7 @@ import {
   Package,
   PackagePlus,
   CheckCircle2,
+  AlertCircle,
   Image as ImageIcon,
 } from "lucide-react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -21,7 +22,6 @@ import * as settingsApi from "@/lib/modules/settings";
 import type { PaymentSettings, ShippingSettings } from "@/lib/modules/settings";
 import { placementByValue } from "@/lib/config/catalog";
 import { HomeContentPanel } from "@/components/admin/home-content-panel";
-import { CharmSettingsPanel } from "@/components/admin/charm-settings-panel";
 import { PaymentAccountPanel } from "@/components/admin/payment-account-panel";
 import { ShippingSettingsPanel } from "@/components/admin/shipping-settings-panel";
 import { TestEmailPanel } from "@/components/admin/test-email-panel";
@@ -41,7 +41,7 @@ export default function AdminPage() {
   const [products, setProducts] = React.useState<Product[]>([]);
   const [showAddProduct, setShowAddProduct] = React.useState(false);
   const [editProduct, setEditProduct] = React.useState<Product | null>(null);
-  const [toast, setToast] = React.useState("");
+  const [toast, setToast] = React.useState<{ msg: string; type: "success" | "error" } | null>(null);
   const [confirm, setConfirm] = React.useState<{ orderId: string; approved: boolean; note?: string } | null>(null);
   const [statusConfirm, setStatusConfirm] = React.useState<{ orderId: string; status: OrderStatus } | null>(null);
   const [lightbox, setLightbox] = React.useState<{ images: string[]; index: number } | null>(null);
@@ -49,7 +49,8 @@ export default function AdminPage() {
   const [auditLogs, setAuditLogs] = React.useState<AuditLog[]>([]);
   const [paymentSettings, setPaymentSettings] = React.useState<PaymentSettings | null>(null);
   const [shippingSettings, setShippingSettings] = React.useState<ShippingSettings | null>(null);
-  const { lang, t } = useLanguage();
+  const { lang, t, setLang } = useLanguage();
+  React.useEffect(() => { setLang("th"); }, [setLang]);
 
   const [loading, setLoading] = React.useState(false);
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
@@ -62,9 +63,17 @@ export default function AdminPage() {
     setCurrentUser(null);
   }
 
-  const notify = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(""), 2500);
+  function friendlyError(raw: string): string {
+    if (raw.includes("E11000") || raw.includes("duplicate key")) {
+      if (raw.includes("slug")) return "ชื่อสินค้านี้ซ้ำกับที่มีอยู่แล้ว ลองเปลี่ยนชื่อหรือเพิ่มคำต่อท้ายดูครับ";
+      return "ข้อมูลซ้ำกับที่มีอยู่แล้วในระบบ";
+    }
+    return raw;
+  }
+
+  const notify = (msg: string, type: "success" | "error" = "success") => {
+    setToast({ msg: type === "error" ? friendlyError(msg) : msg, type });
+    setTimeout(() => setToast(null), 3500);
   };
 
   React.useEffect(() => {
@@ -101,21 +110,21 @@ export default function AdminPage() {
     setLoading(true);
     const res = await settingsApi.updatePaymentSettings(input);
     setLoading(false);
-    if (res.error) { notify(res.error); return; }
+    if (res.error) { notify(res.error, "error"); return; }
     if (res.data) setPaymentSettings(res.data);
-    notify(lang === "th" ? "บันทึกบัญชีรับเงินแล้ว" : "Payment account saved");
+    notify(t("admin.toast.payment_saved"));
     void loadSuperAdminData();
-  }, [lang, loadSuperAdminData]);
+  }, [t, loadSuperAdminData]);
 
   const saveShippingSettings = React.useCallback(async (input: ShippingSettings) => {
     setLoading(true);
     const res = await settingsApi.updateShippingSettings(input);
     setLoading(false);
-    if (res.error) { notify(res.error); return; }
+    if (res.error) { notify(res.error, "error"); return; }
     if (res.data) setShippingSettings(res.data);
-    notify(lang === "th" ? "บันทึกค่าจัดส่งแล้ว" : "Shipping rates saved");
+    notify(t("admin.toast.shipping_saved"));
     void loadSuperAdminData();
-  }, [lang, loadSuperAdminData]);
+  }, [t, loadSuperAdminData]);
 
   const loadData = React.useCallback(async () => {
     setLoading(true);
@@ -197,7 +206,7 @@ export default function AdminPage() {
     setLoading(false);
 
     if (res.error) {
-      notify(res.error);
+      notify(res.error, "error");
       return;
     }
 
@@ -207,14 +216,14 @@ export default function AdminPage() {
 
   async function deleteAdminUser(username: string) {
     const res = await adminUsersApi.deleteAdminUser(username);
-    if (res.error) { notify(res.error); return; }
+    if (res.error) { notify(res.error, "error"); return; }
     notify(`ลบ ${username} แล้ว`);
     await loadSuperAdminData();
   }
 
   async function resetAdminPassword(username: string) {
     const res = await adminUsersApi.resetAdminPassword(username);
-    if (res.error) { notify(res.error); return; }
+    if (res.error) { notify(res.error, "error"); return; }
     notify(`รีเซ็ตรหัสผ่านของ ${username} แล้ว ต้องตั้งรหัสใหม่ที่ /admin/register`);
     await loadSuperAdminData();
   }
@@ -224,7 +233,7 @@ export default function AdminPage() {
     const res = await ordersApi.reviewPaymentSlip(orderId, approved, "admin", note);
     setLoading(false);
     if (res.error) {
-      notify(res.error);
+      notify(res.error, "error");
     } else {
       notify(approved ? t("admin.toast.slip_approved") : t("admin.toast.slip_rejected"));
       loadData();
@@ -246,7 +255,7 @@ export default function AdminPage() {
     const res = await ordersApi.updateAdminOrder(orderId, { status });
     setLoading(false);
     if (res.error) {
-      notify(res.error);
+      notify(res.error, "error");
     } else {
       notify(t("admin.toast.product_updated"));
       loadData();
@@ -256,7 +265,7 @@ export default function AdminPage() {
   async function saveTracking(orderId: string, trackingNumber: string) {
     const res = await ordersApi.updateAdminOrder(orderId, { trackingNumber });
     if (res.error) {
-      notify(res.error);
+      notify(res.error, "error");
     } else {
       notify("บันทึกหมายเลขพัสดุแล้ว");
       loadData();
@@ -278,7 +287,7 @@ export default function AdminPage() {
     const res = await ordersApi.updateAdminOrder(orderId, { cancel: true, reason });
     setLoading(false);
     if (res.error) {
-      notify(res.error);
+      notify(res.error, "error");
     } else {
       notify("ยกเลิกคำสั่งซื้อแล้ว");
       loadData();
@@ -334,7 +343,7 @@ export default function AdminPage() {
     });
     setLoading(false);
     if (res.error) {
-      notify(res.error);
+      notify(res.error, "error");
       throw new Error(res.error);
     } else {
       notify(t("admin.toast.product_added"));
@@ -347,7 +356,7 @@ export default function AdminPage() {
     const res = await productsApi.updateProduct(updated);
     setLoading(false);
     if (res.error) {
-      notify(res.error);
+      notify(res.error, "error");
       throw new Error(res.error);
     } else {
       notify(t("admin.toast.product_updated"));
@@ -360,7 +369,7 @@ export default function AdminPage() {
     const res = await productsApi.deleteProduct(id);
     setLoading(false);
     if (res.error) {
-      notify(res.error);
+      notify(res.error, "error");
     } else {
       notify(t("admin.toast.product_deleted"));
       loadData();
@@ -387,9 +396,16 @@ export default function AdminPage() {
       />
 
       {toast && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 backdrop-blur-md text-white text-xs font-bold px-5 py-3 rounded-2xl shadow-xl border border-white/10 flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          {toast}
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-9999 max-w-sm w-[calc(100%-2rem)] backdrop-blur-md text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-xl flex items-start gap-2.5 animate-in fade-in slide-in-from-top-4 duration-300 ${
+          toast.type === "error"
+            ? "bg-red-600/95 border border-red-400/20"
+            : "bg-slate-900/95 border border-white/10"
+        }`}>
+          {toast.type === "error"
+            ? <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-200" />
+            : <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
+          }
+          <span className="leading-snug">{toast.msg}</span>
         </div>
       )}
 
@@ -453,7 +469,6 @@ export default function AdminPage() {
                 onUpdateProduct={updateProduct}
                 onDeleteProduct={deleteProduct}
                 onEditProduct={setEditProduct}
-                lang={lang}
                 t={t}
               />
             </TabsContent>
@@ -527,48 +542,22 @@ export default function AdminPage() {
 }
 
 function StorefrontPanel({ notify }: { notify: (msg: string) => void }) {
-  const [section, setSection] = React.useState<"home" | "charm">("home");
   const [saving, setSaving] = React.useState(false);
   const homeRef = React.useRef<(() => Promise<void>) | null>(null);
-  const charmRef = React.useRef<(() => Promise<void>) | null>(null);
 
   async function handleSave() {
-    const fn = section === "home" ? homeRef.current : charmRef.current;
-    if (!fn) return;
+    if (!homeRef.current) return;
     setSaving(true);
-    await fn();
+    await homeRef.current();
     setSaving(false);
   }
 
   return (
     <div className="flex flex-col gap-4 pb-24">
-      {/* Full-width toggle */}
-      <div className="flex gap-1 rounded-2xl bg-gray-100 p-1">
-        {(["home", "charm"] as const).map((id) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setSection(id)}
-            className={`flex-1 rounded-xl py-2.5 text-xs font-black transition-all cursor-pointer ${
-              section === id ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            {id === "home" ? "หน้าหลัก" : "ที่ห้อย"}
-          </button>
-        ))}
-      </div>
-
       {/* Panel content */}
-      {section === "home" && (
-        <div className="animate-in fade-in duration-200">
-          <HomeContentPanel notify={notify} saveRef={homeRef} />
-        </div>
-      )}
-      {section === "charm" && (
-        <div className="animate-in fade-in duration-200 rounded-2xl border border-gray-100 bg-white p-4">
-          <CharmSettingsPanel notify={notify} saveRef={charmRef} />
-        </div>
-      )}
+      <div className="animate-in fade-in duration-200">
+        <HomeContentPanel notify={notify} saveRef={homeRef} />
+      </div>
 
       {/* Sticky footer */}
       <div className="fixed bottom-0 left-0 right-0 md:pl-56 lg:pl-64 z-30 bg-white/90 backdrop-blur-md border-t border-gray-100 px-4 py-3 flex justify-end">

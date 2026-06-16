@@ -18,8 +18,8 @@ export type NavItem = {
 
 export const SHOP_NAV: NavItem[] = [
   { href: "/home",    label: "nav.home",        icon: Home },
-  { href: "/profile", label: "nav.track_order", icon: Package },
   { href: "/cart",    label: "nav.cart",         icon: ShoppingCart },
+  { href: "/profile", label: "nav.track_order", icon: Package },
 ];
 
 export { ClipboardList, LayoutDashboard, Mail, Package, User };

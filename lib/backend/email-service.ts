@@ -318,6 +318,46 @@ export function pickupReadyEmail(
   };
 }
 
+export function orderConfirmedEmail(
+  customerName: string,
+  to = "",
+  opts: {
+    total: number;
+    subtotal: number;
+    shippingFee: number;
+    itemCount: number;
+    deliveryMode: "delivery" | "pickup";
+    customerPhone?: string;
+  },
+): EmailPayload {
+  const fmt = new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 });
+  const deliveryLabel = opts.deliveryMode === "pickup" ? "รับที่ร้าน" : "จัดส่งพัสดุ";
+  return {
+    to,
+    subject: "HLLC Store - รับคำสั่งซื้อเรียบร้อยแล้ว",
+    text: `สวัสดีคุณ ${customerName}, เราได้รับคำสั่งซื้อของคุณเรียบร้อยแล้ว ยอดรวม ${fmt.format(opts.total)} กรุณาชำระเงินและส่งสลิปเพื่อยืนยัน`,
+    html: baseEmailHtml({
+      badge: "รับคำสั่งซื้อแล้ว",
+      badgeBg: "#ede9fe",
+      badgeColor: "#5b21b6",
+      alert: "เราได้รับคำสั่งซื้อของคุณเรียบร้อยแล้ว",
+      icon: "check",
+      headline: "ขอบคุณที่สั่งซื้อกับเรา!",
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณถูกบันทึกเรียบร้อยแล้ว กรุณาชำระเงินและอัปโหลดสลิปในแอปเพื่อยืนยันการสั่งซื้อ`,
+      detailRows: [
+        { label: "จำนวนสินค้า", value: `${opts.itemCount} รายการ` },
+        { label: "ค่าสินค้า", value: fmt.format(opts.subtotal) },
+        { label: "ค่าจัดส่ง", value: opts.shippingFee > 0 ? fmt.format(opts.shippingFee) : "ฟรี", color: opts.shippingFee > 0 ? "#111827" : "#166534" },
+        { label: "ยอดรวมทั้งหมด", value: fmt.format(opts.total), color: "#5b21b6" },
+        { label: "วิธีรับสินค้า", value: deliveryLabel },
+        { label: "สถานะ", value: "รอชำระเงิน", color: "#92400e" },
+      ],
+      note: { label: "ขั้นตอนถัดไป", text: "กรุณาโอนเงินและอัปโหลดสลิปการชำระเงินในแอปภายใน 24 ชั่วโมง เพื่อให้เราดำเนินการต่อได้" },
+      customerPhone: opts.customerPhone,
+    }),
+  };
+}
+
 export function orderCancelledEmail(customerName: string, reason: string, to = "", customerPhone?: string): EmailPayload {
   const message = reason?.trim();
   return {

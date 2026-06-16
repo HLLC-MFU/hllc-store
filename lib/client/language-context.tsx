@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 
 export type Language = "th" | "en";
 
@@ -13,6 +13,7 @@ interface TranslationDict {
 
 const DICTIONARY: TranslationDict = {
   // Navigation
+  "nav.back": { th: "ย้อนกลับ", en: "Back" },
   "nav.home": { th: "หน้าหลัก", en: "Home" },
   "nav.cart": { th: "ตะกร้า", en: "Cart" },
   "nav.track_order": { th: "ติดตามพัสดุ", en: "Track Order" },
@@ -222,6 +223,100 @@ const DICTIONARY: TranslationDict = {
   "admin.products.placeholder.stock": { th: "จำนวน เช่น 100", en: "e.g. 100" },
   "admin.products.placeholder.description": { th: "รายละเอียดสินค้า...", en: "Product description..." },
   "admin.products.placeholder.description_en": { th: "Product description...", en: "Product description..." },
+
+  // Product Detail View
+  "product.details": { th: "รายละเอียดสินค้า", en: "Product Details" },
+  "product.quantity": { th: "จำนวน", en: "Quantity" },
+  "product.out_of_stock": { th: "สินค้าหมด", en: "Out of Stock" },
+  "product.buy_now": { th: "ซื้อเลย", en: "Buy Now" },
+  "product.total_price": { th: "ราคารวม", en: "Total" },
+  "product.select_option_first": { th: "กรุณาเลือกตัวเลือกสินค้าก่อน", en: "Please choose an option first" },
+  "product.out_of_stock_toast": { th: "สินค้าหมดแล้ว", en: "Out of stock" },
+  "product.added_to_cart": { th: "เพิ่มลงตะกร้าแล้ว {count} ชิ้น", en: "Added {count} to cart" },
+  "product.stock_limit": { th: "เพิ่มไม่ได้แล้ว มีในสต็อกสูงสุด {stock} ชิ้น", en: "Can't add more — only {stock} in stock" },
+
+  // Charm modal (product detail)
+  "charm.keychain": { th: "สายห้อย", en: "Keychain" },
+  "charm.add_keychain": { th: "เพิ่มสายห้อย", en: "Add keychain" },
+  "charm.pick_color_letters": { th: "เลือกสี + ตัวอักษร", en: "Pick color + letters" },
+  "charm.tap_add_letters": { th: "แตะเพื่อเพิ่มตัวอักษร", en: "Tap to add letters" },
+  "charm.color_step": { th: "สี", en: "Color" },
+  "charm.letters_step": { th: "ตัวอักษร", en: "Letters" },
+  "charm.choose_color_heading": { th: "เลือกสีสายห้อย — +{price}฿", en: "Choose keychain color — +{price}฿" },
+  "charm.next_add_letters": { th: "ถัดไป — เพิ่มตัวอักษร", en: "Next — Add letters" },
+  "charm.free_letters": { th: "{count} ตัวแรกฟรี", en: "First {count} free" },
+  "charm.extra_letter_price": { th: "ตัวต่อไป +{price}฿", en: "+{price}฿ each after" },
+  "charm.tap_letters_below": { th: "แตะตัวอักษรด้านล่างเพื่อเพิ่ม", en: "Tap letters below to add" },
+  "charm.charm_label": { th: "ที่ห้อย", en: "Charm" },
+  "charm.change_color": { th: "เปลี่ยนสี", en: "Change color" },
+  "charm.confirm": { th: "ยืนยัน", en: "Confirm" },
+  "charm.add_prompt_sub": { th: "เพิ่มสายห้อยชื่อพร้อมกับสินค้านี้ได้เลย", en: "You can add a keychain charm with this item" },
+  "charm.add_with_price": { th: "เพิ่มสายห้อย +30฿", en: "Add keychain +30฿" },
+  "charm.no_thanks": { th: "ไม่เพิ่ม", en: "No thanks" },
+
+  // Swipeable cart item
+  "cart.add_keychain": { th: "เพิ่มสาย", en: "Add" },
+  "cart.delete": { th: "ลบ", en: "Delete" },
+  "cart.remove_aria": { th: "ลบสินค้าออกจากตะกร้า", en: "Remove item from cart" },
+  "cart.custom_name_label": { th: "ชื่อ", en: "Name" },
+  "cart.edit": { th: "แก้ไข", en: "Edit" },
+  "cart.done": { th: "สำเร็จ", en: "Done" },
+  "cart.pcs": { th: "ชิ้น", en: "pcs" },
+  "cart.remove_charm_title": { th: "ลบสายห้อยออก?", en: "Remove keychain?" },
+  "cart.remove_charm_sub": { th: "ราคาสายห้อยจะถูกนำออกจากยอดรวม", en: "Keychain price will be removed from total" },
+  "cart.cancel": { th: "ยกเลิก", en: "Cancel" },
+  "cart.remove": { th: "ลบออก", en: "Remove" },
+  "cart.no_keychain": { th: "ยังไม่มีสายห้อย", en: "No keychain yet" },
+  "cart.keychain_plus": { th: "+ สายห้อย", en: "+ KeyChain" },
+  "cart.keychain_label": { th: "สายห้อย", en: "KeyChain" },
+  "cart.pick_keychain_color": { th: "เลือกสีสายห้อย", en: "Pick keychain color" },
+  "cart.pick_letters": { th: "เลือกตัวอักษร", en: "Pick letters" },
+  "cart.free_letters": { th: "ตัวแรกฟรี", en: "free letters" },
+  "cart.keychain_color_label": { th: "สายห้อย", en: "Keychain" },
+
+  // Category grid
+  "shop.shop_now": { th: "ช้อปเลย", en: "Shop now" },
+  "shop.choose": { th: "เลือกซื้อ", en: "Choose" },
+
+  // Charm grid
+  "charm.filter_all": { th: "ทั้งหมด", en: "All" },
+  "charm.out_of_stock": { th: "หมดแล้ว", en: "Out of stock" },
+
+  // Checkout Footer shipping rates
+  "checkout.shipping_rates": { th: "อัตราค่าจัดส่ง", en: "Shipping rates" },
+  "shipping.standard": { th: "ทั่วไป", en: "Standard" },
+  "shipping.remote": { th: "ห่างไกล", en: "Remote" },
+  "shipping.island": { th: "พิเศษ", en: "Island" },
+  "shipping.first_item": { th: "ชิ้นแรก", en: "1st item" },
+  "shipping.each_after": { th: "ชิ้นต่อไป", en: "each after" },
+
+  // InfoStep
+  "checkout.recipient": { th: "ข้อมูลผู้รับ", en: "Recipient" },
+  "checkout.fulfillment": { th: "วิธีรับสินค้า", en: "Fulfillment" },
+  "checkout.delivery": { th: "จัดส่ง", en: "Delivery" },
+  "checkout.pickup": { th: "รับเอง", en: "Pickup" },
+  "checkout.placeholder.fullname": { th: "ชื่อ-นามสกุล", en: "Full name" },
+  "checkout.placeholder.phone": { th: "เบอร์โทรศัพท์", en: "Phone number" },
+  "checkout.placeholder.email": { th: "อีเมล", en: "Email" },
+  "checkout.email_note": { th: "ใช้อีเมลนี้เพื่อรับการแจ้งเตือนสถานะคำสั่งซื้อ", en: "We use this email for order status notifications." },
+  "checkout.shipping_address": { th: "ที่อยู่จัดส่ง", en: "Shipping address" },
+  "checkout.placeholder.address": { th: "บ้านเลขที่, อาคาร, หมู่, ถนน", en: "House no., building, street" },
+  "checkout.pickup_at_d1": { th: "รับสินค้าเองที่ D1", en: "Pickup at D1" },
+  "checkout.pickup_time_note": { th: "กรุณาระบุเวลาที่สะดวกมารับสินค้า", en: "Please select your preferred pickup time." },
+  "checkout.proceed_to_pay": { th: "ไปหน้าชำระเงิน", en: "Proceed to pay" },
+  "checkout.back": { th: "กลับ", en: "Back" },
+
+  // Admin order-row inline strings
+  "admin.order.save_tracking": { th: "บันทึกหมายเลขพัสดุ", en: "Save Tracking" },
+  "admin.order.cancelled_msg": { th: "คำสั่งซื้อถูกยกเลิกแล้ว", en: "Order has been cancelled" },
+  "admin.order.shipped_done": { th: "จัดส่งแล้ว ✓", en: "Shipped ✓" },
+
+  // Products panel
+  "admin.products.search_placeholder": { th: "ค้นหาสินค้า...", en: "Search products..." },
+
+  // Admin settings save notifications
+  "admin.toast.payment_saved": { th: "บันทึกบัญชีรับเงินแล้ว", en: "Payment account saved" },
+  "admin.toast.shipping_saved": { th: "บันทึกค่าจัดส่งแล้ว", en: "Shipping rates saved" },
 };
 
 interface LanguageContextType {

@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { Lock, User, Eye, EyeOff } from "lucide-react";
-import { LanguageChip } from "@/components/shared/language-chip";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/client/language-context";
 import { safeParseWithLang, loginSchema } from "@/lib/validation/schemas-i18n";
@@ -43,12 +42,7 @@ export function AdminLogin({ onLogin, loading = false }: AdminLoginProps) {
 
   return (
     <main className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4">
-      {/* Language chip top-right */}
-      <div className="absolute top-5 right-5">
-        <LanguageChip />
-      </div>
-
-      <div className="w-full max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-300">
+<div className="w-full max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-300">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}

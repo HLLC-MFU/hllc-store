@@ -69,7 +69,7 @@ export function InfoStep({
 
       <button onClick={onBack} className="inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-gray-700 transition-colors">
         <ArrowLeft className="h-4 w-4" />
-        {lang === "th" ? "กลับ" : "Back"}
+        {t("checkout.back")}
       </button>
 
       <form id="checkout-info-form" onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -77,7 +77,7 @@ export function InfoStep({
         {/* Delivery mode */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3">
           <p className="text-xs font-black uppercase tracking-wider text-gray-400">
-            {lang === "th" ? "วิธีรับสินค้า" : "Fulfillment"}
+            {t("checkout.fulfillment")}
           </p>
           <div className="grid grid-cols-2 rounded-xl bg-gray-100 p-1">
             <button
@@ -86,7 +86,7 @@ export function InfoStep({
               className={`flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-black transition-all ${deliveryMode === "delivery" ? "bg-white text-[#85241F] shadow-sm" : "text-gray-500"}`}
             >
               <Truck className="h-4 w-4" />
-              {lang === "th" ? "จัดส่ง" : "Delivery"}
+              {t("checkout.delivery")}
             </button>
             <button
               type="button"
@@ -94,7 +94,7 @@ export function InfoStep({
               className={`flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-black transition-all ${deliveryMode === "pickup" ? "bg-white text-[#85241F] shadow-sm" : "text-gray-500"}`}
             >
               <Store className="h-4 w-4" />
-              {lang === "th" ? "รับเอง" : "Pickup"}
+              {t("checkout.pickup")}
             </button>
           </div>
         </div>
@@ -102,7 +102,7 @@ export function InfoStep({
         {/* Recipient */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3">
           <p className="text-xs font-black text-gray-400 uppercase tracking-wider">
-            {lang === "th" ? "ข้อมูลผู้รับ" : "Recipient"}
+            {t("checkout.recipient")}
           </p>
           <div className="divide-y divide-gray-100 rounded-xl border border-gray-100 ">
             <FieldRow icon={<User className="h-4 w-4" />} error={fieldErrors.name}>
@@ -110,7 +110,7 @@ export function InfoStep({
                 name="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={lang === "th" ? "ชื่อ-นามสกุล" : "Full name"}
+                placeholder={t("checkout.placeholder.fullname")}
                 aria-invalid={Boolean(fieldErrors.name)}
                 className={`${inputCls} ${fieldErrors.name ? "text-red-700 placeholder:text-red-300" : ""}`}
               />
@@ -123,7 +123,7 @@ export function InfoStep({
                 autoComplete="tel"
                 value={formatPhoneDisplay(phone)}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                placeholder={lang === "th" ? "เบอร์โทรศัพท์" : "Phone number"}
+                placeholder={t("checkout.placeholder.phone")}
                 aria-invalid={Boolean(fieldErrors.phone)}
                 className={`${inputCls} ${fieldErrors.phone ? "!text-red-700 placeholder:!text-red-300" : ""}`}
               />
@@ -136,14 +136,14 @@ export function InfoStep({
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={lang === "th" ? "อีเมล" : "Email"}
+                placeholder={t("checkout.placeholder.email")}
                 aria-invalid={Boolean(fieldErrors.email)}
                 className={`${inputCls} ${fieldErrors.email ? "!text-red-700 placeholder:!text-red-300" : ""}`}
               />
             </FieldRow>
           </div>
           <p className="text-[11px] font-semibold text-gray-400">
-            {lang === "th" ? "ใช้อีเมลนี้เพื่อรับการแจ้งเตือนสถานะคำสั่งซื้อ" : "We use this email for order status notifications."}
+            {t("checkout.email_note")}
           </p>
         </div>
 
@@ -151,7 +151,7 @@ export function InfoStep({
         {deliveryMode === "delivery" ? (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3">
             <p className="text-xs font-black text-gray-400 uppercase tracking-wider">
-              {lang === "th" ? "ที่อยู่จัดส่ง" : "Shipping address"}
+              {t("checkout.shipping_address")}
             </p>
             <div className="divide-y divide-gray-100 rounded-xl border border-gray-100 mb-0.5">
               <FieldRow icon={<MapPin className="h-4 w-4" />} error={fieldErrors.address}>
@@ -159,7 +159,7 @@ export function InfoStep({
                   name="address"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder={lang === "th" ? "บ้านเลขที่, อาคาร, หมู่, ถนน" : "House no., building, street"}
+                  placeholder={t("checkout.placeholder.address")}
                   aria-invalid={Boolean(fieldErrors.address)}
                   className={`${inputCls} ${fieldErrors.address ? "text-red-700 placeholder:text-red-300" : ""}`}
                 />
@@ -181,10 +181,10 @@ export function InfoStep({
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <Store className="h-4 w-4 text-[#85241F]" />
-              <p className="text-sm font-black text-[#85241F]">{lang === "th" ? "รับสินค้าเองที่ D1" : "Pickup at D1"}</p>
+              <p className="text-sm font-black text-[#85241F]">{t("checkout.pickup_at_d1")}</p>
             </div>
             <p className="text-xs font-semibold text-gray-400">
-              {lang === "th" ? "กรุณาระบุเวลาที่สะดวกมารับสินค้า" : "Please select your preferred pickup time."}
+              {t("checkout.pickup_time_note")}
             </p>
             <TimeSelect name="pickupTime" error={fieldErrors.pickupTime} />
             {fieldErrors.pickupTime && <p className="mt-1.5 text-xs font-bold text-red-500">{fieldErrors.pickupTime}</p>}
@@ -214,11 +214,12 @@ export function InfoStep({
       <CheckoutFooter
         lang={lang}
         total={selectedPayableTotal}
-        buttonLabel={lang === "th" ? "ไปหน้าชำระเงิน" : "Proceed to pay"}
+        buttonLabel={t("checkout.proceed_to_pay")}
         buttonType="submit"
         formId="checkout-info-form"
         disabled={!itemsLength}
         loading={loading}
+        deliveryMode={deliveryMode}
       />
     </section>
   );

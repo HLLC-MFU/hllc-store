@@ -62,7 +62,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   const router = useRouter();
   const { addItem, items } = useCart();
   const { flyToCart } = useCartFly();
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
   const addBtnRef = useRef<HTMLButtonElement>(null);
 
   const images = product.imageUrls ?? [];
@@ -93,7 +93,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
     ? options.every((option) => (option.stock ?? product.stock) < 1)
     : product.stock < 1;
   const selectedOptionOutOfStock = Boolean(selectedOption && selectedOptionStock < 1);
-  const mustSelectOption = options.length > 0 && !selectedOption;
+  const mustSelectOption = false;
 
   const showToast = useCallback((kind: "added" | "alert", text: string) => {
     setToast({ kind, text });
@@ -131,6 +131,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
     pendingAction.current = null;
   }
   function confirmCharm() {
+    if (tempLetters.length < 2) return;
     setCharmColor(tempColor);
     setCharmLetters([...tempLetters]);
     setCharmOpen(false);
@@ -167,19 +168,17 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   function handleAddToCart(sourceEl?: HTMLElement | null, skipCharmPrompt = false): boolean {
     vibrateTap();
     if (mustSelectOption) {
-      showToast("alert", lang === "th" ? "กรุณาเลือกตัวเลือกสินค้าก่อน" : "Please choose an option first");
+      showToast("alert", t("product.select_option_first"));
       return false;
     }
     if (selectedOptionOutOfStock || outOfStock) {
-      showToast("alert", lang === "th" ? "สินค้าหมดแล้ว" : "Out of stock");
+      showToast("alert", t("product.out_of_stock_toast"));
       return false;
     }
 
     const remaining = selectedOptionStock - cartQty;
     if (remaining <= 0) {
-      showToast("alert", lang === "th"
-        ? `เพิ่มไม่ได้แล้ว มีในสต็อกสูงสุด ${selectedOptionStock} ชิ้น`
-        : `Can't add more — only ${selectedOptionStock} in stock`);
+      showToast("alert", t("product.stock_limit", { stock: selectedOptionStock }));
       return false;
     }
 
@@ -206,24 +205,23 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         imageUrl: displayImages[0] ?? "",
         selectedOption: selectedOption?.label ?? "",
         customName: product.allowCustomName ? charmCustomName : undefined,
+        allowCustomName: product.allowCustomName,
       });
     }
     const flySource = sourceEl ?? addBtnRef.current;
     if (flySource) flyToCart(flySource, displayImages[0]);
-    showToast("added", lang === "th"
-      ? `เพิ่มลงตะกร้าแล้ว ${addCount} ชิ้น`
-      : `Added ${addCount} item${addCount > 1 ? "s" : ""} to cart`);
+    showToast("added", t("product.added_to_cart", { count: addCount }));
     return true;
   }
 
   function handleBuyNow() {
     vibrateTap();
     if (mustSelectOption) {
-      showToast("alert", lang === "th" ? "กรุณาเลือกตัวเลือกสินค้าก่อน" : "Please choose an option first");
+      showToast("alert", t("product.select_option_first"));
       return;
     }
     if (selectedOptionOutOfStock || outOfStock) {
-      showToast("alert", lang === "th" ? "สินค้าหมดแล้ว" : "Out of stock");
+      showToast("alert", t("product.out_of_stock_toast"));
       return;
     }
     if (product.allowCustomName && !charmColor) {
@@ -276,8 +274,20 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         </div>
       </div>
 
+      {/* Back button — desktop only */}
+      <div className="px-4 md:px-6 pt-4">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="hidden md:flex items-center gap-1 text-xs font-bold text-gray-400 hover:text-gray-700 transition-colors mb-4 -ml-1 cursor-pointer"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          {t("nav.back")}
+        </button>
+      </div>
+
       {/* Layout: 1 col mobile, 2 col desktop */}
-      <div className="mx-auto max-w-6xl px-4 py-6 lg:grid lg:grid-cols-[1fr_420px] lg:gap-12 lg:items-start pb-28 lg:pb-10">
+      <div className="mx-auto max-w-6xl px-4 pb-28 lg:pb-10 lg:grid lg:grid-cols-[1fr_420px] lg:gap-12 lg:items-start">
 
       {/* Image Card */}
       <div className="rounded-2xl bg-gray-100 overflow-hidden lg:sticky lg:top-6">
@@ -367,7 +377,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
             <>
               <div className="border-t border-gray-100" />
               <div className="px-4 py-4">
-                <p className="text-sm font-bold text-gray-900 mb-3">รายละเอียดสินค้า</p>
+                <p className="text-sm font-bold text-gray-900 mb-3">{t("product.details")}</p>
                 <ul className="space-y-1.5">
                   {descriptionText.split("\n").filter((line) => line.trim()).map((line, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-gray-500 leading-relaxed">
@@ -380,58 +390,6 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
             </>
           )}
 
-          {options.length > 0 && (
-            <>
-              <div className="border-t border-gray-100" />
-              <div className="px-4 py-4">
-                <p className="mb-3 text-sm font-bold text-gray-900">
-                  {lang === "th" ? "ตัวเลือกสินค้า" : "Options"}
-                </p>
-                {mustSelectOption && (
-                  <p className="mb-3 text-xs font-bold text-[#85241F]">
-                    {lang === "th" ? "กรุณาเลือกก่อนสั่งซื้อ" : "Please choose before checkout"}
-                  </p>
-                )}
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {options.map((option) => {
-                    const selected = option.label === selectedOptionLabel;
-                    const optionStock = option.stock ?? product.stock;
-                    const optionOutOfStock = optionStock < 1;
-                    return (
-                      <button
-                        key={option.label}
-                        type="button"
-                        onClick={() => selectOption(option.label)}
-                        disabled={optionOutOfStock}
-                        className={`flex h-16 min-w-0 items-center gap-2 rounded-xl border px-2 text-left transition-all ${
-                          selected
-                            ? "border-[#85241F] bg-white text-[#85241F] shadow-sm ring-2 ring-[#85241F]/10"
-                            : optionOutOfStock
-                              ? "cursor-not-allowed border-gray-100 bg-gray-100 text-gray-300 opacity-70"
-                              : "border-gray-200 bg-white text-gray-700 hover:border-[#85241F]/30"
-                        }`}
-                      >
-                        {option.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={option.imageUrl} alt={option.label} className="h-11 w-11 shrink-0 rounded-lg object-cover" />
-                        ) : (
-                          <span className="h-11 w-11 shrink-0 rounded-lg bg-gray-100" />
-                        )}
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-xs font-black">{option.label}</span>
-                          <span className={`mt-0.5 block truncate text-[10px] font-bold ${optionOutOfStock ? "text-red-400" : "text-gray-400"}`}>
-                            {optionOutOfStock
-                              ? (lang === "th" ? "สินค้าหมด" : "Out of stock")
-                              : (lang === "th" ? `เหลือ ${optionStock}` : `${optionStock} left`)}
-                          </span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
 
           {/* Charm add-on */}
           {product.allowCustomName && (
@@ -442,14 +400,14 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                   <div className="h-9 w-9 shrink-0 rounded-xl overflow-hidden border border-gray-200 shadow-sm flex items-center justify-center">
                     {product.charmImages?.[charmColor] ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={product.charmImages[charmColor]} alt={selectedCharmMeta.label} className="h-full w-full object-cover" />
+                      <img src={product.charmImages[charmColor]} alt={selectedCharmMeta.label[lang] ?? selectedCharmMeta.label.th} className="h-full w-full object-cover" />
                     ) : (
                       <div className="h-full w-full" style={{ backgroundColor: selectedCharmMeta.hex }} />
                     )}
                   </div>
                   <button type="button" onClick={openCharmModal} className="flex-1 min-w-0 text-left">
                     <p className="text-[11px] font-black text-gray-900">
-                      {lang === "th" ? "สายห้อย" : "Keychain"} — {selectedCharmMeta.label}
+                      {t("charm.keychain")} — {selectedCharmMeta.label[lang] ?? selectedCharmMeta.label.th}
                     </p>
                     {charmLetters.length > 0 ? (
                       <p className="mt-0.5 text-[11px] font-black tracking-widest text-[#85241F]">
@@ -457,7 +415,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                       </p>
                     ) : (
                       <p className="mt-0.5 text-[10px] font-semibold text-gray-400">
-                        {lang === "th" ? "แตะเพื่อเพิ่มตัวอักษร" : "Tap to add letters"}
+                        {t("charm.tap_add_letters")}
                       </p>
                     )}
                   </button>
@@ -492,10 +450,10 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                     </div>
                     <div className="flex-1 text-left">
                       <p className="text-sm font-black text-[#85241F]">
-                        {lang === "th" ? "เพิ่มสายห้อย" : "Add keychain"}
+                        {t("charm.add_keychain")}
                       </p>
                       <p className="text-[10px] font-semibold text-[#85241F]/60">
-                        {lang === "th" ? "เลือกสี + ตัวอักษร" : "Pick color + letters"}
+                        {t("charm.pick_color_letters")}
                       </p>
                     </div>
                     <span className="text-xs font-black text-white bg-[#85241F] px-3 py-1.5 rounded-xl shadow-sm shadow-[#85241F]/30">+{CHARM_PRICE}฿</span>
@@ -508,7 +466,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
           {/* Quantity */}
           <div className="border-t border-gray-100 flex items-center justify-between px-4 py-4">
             <span className="text-sm font-semibold text-gray-700">
-              {lang === "th" ? "จำนวน" : "Quantity"}
+              {t("product.quantity")}
             </span>
             <div className="flex items-center gap-5">
               <button
@@ -547,14 +505,14 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                         {charmStep === "color" ? "1" : "✓"}
                       </div>
                       <span className={`text-[11px] font-black ${charmStep === "color" ? "text-gray-900" : "text-emerald-600"}`}>
-                        {lang === "th" ? "สี" : "Color"}
+                        {t("charm.color_step")}
                       </span>
                       <div className={`h-px w-6 ${charmStep === "color" ? "bg-gray-200" : "bg-emerald-300"}`} />
                       <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black transition-colors ${charmStep === "letters" ? "bg-[#85241F] text-white" : "bg-gray-100 text-gray-400"}`}>
                         2
                       </div>
                       <span className={`text-[11px] font-black ${charmStep === "letters" ? "text-gray-900" : "text-gray-400"}`}>
-                        {lang === "th" ? "ตัวอักษร" : "Letters"}
+                        {t("charm.letters_step")}
                       </span>
                     </div>
                     <button
@@ -570,7 +528,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                   {charmStep === "color" && (
                     <div className="px-5 pb-5">
                       <p className="mb-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                        {lang === "th" ? `เลือกสีสายห้อย — +${CHARM_PRICE}฿` : `Choose keychain color — +${CHARM_PRICE}฿`}
+                        {t("charm.choose_color_heading", { price: CHARM_PRICE })}
                       </p>
                       <div className="grid grid-cols-4 gap-3">
                         {CHARM_COLORS.map((color) => {
@@ -583,13 +541,13 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                               className="flex flex-col items-center gap-1.5 p-1 transition-all cursor-pointer"
                             >
                               <span className={`text-[9px] font-black ${selected ? "text-[#85241F]" : "text-gray-400"}`}>
-                                {color.label}
+                                {color.label[lang] ?? color.label.th}
                               </span>
                               {product.charmImages?.[color.id] ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
                                   src={product.charmImages[color.id]}
-                                  alt={color.label}
+                                  alt={color.label[lang] ?? color.label.th}
                                   className={`h-16 w-16 rounded-2xl object-cover border-2 transition-all ${selected ? "border-[#85241F] scale-105" : "border-transparent"}`}
                                 />
                               ) : (
@@ -608,7 +566,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                         disabled={!tempColor}
                         className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#85241F] text-sm font-black text-white shadow-lg shadow-[#85241F]/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
                       >
-                        {lang === "th" ? "ถัดไป — เพิ่มตัวอักษร" : "Next — Add letters"}
+                        {t("charm.next_add_letters")}
                       </button>
                     </div>
                   )}
@@ -626,10 +584,10 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                           ))}
                         </div>
                         <span className="text-[11px] font-black text-gray-900">
-                          {lang === "th" ? `${FREE_LETTERS} ตัวแรกฟรี` : `First ${FREE_LETTERS} free`}
+                          {t("charm.free_letters", { count: FREE_LETTERS })}
                         </span>
                         <span className="text-[10px] font-semibold text-gray-400">
-                          · {lang === "th" ? `ตัวต่อไป +${LETTER_PRICE}฿` : `+${LETTER_PRICE}฿ each after`}
+                          · {t("charm.extra_letter_price", { price: LETTER_PRICE })}
                         </span>
                       </div>
 
@@ -647,7 +605,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                             ))
                           ) : (
                             <span className="text-xs font-semibold text-gray-400">
-                              {lang === "th" ? "แตะตัวอักษรด้านล่างเพื่อเพิ่ม" : "Tap letters below to add"}
+                              {t("charm.tap_letters_below")}
                             </span>
                           )}
                         </div>
@@ -668,7 +626,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                             <div className="h-4 w-4 rounded-full border border-white shadow-sm" style={{ backgroundColor: tempCharmMeta.hex }} />
                           )}
                           <span className="font-semibold text-gray-500">
-                            {lang === "th" ? "ที่ห้อย" : "Charm"} +{CHARM_PRICE}฿
+                            {t("charm.charm_label")} +{CHARM_PRICE}฿
                             {tempExtraLetters > 0 && ` · ตัวอักษร +${tempExtraLetters}×${LETTER_PRICE}฿`}
                           </span>
                         </div>
@@ -701,14 +659,15 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                           onClick={() => setCharmStep("color")}
                           className="flex h-12 flex-1 items-center justify-center rounded-2xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 active:scale-[0.98] transition-all"
                         >
-                          ← {lang === "th" ? "เปลี่ยนสี" : "Change color"}
+                          ← {t("charm.change_color")}
                         </button>
                         <button
                           type="button"
                           onClick={confirmCharm}
-                          className="flex h-12 flex-1 items-center justify-center rounded-2xl bg-[#85241F] text-sm font-black text-white shadow-lg shadow-[#85241F]/20 active:scale-[0.98] transition-all"
+                          disabled={tempLetters.length < 2}
+                          className="flex h-12 flex-1 items-center justify-center rounded-2xl bg-[#85241F] text-sm font-black text-white shadow-lg shadow-[#85241F]/20 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none disabled:shadow-none"
                         >
-                          {lang === "th" ? "ยืนยัน" : "Confirm"}
+                          {t("charm.confirm")}
                         </button>
                       </div>
                     </div>
@@ -720,15 +679,10 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         <div className="mt-2 hidden lg:block">
           {outOfStock ? (
             <div className="w-full py-3.5 rounded-2xl bg-gray-100 text-center text-sm font-bold text-gray-400">
-              {lang === "th" ? "สินค้าหมด" : "Out of Stock"}
+              {t("product.out_of_stock")}
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <div className="flex flex-col justify-center shrink-0">
-                <span className="text-xs text-gray-400 font-medium">{lang === "th" ? "ราคารวม" : "Total"}</span>
-                <span className="text-base font-black text-[#85241F] leading-tight">{money(unitPrice * quantity)}</span>
-              </div>
-              <div className="w-px h-8 bg-gray-200 shrink-0" />
               <button
                 ref={addBtnRef}
                 type="button"
@@ -747,7 +701,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                 disabled={mustSelectOption || selectedOptionOutOfStock}
                 className="flex-1 flex items-center justify-center rounded-2xl bg-[#85241F] h-11 text-sm font-bold text-white active:scale-95 transition-transform disabled:bg-gray-300 disabled:text-gray-500 disabled:active:scale-100"
               >
-                {lang === "th" ? "ซื้อเลย" : "Buy Now"}
+                {t("product.buy_now")}
               </button>
             </div>
           )}
@@ -760,15 +714,14 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
       <div className="lg:hidden fixed inset-x-0 bottom-0 z-20 bg-white border-t border-gray-100 px-4 py-3">
         {outOfStock ? (
           <div className="w-full py-3.5 rounded-2xl bg-gray-100 text-center text-sm font-bold text-gray-400">
-            {lang === "th" ? "สินค้าหมด" : "Out of Stock"}
+            {t("product.out_of_stock")}
           </div>
         ) : (
           <div className="flex items-center gap-3">
             <div className="flex flex-col justify-center shrink-0">
-              <span className="text-xs text-gray-400 font-medium">{lang === "th" ? "ราคารวม" : "Total"}</span>
+              <span className="text-xs text-gray-400 font-medium">{t("product.total_price")}</span>
               <span className="text-base font-black text-[#85241F] leading-tight">{money(unitPrice * quantity)}</span>
             </div>
-            <div className="w-px h-8 bg-gray-200 shrink-0" />
             <button
               type="button"
               onClick={(e) => handleAddToCart(e.currentTarget)}
@@ -786,7 +739,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
               disabled={mustSelectOption || selectedOptionOutOfStock}
               className="flex-1 flex items-center justify-center rounded-2xl bg-[#85241F] h-11 text-sm font-bold text-white active:scale-95 transition-transform disabled:bg-gray-300 disabled:text-gray-500 disabled:active:scale-100"
             >
-              {lang === "th" ? "ซื้อเลย" : "Buy Now"}
+              {t("product.buy_now")}
             </button>
           </div>
         )}
@@ -816,7 +769,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
           )}
           <p className="text-base font-black text-gray-900 text-center">เพิ่มสายห้อยไหม?</p>
           <p className="mt-1 text-xs text-gray-400 text-center font-medium">
-            {lang === "th" ? "เพิ่มสายห้อยชื่อพร้อมกับสินค้านี้ได้เลย" : "You can add a keychain charm with this item"}
+            {t("charm.add_prompt_sub")}
           </p>
           <div className="mt-5 flex flex-col gap-2">
             <button
@@ -828,7 +781,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
               }}
               className="w-full rounded-2xl bg-[#85241F] py-3.5 text-sm font-black text-white cursor-pointer active:scale-[0.98] transition-transform"
             >
-              {lang === "th" ? "เพิ่มสายห้อย +30฿" : "Add keychain +30฿"}
+              {t("charm.add_with_price")}
             </button>
             <button
               type="button"
@@ -843,7 +796,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
               }}
               className="w-full rounded-2xl border border-gray-200 py-3 text-sm font-bold text-gray-600 cursor-pointer"
             >
-              {lang === "th" ? "ไม่เพิ่ม" : "No thanks"}
+              {t("charm.no_thanks")}
             </button>
           </div>
         </div>

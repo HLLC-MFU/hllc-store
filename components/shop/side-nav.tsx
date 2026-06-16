@@ -14,8 +14,8 @@ export function SideNav() {
 
   const tabs = [
     { href: "/home",    icon: Home,         label: t("nav.home") },
-    { href: "/profile", icon: Package,      label: t("nav.track_order") },
     { href: "/cart",    icon: ShoppingCart, label: t("nav.cart"), badge: count > 0 ? count : null },
+    { href: "/profile", icon: Package,      label: t("nav.track_order") },
   ];
 
   return (

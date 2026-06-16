@@ -6,13 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { Product } from "@/components/admin/types";
 import ProductCard from "@/components/admin/product-card";
+import { placementValue } from "@/lib/config/catalog";
 
 type ProductsPanelProps = {
   products: Product[];
   onUpdateProduct: (updated: Product) => Promise<void>;
   onDeleteProduct: (id: string) => Promise<void>;
   onEditProduct: (p: Product) => void;
-  lang: string;
   t: (key: string) => string;
 };
 
@@ -21,10 +21,22 @@ export function ProductsPanel({
   onUpdateProduct,
   onDeleteProduct,
   onEditProduct,
-  lang,
   t,
 }: ProductsPanelProps) {
   const [productSearch, setProductSearch] = React.useState("");
+
+  const GROUPS = [
+    { key: "bottle",       label: "ขวดน้ำ"          },
+    { key: "secret-set",   label: "Secret Set"       },
+    { key: "bracelet",     label: "สร้อย"             },
+    { key: "charm-dangle", label: "Charm — ที่ห้อย"  },
+    { key: "charm-spacer", label: "Charm — ที่กั้น"  },
+    { key: "charm-clip",   label: "Charm — ที่ล็อค"  },
+  ];
+
+  function productGroup(p: Product): string {
+    return placementValue(p.category, p.group, p.charmType);
+  }
 
   const filteredProducts = React.useMemo(() => {
     const query = productSearch.trim().toLowerCase();
@@ -52,7 +64,7 @@ export function ProductsPanel({
           <Input
             value={productSearch}
             onChange={(e) => setProductSearch(e.target.value)}
-            placeholder={lang === "th" ? "ค้นหาสินค้า..." : "Search products..."}
+            placeholder={t("admin.products.search_placeholder")}
             className="flex-1 border-none bg-transparent text-xs text-gray-800 placeholder:text-gray-400 shadow-none focus-visible:ring-0 p-0 h-auto"
           />
           {productSearch && (
@@ -68,19 +80,34 @@ export function ProductsPanel({
         </div>
       </div>
 
-      {/* Product grid — full width */}
+      {/* Product grid grouped by type */}
       {filteredProducts.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
-          {filteredProducts.map((p) => (
-            <ProductCard
-              key={p.id}
-              product={p}
-              onUpdate={onUpdateProduct}
-              onDelete={onDeleteProduct}
-              onEdit={onEditProduct}
-              t={t}
-            />
-          ))}
+        <div className="flex flex-col gap-6">
+          {GROUPS.map((group, gi) => {
+            const items = filteredProducts.filter(p => productGroup(p) === group.key);
+            if (items.length === 0) return null;
+            return (
+              <div key={group.key}>
+                {gi > 0 && <hr className="mb-6 border-gray-100" />}
+                <p className="mb-3 text-[11px] font-black uppercase tracking-widest text-gray-400">
+                  {group.label}
+                  <span className="ml-2 font-semibold normal-case tracking-normal text-gray-300">({items.length})</span>
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
+                  {items.map(p => (
+                    <ProductCard
+                      key={p.id}
+                      product={p}
+                      onUpdate={onUpdateProduct}
+                      onDelete={onDeleteProduct}
+                      onEdit={onEditProduct}
+                      t={t}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="bg-white border border-gray-100 rounded-3xl py-16 flex flex-col items-center justify-center text-center shadow-2xs">

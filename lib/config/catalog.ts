@@ -24,6 +24,7 @@ export type HomeBlockId = CategoryId | GroupId;
 export type GroupDef = {
   id: GroupId;
   label: LocalizedText;
+  subtitle?: LocalizedText;
   /** charm uses a clip/dangle filter on its grid */
   hasCharmFilter?: boolean;
 };
@@ -44,27 +45,27 @@ export const CATEGORIES: CategoryDef[] = [
     id: "bracelet-charm",
     label: { th: "สร้อยข้อมือพร้อม Charm", en: "Bracelet with Charm" },
     groups: [
-      { id: "secret-set", label: { th: "Secret Set", en: "Secret Set" } },
-      { id: "bracelet", label: { th: "สร้อยข้อมือพร้อมชาร์ม", en: "Bracelet with Charm" } },
-      { id: "charm", label: { th: "เลือกซื้อ Charm", en: "Shop Charms" }, hasCharmFilter: true },
+      { id: "secret-set", label: { th: "Secret Set", en: "Secret Set" }, subtitle: { th: "Mystery bundle — bracelet + charm", en: "Mystery bundle — bracelet + charm" } },
+      { id: "bracelet", label: { th: "Bracelet", en: "Bracelet" }, subtitle: { th: "Choose your bracelet color", en: "Choose your bracelet color" } },
+      { id: "charm", label: { th: "Charms", en: "Charms" }, subtitle: { th: "Add charms individually", en: "Add charms individually" }, hasCharmFilter: true },
     ],
   },
 ];
 
-export const CHARM_COLORS: { id: string; label: string; hex: string }[] = [
-  { id: "white",  label: "ขาว",     hex: "#F5F2EF" },
-  { id: "brown",  label: "น้ำตาล", hex: "#8B6347" },
-  { id: "green",  label: "เขียว",   hex: "#6BAE75" },
-  { id: "pink",   label: "ชมพู",    hex: "#F4A0BF" },
-  { id: "black",  label: "ดำ",      hex: "#2C2C2C" },
-  { id: "blue",   label: "ฟ้า",     hex: "#6AB0DC" },
-  { id: "gold",   label: "ทอง",     hex: "#CBA135" },
+export const CHARM_COLORS: { id: string; label: { th: string; en: string }; hex: string }[] = [
+  { id: "white",  label: { th: "ขาว",     en: "White"  }, hex: "#F5F2EF" },
+  { id: "brown",  label: { th: "น้ำตาล", en: "Brown"  }, hex: "#8B6347" },
+  { id: "green",  label: { th: "เขียว",   en: "Green"  }, hex: "#6BAE75" },
+  { id: "pink",   label: { th: "ชมพู",    en: "Pink"   }, hex: "#F4A0BF" },
+  { id: "black",  label: { th: "ดำ",      en: "Black"  }, hex: "#2C2C2C" },
+  { id: "blue",   label: { th: "ฟ้า",     en: "Blue"   }, hex: "#6AB0DC" },
+  { id: "gold",   label: { th: "ทอง",     en: "Gold"   }, hex: "#CBA135" },
 ];
 
 export const CHARM_TYPES: { id: CharmType; label: LocalizedText }[] = [
-  { id: "clip",   label: { th: "ที่ล็อค",  en: "Clip-on" } },
   { id: "dangle", label: { th: "ที่ห้อย",  en: "Dangle"  } },
   { id: "spacer", label: { th: "ที่กั้น",  en: "Spacer"  } },
+  { id: "clip",   label: { th: "ที่ล็อค",  en: "Clip-on" } },
 ];
 
 // A "placement" is a single admin-facing choice that resolves to the trio of

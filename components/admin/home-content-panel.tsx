@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, Upload, XCircle } from "lucide-react";
+import { Upload, XCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import * as settingsApi from "@/lib/modules/settings";
 import type { HomeContent, HomeBlock } from "@/lib/modules/settings";
@@ -33,7 +33,6 @@ export function HomeContentPanel({
 }) {
   const [blocks, setBlocks] = React.useState<Record<string, HomeBlock>>({});
   const [loading, setLoading] = React.useState(true);
-  const [openId, setOpenId] = React.useState<string | null>(BLOCK_LABELS[0]?.id ?? null);
   const [uploading, setUploading] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -93,117 +92,67 @@ export function HomeContentPanel({
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {BLOCK_LABELS.map(({ id, label, blockLabel }) => {
         const b = block(id);
-        const isOpen = openId === id;
-        const hasImage = !!b.imageUrl;
-        const hasTitle = !!b.title.th;
 
         return (
-          <div key={id} className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
-            {/* Header row — tap to toggle */}
-            <button
-              type="button"
-              onClick={() => setOpenId(isOpen ? null : id)}
-              className="w-full flex items-center gap-3 px-4 py-3 text-left cursor-pointer"
-            >
-              {/* Thumbnail */}
-              <div className="h-10 w-10 shrink-0 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
-                {hasImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={b.imageUrl} alt={label} className="h-full w-full object-cover" />
-                ) : (
-                  <Upload className="h-4 w-4 text-gray-300" />
-                )}
-              </div>
+          <div key={id} className="rounded-2xl border border-gray-100 bg-white overflow-hidden flex flex-col">
+            {/* Card header */}
+            <div className="flex items-center gap-2 px-4 pt-4 pb-2">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{blockLabel}</span>
+              <span className="text-[10px] text-gray-300">·</span>
+              <span className="text-[10px] font-semibold text-gray-500 truncate">{label}</span>
+            </div>
 
-              {/* Label + status */}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-black text-gray-900 truncate">{blockLabel}</p>
-                <p className="text-[10px] font-semibold text-gray-400 truncate mt-0.5">{label}</p>
-              </div>
-
-              <ChevronDown className={`h-4 w-4 text-gray-400 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
-            </button>
-
-            {/* Expanded editor */}
-            {isOpen && (
-              <div className="px-4 pb-4 flex flex-col gap-3 border-t border-gray-50">
-                {/* Image upload */}
-                <div className="pt-3">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">รูปภาพ</p>
-                  {b.imageUrl ? (
-                    <div className="relative w-full aspect-video rounded-xl overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={b.imageUrl} alt={label} className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => update(id, { imageUrl: "" })}
-                        className="absolute top-2 right-2 h-7 w-7 flex items-center justify-center rounded-full bg-white shadow"
-                      >
-                        <XCircle className="h-4 w-4 text-gray-500" />
-                      </button>
-                    </div>
-                  ) : (
-                    <label
-                      htmlFor={`home-img-${id}`}
-                      className="flex w-full aspect-video cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-[#85241F]/30 transition-colors"
-                    >
-                      <Upload className={`h-5 w-5 ${uploading === id ? "text-[#85241F] animate-pulse" : "text-gray-300"}`} />
-                      <span className="text-xs font-bold text-gray-400">
-                        {uploading === id ? "กำลังอัปโหลด..." : "แตะเพื่ออัปโหลดรูป"}
-                      </span>
-                    </label>
-                  )}
-                  <input
-                    id={`home-img-${id}`}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={!!uploading}
-                    onChange={(e) => handleImage(id, e)}
-                  />
+            {/* Image */}
+            <div className="px-4">
+              {b.imageUrl ? (
+                <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={b.imageUrl} alt={label} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => update(id, { imageUrl: "" })}
+                    className="absolute top-2 right-2 h-7 w-7 flex items-center justify-center rounded-full bg-white shadow cursor-pointer"
+                  >
+                    <XCircle className="h-4 w-4 text-gray-500" />
+                  </button>
                 </div>
+              ) : (
+                <label
+                  htmlFor={`home-img-${id}`}
+                  className="flex w-full aspect-[4/3] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-[#85241F]/30 transition-colors bg-gray-50"
+                >
+                  <Upload className={`h-5 w-5 ${uploading === id ? "text-[#85241F] animate-pulse" : "text-gray-300"}`} />
+                  <span className="text-xs font-bold text-gray-400">
+                    {uploading === id ? "กำลังอัปโหลด..." : "แตะเพื่ออัปโหลดรูป"}
+                  </span>
+                </label>
+              )}
+              <input
+                id={`home-img-${id}`}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={!!uploading}
+                onChange={(e) => handleImage(id, e)}
+              />
+            </div>
 
-                {/* Text inputs */}
-                <div>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">หัวข้อ</p>
-                  <div className="flex flex-col gap-2">
-                    <Input
-                      value={b.title.th}
-                      onChange={(e) => setTitle(id, "th", e.target.value)}
-                      placeholder="หัวข้อ (ไทย)"
-                      className="h-10 rounded-xl text-xs"
-                    />
-                    <Input
-                      value={b.title.en ?? ""}
-                      onChange={(e) => setTitle(id, "en", e.target.value)}
-                      placeholder="Title (EN)"
-                      className="h-10 rounded-xl text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">คำอธิบาย</p>
-                  <div className="flex flex-col gap-2">
-                    <Input
-                      value={b.subtitle.th}
-                      onChange={(e) => setSubtitle(id, "th", e.target.value)}
-                      placeholder="คำอธิบาย (ไทย)"
-                      className="h-10 rounded-xl text-xs"
-                    />
-                    <Input
-                      value={b.subtitle.en ?? ""}
-                      onChange={(e) => setSubtitle(id, "en", e.target.value)}
-                      placeholder="Subtitle (EN)"
-                      className="h-10 rounded-xl text-xs"
-                    />
-                  </div>
-                </div>
+            {/* Text inputs */}
+            <div className="px-4 pb-4 pt-3 flex flex-col gap-2 flex-1">
+              <div className="flex flex-col gap-1.5">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">หัวข้อ</p>
+                <Input value={b.title.th} onChange={(e) => setTitle(id, "th", e.target.value)} placeholder="หัวข้อ (ไทย)" className="h-9 rounded-xl text-xs" />
+                <Input value={b.title.en ?? ""} onChange={(e) => setTitle(id, "en", e.target.value)} placeholder="Title (EN)" className="h-9 rounded-xl text-xs" />
               </div>
-            )}
+              <div className="flex flex-col gap-1.5">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">คำอธิบาย</p>
+                <Input value={b.subtitle.th} onChange={(e) => setSubtitle(id, "th", e.target.value)} placeholder="คำอธิบาย (ไทย)" className="h-9 rounded-xl text-xs" />
+                <Input value={b.subtitle.en ?? ""} onChange={(e) => setSubtitle(id, "en", e.target.value)} placeholder="Subtitle (EN)" className="h-9 rounded-xl text-xs" />
+              </div>
+            </div>
           </div>
         );
       })}

@@ -21,10 +21,18 @@ type ConfirmationModalProps = {
 
 function SlipLightbox({ images, index, onClose }: { images: string[]; index: number; onClose: () => void }) {
   const [i, setI] = React.useState(index);
+  const [loadStates, setLoadStates] = React.useState<Record<number, "loading" | "ok" | "error">>({});
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const touchStartX = React.useRef<number | null>(null);
   const count = images.length;
   const current = Math.min(Math.max(i, 0), count - 1);
+
+  // Scroll to the initial index immediately after mount (no animation)
+  React.useEffect(() => {
+    if (index > 0 && scrollRef.current) {
+      scrollRef.current.scrollTo({ left: index * scrollRef.current.clientWidth, behavior: "instant" as ScrollBehavior });
+    }
+  }, [index]);
 
   const scrollTo = React.useCallback((idx: number) => {
     scrollRef.current?.scrollTo({ left: idx * (scrollRef.current.clientWidth), behavior: "smooth" });
@@ -65,12 +73,29 @@ function SlipLightbox({ images, index, onClose }: { images: string[]; index: num
       >
         {images.map((src, idx) => (
           <div key={idx} className="w-full shrink-0 snap-center flex items-center justify-center p-4" style={{ minWidth: "100vw" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={src}
-              alt={`slip ${idx + 1}`}
-              className="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl border border-white/10"
-            />
+            {loadStates[idx] === "error" ? (
+              <div className="flex flex-col items-center gap-3 text-white/60">
+                <span className="text-4xl">🖼️</span>
+                <p className="text-sm font-bold">โหลดรูปไม่ได้</p>
+                <a href={src} target="_blank" rel="noopener noreferrer" className="text-xs underline text-white/80">เปิดในแท็บใหม่</a>
+              </div>
+            ) : (
+              <div className="relative flex items-center justify-center">
+                {loadStates[idx] !== "ok" && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  </div>
+                )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={src}
+                  alt={`slip ${idx + 1}`}
+                  onLoad={() => setLoadStates(prev => ({ ...prev, [idx]: "ok" }))}
+                  onError={() => setLoadStates(prev => ({ ...prev, [idx]: "error" }))}
+                  className={`max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl border border-white/10 transition-opacity duration-300 ${loadStates[idx] === "ok" ? "opacity-100" : "opacity-0"}`}
+                />
+              </div>
+            )}
           </div>
         ))}
       </div>

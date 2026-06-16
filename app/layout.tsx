@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Itim } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 //import { Agentation } from "agentation";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const itim = Itim({
+  variable: "--font-itim",
+  subsets: ["thai", "latin"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {
@@ -27,7 +23,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${itim.variable} font-[family-name:var(--font-itim)] h-full antialiased`}
     >
       {/* {process.env.NODE_ENV === "development" && <Agentation />} */}
       <body className="min-h-full">

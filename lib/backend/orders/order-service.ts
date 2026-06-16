@@ -7,7 +7,7 @@ import { calcShippingFee } from "@/lib/config/shipping";
 import { isRemoteArea } from "@/lib/data/remote-areas";
 import { isIslandArea } from "@/lib/data/island-areas";
 import { getShippingSettings } from "@/lib/backend/settings/settings-service";
-import { sendEmail, trackingNumberEmail, pickupReadyEmail, orderCancelledEmail } from "@/lib/backend/email-service";
+import { sendEmail, trackingNumberEmail, pickupReadyEmail, orderCancelledEmail, orderConfirmedEmail } from "@/lib/backend/email-service";
 import { getOrdersCollection } from "./order-module";
 import type {
   CreateOrderInput,
@@ -221,7 +221,22 @@ export async function createOrder(input: CreateOrderInput) {
   const result = await orders.insertOne(order);
   publishOrdersUpdated();
 
-  return toOrder({ _id: result.insertedId, ...order });
+  const created = toOrder({ _id: result.insertedId, ...order });
+
+  if (customer.email) {
+    notifyEmail(
+      orderConfirmedEmail(customer.name, customer.email, {
+        total,
+        subtotal,
+        shippingFee,
+        itemCount: storedItems.reduce((sum, i) => sum + i.quantity, 0),
+        deliveryMode,
+        customerPhone: customer.phone,
+      }),
+    );
+  }
+
+  return created;
 }
 
 export async function listOrders(filters?: {

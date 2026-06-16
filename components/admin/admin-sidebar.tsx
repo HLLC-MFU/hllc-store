@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ClipboardList, Images, LayoutDashboard, LogOut, Package, User } from "lucide-react";
 import { useLanguage } from "@/lib/client/language-context";
-import { LanguageChip } from "@/components/shared/language-chip";
 
 type Props = {
   activeTab: string;
@@ -76,7 +75,6 @@ export function AdminSidebar({ onLogout,
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/images/HLLCLOGO.png" alt="HLLC" className="h-10 w-auto object-contain" />
         </Link>
-        <LanguageChip />
       </div>
 
       {/* Nav */}

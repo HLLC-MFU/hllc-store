@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, Check, DollarSign, FileText, Image, PackagePlus, Pencil, Upload, XCircle } from "lucide-react";
+import { AlertCircle, Check, DollarSign, FileText, Image, PackagePlus, Pencil, Plus, Upload, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,7 @@ import type { Product } from "./types";
 export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlledOpen, onClose, product }: {
   onSubmit: (fd: FormData) => Promise<void>;
   onUpdate?: (p: Product) => Promise<void>;
-  notify: (msg: string) => void;
+  notify: (msg: string, type?: "success" | "error") => void;
   t: (key: string, replacements?: Record<string, string | number>) => string;
   open?: boolean;
   onClose?: () => void;
@@ -44,13 +44,84 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
   const [placement, setPlacement] = React.useState(() =>
     placementValue(product?.category, product?.group, product?.charmType),
   );
+  type BottleColor = { id: string; label: string; imageUrl: string };
+  const [bottleColors, setBottleColors] = React.useState<BottleColor[]>(() => {
+    if (product?.category !== "bottle" || !product?.options?.length) return [];
+    return product.options.map((opt, i) => ({ id: String(i), label: opt.label, imageUrl: opt.imageUrl ?? "" }));
+  });
+  const [colorUploading, setColorUploading] = React.useState<string | null>(null);
+
+  function addBottleColor() {
+    setBottleColors(prev => [...prev, { id: `${Date.now()}`, label: "", imageUrl: "" }]);
+  }
+  function removeBottleColor(id: string) {
+    setBottleColors(prev => prev.filter(c => c.id !== id));
+  }
+  function updateBottleColor(id: string, patch: Partial<BottleColor>) {
+    setBottleColors(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
+  }
+
+  async function handleColorUpload(colorId: string, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setColorUploading(colorId);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      if (!res.ok) throw new Error();
+      const data = await res.json() as { url: string };
+      updateBottleColor(colorId, { imageUrl: data.url });
+    } catch {
+      notify("อัปโหลดรูปไม่สำเร็จ");
+    } finally {
+      setColorUploading(null);
+    }
+  }
+
   const [allowCustomName, setAllowCustomName] = React.useState(product?.allowCustomName ?? false);
   const [customNameMaxLength, setCustomNameMaxLength] = React.useState(product?.customNameMaxLength ?? 12);
   const [step, setStep] = React.useState(1);
   const [nameValue, setNameValue] = React.useState(product?.name.th ?? "");
   const [priceValue, setPriceValue] = React.useState(String(product?.price ?? ""));
   const [stockValue, setStockValue] = React.useState(String(product?.stock ?? ""));
+  const [descriptionTh, setDescriptionTh] = React.useState(product?.description?.th ?? "");
+  const [descriptionEn, setDescriptionEn] = React.useState(product?.description?.en ?? "");
+  const [fieldErrors, setFieldErrors] = React.useState<Set<string>>(new Set());
   const TOTAL_STEPS = 3;
+
+  function markError(field: string) {
+    setFieldErrors(prev => new Set([...prev, field]));
+  }
+  function clearError(field: string) {
+    setFieldErrors(prev => { const s = new Set(prev); s.delete(field); return s; });
+  }
+  function err(field: string) {
+    return fieldErrors.has(field);
+  }
+
+  function validateStep1(): string[] {
+    const missing: string[] = [];
+    if (imagePreviews.length === 0) { markError("image"); missing.push("รูปสินค้า"); } else clearError("image");
+    if (!nameValue.trim()) { markError("name"); missing.push("ชื่อสินค้า (TH)"); } else clearError("name");
+    if (!placement) { markError("placement"); missing.push("หมวดหมู่สินค้า"); } else clearError("placement");
+    return missing;
+  }
+
+  function validateStep2(): string[] {
+    const missing: string[] = [];
+    if (!priceValue.trim() || isNaN(Number(priceValue))) { markError("price"); missing.push("ราคา"); } else clearError("price");
+    if (!stockValue.trim() || isNaN(Number(stockValue))) { markError("stock"); missing.push("จำนวนสต็อก"); } else clearError("stock");
+    return missing;
+  }
+
+  function validateStep3(): string[] {
+    const missing: string[] = [];
+    if (!descriptionTh.trim()) { markError("descriptionTh"); missing.push("รายละเอียด (TH)"); } else clearError("descriptionTh");
+    if (!descriptionEn.trim()) { markError("descriptionEn"); missing.push("Description (EN)"); } else clearError("descriptionEn");
+    return missing;
+  }
 
   const step1Valid = imagePreviews.length > 0 && nameValue.trim().length > 0 && !!placement;
   const step2Valid = priceValue.trim() !== "" && stockValue.trim() !== "";
@@ -142,7 +213,10 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
     }
     if (imagePreviews[0]) fd.set("imageUrl", imagePreviews[0]);
     fd.set("imageUrls", JSON.stringify(imagePreviews));
-    fd.set("options", JSON.stringify([]));
+    const bottleOptions = placement === "bottle"
+      ? bottleColors.filter(c => c.label.trim()).map(c => ({ label: c.label, imageUrl: c.imageUrl }))
+      : [];
+    fd.set("options", JSON.stringify(bottleOptions));
     fd.set("placement", placement);
     fd.set("allowCustomName", allowCustomName ? "true" : "");
     fd.set("customNameMaxLength", String(customNameMaxLength));
@@ -174,7 +248,9 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
         customNameMaxLength,
         imageUrl: imagePreviews[0] ?? product.imageUrl,
         imageUrls: imagePreviews.length > 0 ? imagePreviews : undefined,
-        options: [],
+        options: placement === "bottle"
+          ? bottleColors.filter(c => c.label.trim()).map(c => ({ label: c.label, imageUrl: c.imageUrl }))
+          : [],
         });
       } catch {
         return;
@@ -191,8 +267,6 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
     setImagePreviews([]);
     handleClose();
   }
-
-  void notify;
 
   if (!isOpen) return null;
 
@@ -291,8 +365,8 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                     )}
                   </div>
                 ) : (
-                  <button type="button" onClick={() => { fileRef.current?.click(); setImageError(false); }} disabled={uploading}
-                    className={`w-full border-2 border-dashed rounded-xl py-6 flex flex-col items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 ${imageError ? "border-red-400 bg-red-50" : "border-gray-200 hover:border-[#85241F]/30"}`}>
+                  <button type="button" onClick={() => { fileRef.current?.click(); setImageError(false); clearError("image"); }} disabled={uploading}
+                    className={`w-full border-2 border-dashed rounded-xl py-6 flex flex-col items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 ${imageError || err("image") ? "border-red-400 bg-red-50" : "border-gray-200 hover:border-[#85241F]/30"}`}>
                     <Upload className={`w-5 h-5 ${imageError ? "text-red-400" : "text-gray-400"}`} />
                     <span className={`text-xs font-bold ${imageError ? "text-red-500" : "text-gray-400"}`}>
                       {uploading ? "กำลังอัปโหลด..." : imageError ? t("admin.products.image.required") : t("admin.products.image.upload")}
@@ -306,19 +380,19 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label className="text-[10px] mb-1.5 flex items-center gap-1 font-bold text-gray-500"><span className="bg-gray-100 text-gray-500 px-1 py-0.5 rounded text-[8px] font-black leading-none">TH</span> ชื่อสินค้า</Label>
-                  <Input name="name" required value={nameValue} onChange={(e) => setNameValue(e.target.value)} placeholder="เช่น น้ำดื่ม HLLC" className="rounded-xl border-gray-200 text-xs h-10" />
+                  <Input name="name" required value={nameValue} onChange={(e) => { setNameValue(e.target.value); if (e.target.value.trim()) clearError("name"); }} placeholder="เช่น น้ำดื่ม HLLC" className={`rounded-xl text-xs h-10 ${err("name") ? "border-red-400 focus-visible:ring-red-300" : "border-gray-200"}`} />
                 </div>
                 <div>
                   <Label className="text-[10px] mb-1.5 flex items-center gap-1 font-bold text-gray-500"><span className="bg-gray-100 text-gray-500 px-1 py-0.5 rounded text-[8px] font-black leading-none">EN</span> Product Name</Label>
-                  <Input name="nameEn" defaultValue={product?.name.en ?? ""} placeholder="e.g. HLLC Water" className="rounded-xl border-gray-200 text-xs h-10" />
+                  <Input name="nameEn" defaultValue={product?.name.en ?? ""} placeholder="e.g. HLLC Water" className={`rounded-xl text-xs h-10 ${err("name") ? "border-red-400 focus-visible:ring-red-300" : "border-gray-200"}`} />
                 </div>
               </div>
 
               {/* Placement */}
               <div>
                 <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">หมวดหมู่สินค้า</Label>
-                <Select value={placement} onValueChange={(v) => setPlacement(v)}>
-                  <SelectTrigger className="h-10 text-xs rounded-xl">
+                <Select value={placement} onValueChange={(v) => { setPlacement(v); clearError("placement"); }}>
+                  <SelectTrigger className={`h-10 text-xs rounded-xl ${err("placement") ? "border-red-400" : ""}`}>
                     <SelectValue placeholder="— เลือกหมวดหมู่ —" />
                   </SelectTrigger>
                   <SelectContent>
@@ -338,6 +412,60 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* ตัวเลือกสี — เฉพาะขวดน้ำ */}
+              {placement === "bottle" && (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">ตัวเลือกสี <span className="normal-case font-medium tracking-normal text-gray-300">(ไม่บังคับ)</span></p>
+                    <button type="button" onClick={addBottleColor}
+                      className="flex items-center gap-1 text-[10px] font-black text-[#85241F] hover:text-[#B72D2A] transition-colors">
+                      <Plus className="h-3 w-3" /> เพิ่มสี
+                    </button>
+                  </div>
+                  {bottleColors.length === 0 ? (
+                    <p className="py-3 text-center text-[10px] text-gray-300">ยังไม่มีสี — กด "เพิ่มสี" เพื่อเพิ่ม</p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {bottleColors.map(color => {
+                        const isUp = colorUploading === color.id;
+                        return (
+                          <div key={color.id} className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-2.5 py-2">
+                            {color.imageUrl ? (
+                              <div className="relative h-11 w-11 shrink-0">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={color.imageUrl} alt={color.label} className="h-full w-full rounded-lg border border-gray-200 object-cover" />
+                                <button type="button" onClick={() => updateBottleColor(color.id, { imageUrl: "" })}
+                                  className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white shadow">
+                                  <XCircle className="h-3 w-3 text-gray-400" />
+                                </button>
+                              </div>
+                            ) : (
+                              <label className="flex h-11 w-11 shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border-2 border-dashed border-gray-200 hover:border-[#85241F]/40 transition-colors">
+                                <Upload className={`h-3 w-3 ${isUp ? "text-[#85241F] animate-pulse" : "text-gray-300"}`} />
+                                <span className="text-[7px] font-bold text-gray-300">{isUp ? "..." : "รูป"}</span>
+                                <input type="file" accept="image/*" className="hidden" disabled={!!colorUploading || uploading}
+                                  onChange={(e) => handleColorUpload(color.id, e)} />
+                              </label>
+                            )}
+                            <input
+                              type="text"
+                              value={color.label}
+                              onChange={(e) => updateBottleColor(color.id, { label: e.target.value })}
+                              placeholder="ชื่อสี เช่น ฟ้า, แดง"
+                              className="flex-1 min-w-0 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-800 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-[#85241F]/30"
+                            />
+                            <button type="button" onClick={() => removeBottleColor(color.id)}
+                              className="shrink-0 text-gray-300 hover:text-red-400 transition-colors">
+                              <XCircle className="h-4 w-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* ── Step 2: ราคา + สต็อก + ค่าส่ง ── */}
@@ -347,11 +475,11 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">ราคา (฿)</Label>
-                  <Input name="price" type="number" min="0" required value={priceValue} onChange={(e) => setPriceValue(e.target.value)} placeholder="0" className="rounded-xl border-gray-200 text-xs h-10" />
+                  <Input name="price" type="number" min="0" required value={priceValue} onChange={(e) => { setPriceValue(e.target.value); if (e.target.value.trim()) clearError("price"); }} placeholder="0" className={`rounded-xl text-xs h-10 ${err("price") ? "border-red-400 focus-visible:ring-red-300" : "border-gray-200"}`} />
                 </div>
                 <div>
                   <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">จำนวนสต็อก</Label>
-                  <Input name="stock" type="number" min="0" required value={stockValue} onChange={(e) => setStockValue(e.target.value)} placeholder="0" className="rounded-xl border-gray-200 text-xs h-10" />
+                  <Input name="stock" type="number" min="0" required value={stockValue} onChange={(e) => { setStockValue(e.target.value); if (e.target.value.trim()) clearError("stock"); }} placeholder="0" className={`rounded-xl text-xs h-10 ${err("stock") ? "border-red-400 focus-visible:ring-red-300" : "border-gray-200"}`} />
                 </div>
 
                 <div className="col-span-2">
@@ -421,11 +549,11 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label className="text-[10px] mb-1.5 flex items-center gap-1 font-bold text-gray-500"><span className="bg-gray-100 text-gray-500 px-1 py-0.5 rounded text-[8px] font-black leading-none">TH</span> รายละเอียด</Label>
-                  <Textarea name="description" rows={4} defaultValue={product?.description?.th ?? ""} placeholder="รายละเอียดภาษาไทย..." className="rounded-xl border-gray-200 text-xs resize-none" />
+                  <Textarea name="description" rows={4} value={descriptionTh} onChange={(e) => { setDescriptionTh(e.target.value); if (e.target.value.trim()) clearError("descriptionTh"); }} placeholder="รายละเอียดภาษาไทย..." className={`rounded-xl text-xs resize-none ${err("descriptionTh") ? "border-red-400 focus-visible:ring-red-300" : "border-gray-200"}`} />
                 </div>
                 <div>
                   <Label className="text-[10px] mb-1.5 flex items-center gap-1 font-bold text-gray-500"><span className="bg-gray-100 text-gray-500 px-1 py-0.5 rounded text-[8px] font-black leading-none">EN</span> Description</Label>
-                  <Textarea name="descriptionEn" rows={4} defaultValue={product?.description?.en ?? ""} placeholder="Description in English..." className="rounded-xl border-gray-200 text-xs resize-none" />
+                  <Textarea name="descriptionEn" rows={4} value={descriptionEn} onChange={(e) => { setDescriptionEn(e.target.value); if (e.target.value.trim()) clearError("descriptionEn"); }} placeholder="Description in English..." className={`rounded-xl text-xs resize-none ${err("descriptionEn") ? "border-red-400 focus-visible:ring-red-300" : "border-gray-200"}`} />
                 </div>
               </div>
             </div>
@@ -440,18 +568,36 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
               {step < TOTAL_STEPS ? (
                 <Button
                   type="button"
+                  disabled={uploading}
                   onClick={() => {
+                    const missing = step === 1 ? validateStep1() : step === 2 ? validateStep2() : [];
+                    if (missing.length > 0) {
+                      notify(`กรุณากรอก: ${missing.join(", ")}`, "error");
+                      return;
+                    }
                     blockSubmit.current = true;
+                    setFieldErrors(new Set());
                     setStep((s) => s + 1);
                     setTimeout(() => { blockSubmit.current = false; }, 400);
                   }}
-                  disabled={uploading || (step === 1 && !step1Valid) || (step === 2 && !step2Valid)}
-                  className="flex-1 bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-11 text-xs font-bold text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex-1 bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-11 text-xs font-bold text-white disabled:opacity-40"
                 >
                   ถัดไป →
                 </Button>
               ) : (
-                <Button type="submit" disabled={uploading} className="flex-1 bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-11 text-xs font-bold shadow-md shadow-[#85241F]/10 disabled:opacity-50">
+                <Button
+                  type="button"
+                  disabled={uploading}
+                  onClick={() => {
+                    const missing = validateStep3();
+                    if (missing.length > 0) {
+                      notify(`กรุณากรอก: ${missing.join(", ")}`, "error");
+                      return;
+                    }
+                    formRef.current?.requestSubmit();
+                  }}
+                  className="flex-1 bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-11 text-xs font-bold shadow-md shadow-[#85241F]/10 disabled:opacity-50"
+                >
                   {isEditMode
                     ? <><Pencil className="w-4 h-4 mr-1" /> บันทึก</>
                     : <><Check className="w-4 h-4 mr-1" /> เสร็จสิ้น</>}

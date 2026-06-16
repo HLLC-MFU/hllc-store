@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/lib/client/language-context";
 
 const fmt = new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 });
 const money = (v: number) => fmt.format(v);
@@ -23,40 +24,42 @@ type Props = {
   loading?: boolean;
   /** Extra content on the left, e.g. the cart's select-all checkbox. */
   leftSlot?: React.ReactNode;
+  deliveryMode?: "delivery" | "pickup";
 };
 
 export function CheckoutFooter({
   lang, total, buttonLabel, count,
   buttonType = "button", onButtonClick, formId,
-  disabled, loading, leftSlot,
+  disabled, loading, leftSlot, deliveryMode,
 }: Props) {
   const [showRates, setShowRates] = useState(false);
+  const { t } = useLanguage();
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-100 bg-white">
+    <div className="fixed left-0 md:left-56 lg:left-64 right-0 bottom-0 z-50 border-t border-gray-100 bg-white">
       {/* Shipping rates popover */}
       {showRates && (
         <>
           <div className="absolute inset-0 -top-[100vh]" onClick={() => setShowRates(false)} />
           <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-72 bg-white rounded-2xl border border-gray-100 shadow-xl p-4 animate-in slide-in-from-bottom-2 duration-150 z-10">
             <p className="text-xs font-black text-gray-900 mb-3">
-              {lang === "th" ? "อัตราค่าจัดส่ง" : "Shipping rates"}
+              {t("checkout.shipping_rates")}
             </p>
             <div className="grid grid-cols-4 gap-x-2 gap-y-1.5 items-center">
               {/* Header row */}
               <div />
-              <p className="text-center text-[10px] font-black text-gray-500">{lang === "th" ? "ทั่วไป" : "Standard"}</p>
-              <p className="text-center text-[10px] font-black text-gray-500">{lang === "th" ? "ห่างไกล" : "Remote"}</p>
-              <p className="text-center text-[10px] font-black text-gray-500">{lang === "th" ? "พิเศษ" : "Island"}</p>
+              <p className="text-center text-[10px] font-black text-gray-500">{t("shipping.standard")}</p>
+              <p className="text-center text-[10px] font-black text-gray-500">{t("shipping.remote")}</p>
+              <p className="text-center text-[10px] font-black text-gray-500">{t("shipping.island")}</p>
               {/* Divider */}
               <div className="col-span-4 border-t border-gray-100" />
               {/* Row 1 */}
-              <p className="text-[10px] font-semibold text-gray-400">{lang === "th" ? "ชิ้นแรก" : "1st item"}</p>
+              <p className="text-[10px] font-semibold text-gray-400">{t("shipping.first_item")}</p>
               <p className="text-center text-sm font-black text-gray-900">฿50</p>
               <p className="text-center text-sm font-black text-gray-900">฿80</p>
               <p className="text-center text-sm font-black text-gray-900">฿100</p>
               {/* Row 2 */}
-              <p className="text-[10px] font-semibold text-gray-400">{lang === "th" ? "ชิ้นต่อไป" : "each after"}</p>
+              <p className="text-[10px] font-semibold text-gray-400">{t("shipping.each_after")}</p>
               <p className="text-center text-sm font-black text-gray-900">+฿10</p>
               <p className="text-center text-sm font-black text-gray-900">+฿15</p>
               <p className="text-center text-sm font-black text-gray-900">+฿15</p>
@@ -69,14 +72,18 @@ export function CheckoutFooter({
         {leftSlot}
 
         <div className="ml-auto flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => setShowRates((v) => !v)}
-            className={`flex items-center justify-center h-9 w-9 rounded-xl transition-colors shrink-0 ${showRates ? "bg-[#85241F] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
-          >
-            <Truck className="h-4 w-4" />
-          </button>
-          <span className="text-gray-300">|</span>
+          {deliveryMode !== "pickup" && (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowRates((v) => !v)}
+                className={`flex items-center justify-center h-9 w-9 rounded-xl transition-colors shrink-0 ${showRates ? "bg-[#85241F] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+              >
+                <Truck className="h-4 w-4" />
+              </button>
+              <span className="text-gray-300">|</span>
+            </>
+          )}
           <span className="text-base font-black text-[#85241F]">{money(total)}</span>
         </div>
 

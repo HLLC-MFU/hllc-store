@@ -4,10 +4,8 @@ const isDev = process.env.NODE_ENV !== "production";
 
 const nextConfig: NextConfig = {
   // Allow LAN access for mobile testing (pnpm dev --hostname 0.0.0.0)
-  allowedDevOrigins: ["172.25.59.105"],
-  experimental: {
-    viewTransition: true,
-  },
+  allowedDevOrigins: ["172.25.3.141"],
+  experimental: {},
   async headers() {
     const securityHeaders = [
       { key: "X-Frame-Options", value: "DENY" },
@@ -34,7 +32,15 @@ const nextConfig: NextConfig = {
       });
     }
 
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      {
+        source: "/uploads/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      { source: "/:path*", headers: securityHeaders },
+    ];
   },
 };
 
