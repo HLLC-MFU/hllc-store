@@ -55,6 +55,8 @@ export async function getShippingSettings(): Promise<ShippingRates> {
     remoteAdditionalItem: num(doc.remoteAdditionalItem, DEFAULT_SHIPPING_RATES.remoteAdditionalItem),
     islandFirstItem: num(doc.islandFirstItem, DEFAULT_SHIPPING_RATES.islandFirstItem),
     islandAdditionalItem: num(doc.islandAdditionalItem, DEFAULT_SHIPPING_RATES.islandAdditionalItem),
+    pickupLocation: typeof doc.pickupLocation === "string" ? doc.pickupLocation : "",
+    pickupHours: typeof doc.pickupHours === "string" ? doc.pickupHours : "",
   };
 }
 

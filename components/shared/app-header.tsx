@@ -101,7 +101,7 @@ export function AppHeader({ navItems = SHOP_NAV, showCart = true, showBack = tru
   const pathname = usePathname();
   const router = useRouter();
 
-  const isSubPage = showBack && pathname !== "/home" && pathname !== "/cart";
+  const isSubPage = showBack && pathname !== "/home" && pathname !== "/cart" && pathname !== "/profile";
 
   return (
     <>

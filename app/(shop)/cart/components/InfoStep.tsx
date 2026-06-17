@@ -48,6 +48,8 @@ type Props = {
   selectedCount: number;
   selectedTotal: number;
   selectedShippingFee: number;
+  pickupLocation?: string;
+  pickupHours?: string;
   selectedPayableTotal: number;
   itemsLength: number;
   onBack: () => void;
@@ -61,10 +63,10 @@ export function InfoStep({
   province, setProvince, subDistrict, setSubDistrict, postalCode, setPostalCode,
   fieldErrors, loading,
   selectedCount, selectedTotal, selectedShippingFee, selectedPayableTotal,
-  itemsLength, onBack, onSubmit,
+  itemsLength, onBack, onSubmit, pickupLocation, pickupHours,
 }: Props) {
   return (
-    <section className="min-h-screen bg-gray-50 mx-auto max-w-xl pb-24 animate-in fade-in slide-in-from-bottom-2 duration-200">
+    <section className="bg-gray-50 mx-auto max-w-xl pb-24 animate-in fade-in slide-in-from-bottom-2 duration-200">
       <div className="px-4 pt-4 flex flex-col gap-4">
 
       <button onClick={onBack} className="inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-gray-700 transition-colors">
@@ -181,12 +183,14 @@ export function InfoStep({
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <Store className="h-4 w-4 text-[#85241F]" />
-              <p className="text-sm font-black text-[#85241F]">{t("checkout.pickup_at_d1")}</p>
+              <p className="text-sm font-black text-[#85241F]">
+                {pickupLocation ? `รับสินค้าเองที่ ${pickupLocation}` : t("checkout.pickup_at_d1")}
+              </p>
             </div>
             <p className="text-xs font-semibold text-gray-400">
               {t("checkout.pickup_time_note")}
             </p>
-            <TimeSelect name="pickupTime" error={fieldErrors.pickupTime} />
+            <TimeSelect name="pickupTime" error={fieldErrors.pickupTime} pickupHours={pickupHours} />
             {fieldErrors.pickupTime && <p className="mt-1.5 text-xs font-bold text-red-500">{fieldErrors.pickupTime}</p>}
           </div>
         )}

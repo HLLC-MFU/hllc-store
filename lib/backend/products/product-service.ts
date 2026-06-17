@@ -281,34 +281,40 @@ export async function updateProduct(
 }
 
 export async function deleteProduct(productId: string) {
-  const collection = await getProductCollection();
-  const oid = assertObjectId(productId, "product id");
-
-  const result = await collection.deleteOne({ _id: oid });
-
-  if (result.deletedCount === 0) {
-    throw new Error("product not found");
-  }
-
-  const { getDb } = await import("@/lib/backend/mongodb");
+  const { getMongoClient, getDb } = await import("@/lib/backend/mongodb");
+  const client = await getMongoClient();
   const db = await getDb();
+  const oid = assertObjectId(productId, "product id");
   const timestamp = new Date().toISOString();
 
-  await db.collection("orders").updateMany(
-    {
-      "items.productId": oid,
-      status: { $in: ["pending_payment", "payment_review"] },
-    },
-    {
-      $set: {
-        status: "cancelled",
-        cancellationReason: `สินค้า ${productId} ถูกลบออกจากระบบ`,
-        cancelledBy: "system",
-        cancelledAt: timestamp,
-        updatedAt: timestamp,
-      },
-    },
-  );
+  const session = client.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const result = await db.collection("products").deleteOne({ _id: oid }, { session });
+      if (result.deletedCount === 0) {
+        throw new Error("product not found");
+      }
+
+      await db.collection("orders").updateMany(
+        {
+          "items.productId": oid,
+          status: { $in: ["pending_payment", "payment_review"] },
+        },
+        {
+          $set: {
+            status: "cancelled",
+            cancellationReason: `สินค้า ${productId} ถูกลบออกจากระบบ`,
+            cancelledBy: "system",
+            cancelledAt: timestamp,
+            updatedAt: timestamp,
+          },
+        },
+        { session },
+      );
+    });
+  } finally {
+    await session.endSession();
+  }
 
   return { success: true };
 }

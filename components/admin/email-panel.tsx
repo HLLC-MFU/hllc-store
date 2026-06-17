@@ -101,9 +101,11 @@ export function EmailPanel({ lang, emailForm, setEmailForm, emailSending, onSubm
                 </div>
                 <div className="px-4 py-5">
                   {emailForm.html.trim() ? (
-                    <div
-                      className="prose prose-sm max-w-none text-sm leading-relaxed text-gray-700"
-                      dangerouslySetInnerHTML={{ __html: emailForm.html }}
+                    <iframe
+                      srcDoc={emailForm.html}
+                      sandbox=""
+                      className="w-full min-h-48 border-0"
+                      title="Email preview"
                     />
                   ) : (
                     <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">

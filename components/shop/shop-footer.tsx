@@ -28,8 +28,7 @@ function MailIcon({ className }: { className?: string }) {
 }
 
 const CONTACT = {
-  email: "activity@email.com",
-  emailUrl: "activity@mfu.ac.th",
+  email: "activity@mfu.ac.th",
   instagram: "@mfu_activities",
   instagramUrl: "https://instagram.com/mfu_activities",
   facebook: "MFU Activities",
@@ -38,45 +37,47 @@ const CONTACT = {
 
 export function ShopFooter() {
   return (
-    <footer className="border-t border-amber-950/30 bg-white">
-      <div className="bg-amber-950 px-6 py-6">
-        <p className="mb-4 text-[10px] font-black uppercase tracking-widest text-amber-800">ติดต่อเรา</p>
-        <div className="flex flex-col gap-3">
-          <a href={CONTACT.emailUrl} className="flex items-center gap-3 group">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white">
+    <footer className="bg-[#85241F]">
+      <div className="mx-auto max-w-sm px-6 pt-8 pb-28 flex flex-col items-center gap-5">
+
+        <p className="text-[11px] font-black uppercase tracking-widest text-white/50">ติดต่อเรา</p>
+
+        <div className="flex flex-col gap-3 w-fit mx-auto">
+
+          <a href={`mailto:${CONTACT.email}`} className="flex items-center gap-3 group">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white group-hover:bg-white/20 transition-colors">
               <MailIcon className="h-4 w-4" />
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-amber-800 leading-none mb-0.5">Email</p>
-              <p className="text-sm font-bold text-amber-100 group-hover:text-white transition-colors">{CONTACT.email}</p>
+              <p className="text-[10px] font-bold text-white/50 uppercase tracking-wide leading-none mb-0.5">Email</p>
+              <p className="text-sm font-bold text-white group-hover:text-white/80 transition-colors">{CONTACT.email}</p>
             </div>
           </a>
 
           <a href={CONTACT.instagramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 group">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white group-hover:bg-white/20 transition-colors">
               <InstagramIcon className="h-4 w-4" />
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-amber-800 leading-none mb-0.5">Instagram</p>
-              <p className="text-sm font-bold text-amber-100 group-hover:text-white transition-colors">{CONTACT.instagram}</p>
+              <p className="text-[10px] font-bold text-white/50 uppercase tracking-wide leading-none mb-0.5">Instagram</p>
+              <p className="text-sm font-bold text-white group-hover:text-white/80 transition-colors">{CONTACT.instagram}</p>
             </div>
           </a>
 
           <a href={CONTACT.facebookUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 group">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white group-hover:bg-white/20 transition-colors">
               <FacebookIcon className="h-4 w-4" />
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-amber-800 leading-none mb-0.5">Facebook</p>
-              <p className="text-sm font-bold text-amber-100 group-hover:text-white transition-colors">{CONTACT.facebook}</p>
+              <p className="text-[10px] font-bold text-white/50 uppercase tracking-wide leading-none mb-0.5">Facebook</p>
+              <p className="text-sm font-bold text-white group-hover:text-white/80 transition-colors">{CONTACT.facebook}</p>
             </div>
           </a>
-        </div>
-      </div>
 
-      <div className="bg-amber-950 border-t border-amber-900 px-6 pt-4 pb-24">
-        <p className="text-[10px] font-semibold text-amber-900">
-          © {new Date().getFullYear()} HLLC Store. Make By Dinozexe.
+        </div>
+
+        <p className="text-[11px] font-semibold text-white/30 pt-2 border-t border-white/10 w-full text-center">
+          © {new Date().getFullYear()} HLLC Store.
         </p>
       </div>
     </footer>

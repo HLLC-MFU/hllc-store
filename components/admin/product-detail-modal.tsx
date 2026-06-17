@@ -82,6 +82,16 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
             </div>
           </div>
 
+          {/* Shipping */}
+          {(product.shippingFirstItem > 0 || product.shippingAdditionalItem > 0) && (
+            <div className="flex items-center justify-between rounded-xl bg-gray-50 border border-gray-100 px-4 py-3">
+              <span className="text-xs font-bold text-gray-500">ค่าส่ง</span>
+              <span className="text-xs font-black text-gray-700">
+                ชิ้นแรก {product.shippingFirstItem}฿ · เพิ่ม {product.shippingAdditionalItem}฿/ชิ้น
+              </span>
+            </div>
+          )}
+
           {/* Description */}
           {product.description?.th && (
             <p className="text-xs text-gray-500 leading-relaxed">{product.description.th}</p>

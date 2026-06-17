@@ -18,6 +18,7 @@ import {
   Package,
   Pencil,
   Phone,
+  Send,
   Store,
   Trash2,
   Truck,
@@ -48,6 +49,8 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
   const [editingTracking, setEditingTracking] = React.useState(!order.trackingNumber);
   const [showCancel, setShowCancel] = React.useState(false);
   const [cancelReason, setCancelReason] = React.useState("");
+  const [resendingEmail, setResendingEmail] = React.useState(false);
+  const [resendDone, setResendDone] = React.useState(false);
   const [slipIndex, setSlipIndex] = React.useState(0);
   const slipScrollRef = React.useRef<HTMLDivElement>(null);
   const { lang } = useLanguage();
@@ -57,17 +60,16 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
 
   const canCancel = order.status !== "cancelled" && order.status !== "completed";
 
-  const timelineSteps: OrderStatus[] = [
-    "payment_review",
-    "packing",
-    "shipped",
-  ];
+  const isPickup = order.deliveryMode === "pickup";
+  const timelineSteps: OrderStatus[] = isPickup
+    ? ["payment_review", "packing", "shipped", "completed"]
+    : ["payment_review", "packing", "shipped"];
 
   const currentIdx = timelineSteps.indexOf(order.status);
-  const isPickup = order.deliveryMode === "pickup";
   const statusLabel = (status?: OrderStatus) => {
     if (!status) return "";
     if (status === "shipped" && isPickup) return t("admin.status.shipped_pickup");
+    if (status === "completed" && isPickup) return t("admin.status.completed_pickup");
     return t(`admin.status.${status}`);
   };
   const statusButtonLabel = statusLabel;
@@ -316,9 +318,25 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                 ))}
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                <span className="text-sm font-black text-gray-500">ยอดรวม</span>
-                <span className="text-xl font-black text-gray-950">{money(order.total)}</span>
+              <div className="flex flex-col gap-1.5 pt-3 border-t border-slate-100">
+                {order.subtotal !== undefined && order.shippingFee !== undefined && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-400">ยอดสินค้า</span>
+                      <span className="text-sm font-black text-gray-600">{money(order.subtotal)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-400">ค่าส่ง</span>
+                      <span className="text-sm font-black text-gray-600">
+                        {order.shippingFee === 0 ? (isPickup ? "รับเอง (ฟรี)" : "ฟรี") : money(order.shippingFee)}
+                      </span>
+                    </div>
+                  </>
+                )}
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-sm font-black text-gray-500">ยอดรวม</span>
+                  <span className="text-xl font-black text-gray-950">{money(order.total)}</span>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -334,23 +352,25 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                   style={{ width: `${(Math.max(0, currentIdx) / (timelineSteps.length - 1)) * 92}%` }}
                 />
                 {timelineSteps.map((s, idx) => {
-                  const done = idx < currentIdx || order.status === "shipped";
-                  const active = idx === currentIdx;
+                  const isAtOrPastLastStep = currentIdx < 0;
+                  const done = idx < currentIdx || isAtOrPastLastStep || (idx === currentIdx && currentIdx === timelineSteps.length - 1);
+                  const active = idx === currentIdx && !done;
                   const StepIcon = s === "payment_review" ? FileCheck2
                     : s === "packing" ? Package
                     : s === "shipped" ? (isPickup ? Store : Truck)
-                    : Check;
+                    : CheckCircle2;
                   return (
                     <div key={s} className="flex flex-col items-center z-10">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-sm ${
                         done ? "bg-emerald-500 border-emerald-500 text-white" :
+                        active && isPickup ? "bg-white border-emerald-500 text-emerald-500 scale-110 ring-4 ring-emerald-500/5" :
                         active ? "bg-white border-[#85241F] text-[#85241F] scale-110 ring-4 ring-[#85241F]/5" :
                         "bg-white border-gray-200 text-gray-300"
                       }`}>
                         {done ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : <StepIcon className="w-3.5 h-3.5" />}
                       </div>
                       <span className={`text-[10px] font-bold mt-2 text-center max-w-16 truncate block ${
-                        active ? "text-[#85241F] font-black" : done ? "text-emerald-600" : "text-gray-400"
+                        active && !isPickup ? "text-[#85241F] font-black" : (active || done) ? "text-emerald-600 font-black" : "text-gray-400"
                       }`}>
                         {statusLabel(s)}
                       </span>
@@ -538,6 +558,35 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
             </CardContent>
           </Card>
 
+          {/* Resend email */}
+          {order.customer.email && (
+            <Card className="rounded-2xl shadow-3xs border-sky-100/80">
+              <CardContent className="p-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Mail className="w-3.5 h-3.5 text-sky-400" />
+                  <span className="text-xs font-black text-sky-600">ส่ง email ใหม่</span>
+                  <span className="text-[10px] text-gray-400 font-medium truncate max-w-36">{order.customer.email}</span>
+                </div>
+                <Button
+                  disabled={resendingEmail || resendDone}
+                  onClick={async () => {
+                    setResendingEmail(true);
+                    try {
+                      await fetch(`/api/backend/admin/orders/${order.id}?action=resend-email`, { method: "POST", headers: { "x-admin-token": document.cookie.match(/admin_token=([^;]+)/)?.[1] ?? "", "x-csrf-token": document.cookie.match(/admin_csrf=([^;]+)/)?.[1] ?? "" } });
+                      setResendDone(true);
+                      setTimeout(() => setResendDone(false), 4000);
+                    } finally {
+                      setResendingEmail(false);
+                    }
+                  }}
+                  className={`h-8 px-3 rounded-xl text-xs font-black shrink-0 ${resendDone ? "bg-emerald-500 text-white" : "bg-sky-50 text-sky-600 hover:bg-sky-100"}`}
+                >
+                  {resendDone ? <><Check className="w-3.5 h-3.5" /> ส่งแล้ว</> : resendingEmail ? "กำลังส่ง..." : <><Send className="w-3.5 h-3.5" /> ส่ง</>}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Cancel section */}
           {canCancel && (
             <Card className="rounded-2xl shadow-3xs border-red-100/80">
@@ -589,10 +638,15 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
 
     {/* Modal portal — rendered outside Card */}
     {useModal && open && typeof window !== "undefined" && createPortal(
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 animate-in fade-in duration-150" style={{zIndex:50}} onClick={() => setOpen(false)}>
-        <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/80 animate-in fade-in duration-150" style={{zIndex:50}} onClick={() => setOpen(false)}>
+        <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+          {/* Drag handle — mobile only */}
+          <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
+            <div className="w-10 h-1 rounded-full bg-gray-200" />
+          </div>
+
           {/* Modal header — name + X */}
-          <div className="flex items-center justify-between px-5 pt-4 pb-3 shrink-0 gap-2">
+          <div className="flex items-center justify-between px-5 pt-2 sm:pt-4 pb-3 shrink-0 gap-2">
             <div className="min-w-0">
               <p className="font-black text-sm text-gray-900 truncate">{order.customer.name}</p>
               <p className="text-xs text-gray-400 mt-0.5 truncate">{order.items.map((i) => `${i.name[lang] || i.name.th} ×${i.quantity}`).join(", ")}</p>
@@ -621,15 +675,16 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                 <div className="absolute top-3.5 left-4 right-4 h-0.5 bg-gray-100 z-0" />
                 <div className="absolute top-3.5 left-4 h-0.5 bg-emerald-500 z-0 transition-all duration-500" style={{ width: `${(Math.max(0, currentIdx) / (timelineSteps.length - 1)) * 88}%` }} />
                 {timelineSteps.map((s, idx) => {
-                  const done = idx < currentIdx || order.status === "shipped";
-                  const active = idx === currentIdx;
-                  const StepIcon = s === "payment_review" ? FileCheck2 : s === "packing" ? Package : s === "shipped" ? (isPickup ? Store : Truck) : Check;
+                  const isAtOrPastLastStep = currentIdx < 0;
+                  const done = idx < currentIdx || isAtOrPastLastStep || (idx === currentIdx && currentIdx === timelineSteps.length - 1);
+                  const active = idx === currentIdx && !done;
+                  const StepIcon = s === "payment_review" ? FileCheck2 : s === "packing" ? Package : s === "shipped" ? (isPickup ? Store : Truck) : CheckCircle2;
                   return (
                     <div key={s} className="flex flex-col items-center z-10">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all shadow-sm ${done ? "bg-emerald-500 border-emerald-500 text-white" : active ? "bg-white border-[#85241F] text-[#85241F] scale-110 ring-4 ring-[#85241F]/5" : "bg-white border-gray-200 text-gray-300"}`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all shadow-sm ${done ? "bg-emerald-500 border-emerald-500 text-white" : active && isPickup ? "bg-white border-emerald-500 text-emerald-500 scale-110 ring-4 ring-emerald-500/5" : active ? "bg-white border-[#85241F] text-[#85241F] scale-110 ring-4 ring-[#85241F]/5" : "bg-white border-gray-200 text-gray-300"}`}>
                         {done ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : <StepIcon className="w-3.5 h-3.5" />}
                       </div>
-                      <span className={`text-[10px] font-bold mt-1.5 text-center max-w-16 truncate block ${active ? "text-[#85241F] font-black" : done ? "text-emerald-600" : "text-gray-400"}`}>
+                      <span className={`text-[10px] font-bold mt-1.5 text-center max-w-16 truncate block ${active && !isPickup ? "text-[#85241F] font-black" : (active || done) ? "text-emerald-600 font-black" : "text-gray-400"}`}>
                         {statusLabel(s)}
                       </span>
                     </div>
@@ -638,6 +693,65 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
               </div>
             </div>
           )}
+          {/* Slip — fixed, always visible, not inside scroll */}
+          {order.status === "payment_review" && order.slip.imageUrl && order.slip.status !== "none" && (
+            <div className="shrink-0 border-b border-gray-100">
+              <div className="flex items-center justify-between px-4 py-2 bg-gray-50/80">
+                <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                  {slipImages.length > 1 ? (slipIndex === 0 ? "สลิปล่าสุด" : `สลิปเก่า #${slipImages.length - slipIndex}`) : "สลิปล่าสุด"}
+                </span>
+                {slipImages.length > 1 && <span className="text-[10px] font-black text-gray-400">{slipIndex + 1} / {slipImages.length}</span>}
+              </div>
+              <div className="relative h-40 sm:h-52 bg-gray-100">
+                <div
+                  ref={slipScrollRef}
+                  onScroll={(e) => {
+                    const container = e.currentTarget;
+                    const index = Math.round(container.scrollLeft / container.clientWidth);
+                    if (index !== slipIndex && index >= 0 && index < slipImages.length) setSlipIndex(index);
+                  }}
+                  className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none"
+                >
+                  {slipImages.map((src, i) => (
+                    <button key={`${src}-${i}`} type="button" onClick={() => onViewSlip(slipImages, i)}
+                      className="w-full h-full shrink-0 snap-center relative group cursor-pointer block">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={src} alt={`slip ${i + 1}`} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 flex items-end px-3 pb-3 transition-colors">
+                        <span className="opacity-0 group-hover:opacity-100 text-white text-[9px] font-black bg-black/60 px-2 py-1 rounded-lg">ขยาย</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                {slipImages.length > 1 && (
+                  <>
+                    {slipIndex > 0 && (
+                      <button type="button" onClick={() => { const n = slipIndex - 1; slipScrollRef.current?.scrollTo({ left: n * slipScrollRef.current.clientWidth, behavior: "smooth" }); setSlipIndex(n); }}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm shadow-md flex items-center justify-center text-gray-700 hover:bg-white active:scale-90 transition-all">
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                    )}
+                    {slipIndex < slipImages.length - 1 && (
+                      <button type="button" onClick={() => { const n = slipIndex + 1; slipScrollRef.current?.scrollTo({ left: n * slipScrollRef.current.clientWidth, behavior: "smooth" }); setSlipIndex(n); }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm shadow-md flex items-center justify-center text-gray-700 hover:bg-white active:scale-90 transition-all">
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    )}
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+                      {slipImages.map((_, i) => (
+                        <button key={i} type="button" onClick={() => { slipScrollRef.current?.scrollTo({ left: i * slipScrollRef.current.clientWidth, behavior: "smooth" }); setSlipIndex(i); }}
+                          className={`rounded-full transition-all ${i === slipIndex ? "w-4 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/60"}`} />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+              {slipIndex > 0 && previousSlips[slipIndex - 1]?.reviewNote && (
+                <p className="px-4 py-2 text-[10px] font-semibold text-red-600 border-t border-gray-100 bg-red-50/50">{previousSlips[slipIndex - 1].reviewNote}</p>
+              )}
+            </div>
+          )}
+
           {/* Modal body — same content as dropdown */}
           <div className="overflow-y-auto flex-1 p-4 bg-slate-50/20 flex flex-col gap-4">
 
@@ -660,105 +774,6 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                     </div>
                   ))}
                 </CardContent>
-              </Card>
-            )}
-
-            {/* Slip image — carousel */}
-            {order.status === "payment_review" && order.slip.imageUrl && order.slip.status !== "none" && (
-              <Card className="rounded-2xl shadow-3xs overflow-hidden">
-                <CardContent className="p-3 pb-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
-                      {slipImages.length > 1
-                        ? slipIndex === 0
-                          ? "สลิปล่าสุด"
-                          : `สลิปเก่า #${slipImages.length - slipIndex}`
-                        : "สลิปล่าสุด"}
-                    </span>
-                    {slipImages.length > 1 && (
-                      <span className="text-[10px] font-black text-gray-400">
-                        {slipIndex + 1} / {slipImages.length}
-                      </span>
-                    )}
-                  </div>
-                </CardContent>
-                {/* Carousel */}
-                <div className="relative h-52 md:h-72 bg-gray-100">
-                  <div
-                    ref={slipScrollRef}
-                    onScroll={(e) => {
-                      const container = e.currentTarget;
-                      const index = Math.round(container.scrollLeft / container.clientWidth);
-                      if (index !== slipIndex && index >= 0 && index < slipImages.length) {
-                        setSlipIndex(index);
-                      }
-                    }}
-                    className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none"
-                  >
-                    {slipImages.map((src, i) => (
-                      <button
-                        key={`${src}-${i}`}
-                        type="button"
-                        onClick={() => onViewSlip(slipImages, i)}
-                        className="w-full h-full shrink-0 snap-center relative group cursor-pointer block"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={src} alt={`slip ${i + 1}`} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 flex items-end px-3 pb-3 transition-colors">
-                          <span className="opacity-0 group-hover:opacity-100 text-white text-[9px] font-black bg-black/60 px-2 py-1 rounded-lg">ขยาย</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                  {slipImages.length > 1 && (
-                    <>
-                      {slipIndex > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const next = slipIndex - 1;
-                            slipScrollRef.current?.scrollTo({ left: next * (slipScrollRef.current.clientWidth), behavior: "smooth" });
-                            setSlipIndex(next);
-                          }}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm shadow-md flex items-center justify-center text-gray-700 hover:bg-white active:scale-90 transition-all"
-                        >
-                          <ChevronLeft className="w-4 h-4" />
-                        </button>
-                      )}
-                      {slipIndex < slipImages.length - 1 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const next = slipIndex + 1;
-                            slipScrollRef.current?.scrollTo({ left: next * (slipScrollRef.current.clientWidth), behavior: "smooth" });
-                            setSlipIndex(next);
-                          }}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm shadow-md flex items-center justify-center text-gray-700 hover:bg-white active:scale-90 transition-all"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      )}
-                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
-                        {slipImages.map((_, i) => (
-                          <button
-                            key={i}
-                            type="button"
-                            onClick={() => {
-                              slipScrollRef.current?.scrollTo({ left: i * (slipScrollRef.current.clientWidth), behavior: "smooth" });
-                              setSlipIndex(i);
-                            }}
-                            className={`rounded-full transition-all ${i === slipIndex ? "w-4 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/60"}`}
-                          />
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-                {slipIndex > 0 && previousSlips[slipIndex - 1]?.reviewNote && (
-                  <CardContent className="border-t border-gray-100 p-3 pt-2">
-                    <p className="text-[10px] font-semibold text-red-600 leading-relaxed">{previousSlips[slipIndex - 1].reviewNote}</p>
-                  </CardContent>
-                )}
               </Card>
             )}
 
@@ -803,16 +818,52 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       </span>
                     </div>
                   </div>
+                  <div className="flex flex-col gap-2.5">
                   {order.items.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <span className="text-sm text-gray-800 font-semibold truncate">{item.name[lang] || item.name.th} <span className="text-gray-400 font-medium">×{item.quantity}</span></span>
-                      <span className="text-sm font-black text-gray-900 shrink-0 ml-3">{money(item.subtotal)}</span>
+                    <div key={i} className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-800 font-semibold">{item.name[lang] || item.name.th} <span className="text-gray-400 font-medium">×{item.quantity}</span></span>
+                        <span className="text-sm font-black text-gray-900 shrink-0 ml-3">{money(item.subtotal)}</span>
+                      </div>
+                      {(item.selectedOption || item.customName) && (
+                        <div className="flex flex-wrap gap-1.5 pl-2 border-l-2 border-[#85241F]/20">
+                          {item.selectedOption && (
+                            <div className="flex items-center gap-1 rounded-lg bg-[#85241F]/5 px-2.5 py-1">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">ตัวเลือก</span>
+                              <span className="text-[11px] font-black text-[#85241F]">{item.selectedOption}</span>
+                            </div>
+                          )}
+                          {item.customName && (
+                            <div className="flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">ชื่อ</span>
+                              <span className="text-[11px] font-black text-amber-700">{item.customName}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
+                  </div>{/* end items scroll */}
                 </div>
-                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                  <span className="text-sm font-black text-gray-500">ยอดรวม</span>
-                  <span className="text-xl font-black text-gray-950">{money(order.total)}</span>
+                <div className="flex flex-col gap-1.5 pt-3 border-t border-slate-100">
+                  {order.subtotal !== undefined && order.shippingFee !== undefined && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-gray-400">ยอดสินค้า</span>
+                        <span className="text-sm font-black text-gray-600">{money(order.subtotal)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-gray-400">ค่าส่ง</span>
+                        <span className="text-sm font-black text-gray-600">
+                          {order.shippingFee === 0 ? (isPickup ? "รับเอง (ฟรี)" : "ฟรี") : money(order.shippingFee)}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-sm font-black text-gray-500">ยอดรวม</span>
+                    <span className="text-xl font-black text-gray-950">{money(order.total)}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>

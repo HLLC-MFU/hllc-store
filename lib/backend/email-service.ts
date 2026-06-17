@@ -295,12 +295,13 @@ export function pickupReadyEmail(
   customerName: string,
   to = "",
   customerPhone?: string,
-  location = "สาขาสยามสแควร์ ชั้น 2",
+  location?: string,
+  pickupHours?: string,
 ): EmailPayload {
   return {
     to,
     subject: "HLLC Store - สินค้าพร้อมให้รับแล้ว",
-    text: `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณพร้อมให้มารับแล้วที่ ${location}`,
+    text: `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณพร้อมให้มารับแล้ว${location ? `ที่ ${location}` : ""}${pickupHours ? ` เวลา ${pickupHours}` : ""}`,
     html: baseEmailHtml({
       badge: "พร้อมให้รับ",
       badgeBg: "#fef3c7",
@@ -311,7 +312,8 @@ export function pickupReadyEmail(
       intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณพร้อมให้เข้ารับแล้ว กรุณาแสดงเบอร์โทรที่ใช้สั่งซื้อกับเจ้าหน้าที่เมื่อมาถึง`,
       detailRows: [
         { label: "สถานะ", value: "พร้อมให้รับ", color: "#92400e" },
-        { label: "จุดรับสินค้า", value: location },
+        ...(location ? [{ label: "จุดรับสินค้า", value: location }] : []),
+        ...(pickupHours ? [{ label: "เวลารับสินค้า", value: pickupHours }] : []),
       ],
       customerPhone,
     }),
@@ -337,9 +339,12 @@ export function orderConfirmedEmail(
     items: { name: string; qty: number; option?: string; customName?: string }[];
     deliveryMode: "delivery" | "pickup";
     customerPhone?: string;
+    pickupLocation?: string;
   },
 ): EmailPayload {
-  const deliveryLabel = opts.deliveryMode === "pickup" ? "รับที่ร้าน" : "จัดส่งพัสดุ";
+  const deliveryLabel = opts.deliveryMode === "pickup"
+    ? (opts.pickupLocation ? `รับที่ ${opts.pickupLocation}` : "รับที่ร้าน")
+    : "จัดส่งพัสดุ";
   const itemRows = opts.items.map((i) => ({
     label: `${i.qty}×`,
     value: formatItemValue(i),
@@ -359,7 +364,7 @@ export function orderConfirmedEmail(
       detailRows: [
         ...itemRows,
         { label: "วิธีรับสินค้า", value: deliveryLabel },
-        { label: "สถานะ", value: "รอชำระเงิน", color: "#92400e" },
+        { label: "สถานะ", value: "รอตรวจสอบการชำระเงิน", color: "#92400e" },
       ],
       customerPhone: opts.customerPhone,
     }),

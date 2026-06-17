@@ -28,9 +28,10 @@ const STEPS_DELIVERY: { status: StepStatus; th: string; en: string; Icon: React.
 ];
 
 const STEPS_PICKUP: { status: StepStatus; th: string; en: string; Icon: React.ElementType }[] = [
-  { status: "payment_review", th: "ยืนยันชำระเงิน",  en: "Payment confirmed",  Icon: FileCheck2 },
-  { status: "packing",        th: "กำลังแพ็คสินค้า",  en: "Packing",            Icon: Package    },
-  { status: "shipped",        th: "พร้อมรับสินค้า",   en: "Ready for Pickup",   Icon: Store      },
+  { status: "payment_review", th: "ยืนยันชำระเงิน",  en: "Payment confirmed",  Icon: FileCheck2  },
+  { status: "packing",        th: "กำลังแพ็คสินค้า",  en: "Packing",            Icon: Package     },
+  { status: "shipped",        th: "พร้อมรับสินค้า",   en: "Ready for Pickup",   Icon: Store       },
+  { status: "completed",      th: "รับสินค้าแล้ว",    en: "Picked Up",          Icon: CheckCircle2},
 ];
 
 const STATUS_META: Record<OrderStatus, { th: string; en: string; color: string; bg: string; icon: React.ElementType }> = {
@@ -66,6 +67,8 @@ export function LogisticsProgress({ order, lang }: { order: Order; lang: "th" | 
     : STATUS_META[order.status];
   const meta = isPickup && order.status === "shipped"
     ? { ...baseMeta, th: "พร้อมรับสินค้า", en: "Ready for Pickup", icon: Store }
+    : isPickup && order.status === "completed"
+    ? { ...baseMeta, th: "รับสินค้าแล้ว", en: "Picked Up", icon: CheckCircle2 }
     : baseMeta;
   const StatusIcon = meta.icon;
   const currentIdx = stepIndex(order.status);
@@ -96,9 +99,8 @@ export function LogisticsProgress({ order, lang }: { order: Order; lang: "th" | 
         <div className="rounded-2xl border border-gray-100 bg-white p-4">
           <div className="flex flex-col">
             {STEPS.map(({ status, th, en, Icon }, idx) => {
-              const done   = idx < currentIdx || order.status === "completed" || (order.status === "shipped" && idx === currentIdx);
-              const active = idx === currentIdx && !cancelled && !done;
-              const future = idx > currentIdx;
+              const done   = idx < currentIdx || (idx === currentIdx && currentIdx === STEPS.length - 1);
+              const active = idx === currentIdx && !done;
               const isLast = idx === STEPS.length - 1;
               return (
                 <div key={status} className="flex gap-3">
@@ -126,7 +128,7 @@ export function LogisticsProgress({ order, lang }: { order: Order; lang: "th" | 
                     }`}>
                       {lang === "th" ? th : en}
                     </p>
-                    {active && !future && !done && (
+                    {active && (
                       <p className="mt-0.5 text-[10px] font-semibold text-gray-400">
                         {lang === "th" ? "สถานะปัจจุบัน" : "Current status"}
                       </p>

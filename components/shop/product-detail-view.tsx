@@ -464,6 +464,43 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
             </>
           )}
 
+          {/* Product Options — shown for non-charm products that have variants */}
+          {!product.allowCustomName && options.length > 0 && (
+            <>
+              <div className="border-t border-gray-100" />
+              <div className="px-4 py-4">
+                <p className="mb-3 text-sm font-bold text-gray-900">
+                  {lang === "th" ? "เลือกตัวเลือก" : "Select option"}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {options.map((option) => {
+                    const stock = option.stock ?? product.stock;
+                    const soldOut = stock < 1;
+                    const selected = selectedOptionLabel === option.label;
+                    return (
+                      <button
+                        key={option.label}
+                        type="button"
+                        disabled={soldOut}
+                        onClick={() => selectOption(option.label)}
+                        className={`flex h-9 items-center justify-center rounded-2xl border-2 px-4 text-sm font-black transition-all ${
+                          selected
+                            ? "border-[#85241F] bg-[#fce8e7] text-[#85241F]"
+                            : soldOut
+                            ? "cursor-not-allowed border-gray-100 bg-gray-50 text-gray-300"
+                            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                        }`}
+                      >
+                        {option.label}
+                        {soldOut && <span className="ml-1 text-[9px]">({lang === "th" ? "หมด" : "OOS"})</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+
           {/* Quantity */}
           <div className="border-t border-gray-100 flex items-center justify-between px-4 py-4">
             <span className="text-sm font-semibold text-gray-700">
@@ -720,10 +757,6 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <div className="flex flex-col justify-center shrink-0">
-              <span className="text-xs text-gray-400 font-medium">{t("product.total_price")}</span>
-              <span className="text-base font-black text-[#85241F] leading-tight">{money(unitPrice * quantity)}</span>
-            </div>
             <button
               type="button"
               onClick={(e) => handleAddToCart(e.currentTarget)}

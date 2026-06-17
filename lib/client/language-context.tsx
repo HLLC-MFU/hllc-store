@@ -138,6 +138,7 @@ const DICTIONARY: TranslationDict = {
   "admin.status.shipped": { th: "จัดส่งแล้ว", en: "Shipped" },
   "admin.status.shipped_pickup": { th: "พร้อมรับสินค้า", en: "Ready for Pickup" },
   "admin.status.completed": { th: "ถึงมือแล้ว", en: "Delivered" },
+  "admin.status.completed_pickup": { th: "รับสินค้าแล้ว", en: "Picked Up" },
   "admin.status.cancelled": { th: "ยกเลิกแล้ว", en: "Cancelled" },
 
   "admin.order.shipping_label": { th: "ใบติดพัสดุ", en: "Shipping Label" },

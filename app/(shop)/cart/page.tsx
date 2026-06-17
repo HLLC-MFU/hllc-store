@@ -272,8 +272,9 @@ export default function CartPage() {
     const prov = String(formData.get("province") ?? "").trim();
     const postal = String(formData.get("postalCode") ?? "").trim();
     const pickupTime = String(formData.get("pickupTime") ?? "").trim();
+    const pickupPlace = shippingRates.pickupLocation || "ร้าน";
     const fullAddress = deliveryMode === "pickup"
-      ? `รับเองที่ D1${pickupTime ? ` เวลา ${pickupTime}` : ""}`
+      ? `รับเองที่ ${pickupPlace}${pickupTime ? ` เวลา ${pickupTime}` : ""}`
       : [address, sub, district, prov, postal].filter(Boolean).join(" ");
     try {
       const order = await createOrder({
@@ -380,6 +381,8 @@ export default function CartPage() {
             selectedCount={selectedCount} selectedTotal={selectedTotal}
             selectedShippingFee={selectedShippingFee} selectedPayableTotal={selectedPayableTotal}
             itemsLength={items.length} onBack={() => setStep("cart")} onSubmit={handleCheckout}
+            pickupLocation={shippingRates.pickupLocation}
+            pickupHours={shippingRates.pickupHours}
           />
         )}
       </div>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Noto_Sans_Thai, Nunito } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-//import { Agentation } from "agentation";
+import { Agentation } from "agentation";
 
 const notoSansThai = Noto_Sans_Thai({
   variable: "--font-noto-sans-thai",
@@ -31,7 +31,7 @@ export default function RootLayout({
       lang="en"
       className={`${notoSansThai.variable} ${nunito.variable} h-full antialiased`}
     >
-      {/* {process.env.NODE_ENV === "development" && <Agentation />} */}
+      {process.env.NODE_ENV === "development" && <Agentation />}
       <body className="min-h-full">
         <Providers>{children}</Providers>
       </body>

@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
+import { requireAdmin } from "@/lib/backend/admin-auth";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
 export async function POST(request: NextRequest) {
+  const authError = requireAdmin(request);
+  if (authError) return authError;
+
   const formData = await request.formData().catch(() => null);
   if (!formData) return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
 

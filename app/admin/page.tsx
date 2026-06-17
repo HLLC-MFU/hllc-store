@@ -15,6 +15,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useLanguage } from "@/lib/client/language-context";
 import type { Order, OrderStatus, Product } from "@/components/admin/types";
 import * as ordersApi from "@/lib/modules/orders";
+import { isPickupOrder } from "@/components/admin/api-client";
 import * as productsApi from "@/lib/modules/products";
 import * as adminUsersApi from "@/lib/modules/admin-users";
 import type { AdminRole, AdminUser, AuditLog, CurrentAdmin } from "@/lib/modules/admin-users";
@@ -43,8 +44,9 @@ export default function AdminPage() {
   const [editProduct, setEditProduct] = React.useState<Product | null>(null);
   const [toast, setToast] = React.useState<{ msg: string; type: "success" | "error" } | null>(null);
   const [confirm, setConfirm] = React.useState<{ orderId: string; approved: boolean; note?: string } | null>(null);
-  const [statusConfirm, setStatusConfirm] = React.useState<{ orderId: string; status: OrderStatus } | null>(null);
+  const [statusConfirm, setStatusConfirm] = React.useState<{ orderId: string; status: OrderStatus; isPickup?: boolean } | null>(null);
   const [lightbox, setLightbox] = React.useState<{ images: string[]; index: number } | null>(null);
+  const [ordersFilter, setOrdersFilter] = React.useState<string>("all");
   const [adminUsers, setAdminUsers] = React.useState<AdminUser[]>([]);
   const [auditLogs, setAuditLogs] = React.useState<AuditLog[]>([]);
   const [paymentSettings, setPaymentSettings] = React.useState<PaymentSettings | null>(null);
@@ -273,7 +275,8 @@ export default function AdminPage() {
   }
 
   function triggerStatusConfirm(orderId: string, status: OrderStatus) {
-    setStatusConfirm({ orderId, status });
+    const order = orders.find((o) => o.id === orderId);
+    setStatusConfirm({ orderId, status, isPickup: order ? isPickupOrder(order) : false });
   }
 
   function confirmStatusChange() {
@@ -451,6 +454,7 @@ export default function AdminPage() {
                 orders={orders}
                 pendingSlips={pendingSlips}
                 setActiveTab={setActiveTab}
+                onNavigateOrders={(filter) => { setOrdersFilter(filter); setActiveTab("orders"); }}
                 t={t}
               />
             </TabsContent>
@@ -464,6 +468,7 @@ export default function AdminPage() {
                 onCancelOrder={cancelOrder}
                 t={t}
                 onViewSlip={(images, index) => setLightbox({ images, index })}
+                initialStatusFilter={ordersFilter as OrderStatus | "all" | "shipped_pickup"}
               />
             </TabsContent>
 

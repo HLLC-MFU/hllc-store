@@ -1,8 +1,9 @@
 import type { NextRequest } from "next/server";
 import { getAdminIdentity, requireAdmin } from "@/lib/backend/admin-auth";
 import { writeAuditLog } from "@/lib/backend/admin-user-service";
-import { badRequest, notFound, ok } from "@/lib/backend/http";
+import { badRequest, notFound, ok, tooManyRequests } from "@/lib/backend/http";
 import { readLimitedJson } from "@/lib/backend/request-utils";
+import { rateLimit } from "@/lib/backend/rate-limit";
 import type { CreateOrderInput, PaymentSlipInput } from "@/lib/backend/types";
 import * as orderService from "./order-service";
 
@@ -17,6 +18,9 @@ type UpdateOrderBody = {
 /* ---------- storefront ---------- */
 
 export async function listCustomerOrders(request: NextRequest) {
+  const limit = rateLimit(request, { bucket: "customer-orders", windowMs: 60_000, max: 30 });
+  if (limit.limited) return tooManyRequests(limit.retryAfterSeconds, "too many requests");
+
   const customerPhone = request.nextUrl.searchParams.get("customerPhone")?.replace(/\D/g, "") ?? "";
   const status = request.nextUrl.searchParams.get("status");
 
@@ -106,6 +110,17 @@ export async function getPendingOrdersCount(request: NextRequest) {
 
   try {
     return ok({ pending: await orderService.countPendingOrders() });
+  } catch (error) {
+    return badRequest(error);
+  }
+}
+
+export async function resendOrderEmail(request: NextRequest, orderId: string) {
+  const authError = requireAdmin(request);
+  if (authError) return authError;
+  try {
+    await orderService.resendOrderEmail(orderId);
+    return ok({ message: "ส่ง email ใหม่แล้ว" });
   } catch (error) {
     return badRequest(error);
   }

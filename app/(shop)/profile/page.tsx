@@ -44,6 +44,14 @@ function itemName(name: string | { th: string; en?: string }, lang: "th" | "en")
   return name[lang] || name.th;
 }
 
+function formatCustomName(raw: string): string {
+  if (!raw.startsWith("charm:")) return raw;
+  const parts = raw.slice(6).split(":");
+  const color = parts[0] ?? "";
+  const letters = parts[1] ?? "";
+  return `สายห้อย สี${color}${letters ? ` · ${letters}` : ""}`;
+}
+
 const STATUS_LABEL: Record<string, { th: string; en: string; badge: string; icon: string }> = {
   payment_review:  { th: "รอยืนยันชำระ",  en: "Awaiting confirmation", badge: "text-amber-700 bg-amber-50",    icon: "bg-amber-100 text-amber-600"   },
   paid:            { th: "ชำระแล้ว",        en: "Paid",                  badge: "text-blue-700 bg-blue-50",      icon: "bg-blue-100 text-blue-600"     },
@@ -303,21 +311,23 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
             {itemsOpen && (
               <div className="border-t border-gray-100 px-4 py-3 flex flex-col gap-2">
                 {order.items.map((item) => (
-                  <div key={`${order.id}-${item.productId}-${item.selectedOption ?? ""}`} className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold text-gray-700 truncate">
-                      {itemName(item.name, lang)}<span className="ml-1 text-gray-400 font-medium">×{item.quantity}</span>
-                    </span>
-                    {item.selectedOption ? (
-                      <span className="max-w-24 truncate rounded-md bg-[#85241F]/5 px-2 py-0.5 text-[10px] font-black text-[#85241F]">
-                        {item.selectedOption}
+                  <div key={`${order.id}-${item.productId}-${item.selectedOption ?? ""}`} className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-semibold text-gray-700">
+                        {itemName(item.name, lang)}<span className="ml-1 text-gray-400 font-medium">×{item.quantity}</span>
                       </span>
-                    ) : null}
-                    {item.customName ? (
-                      <span className="max-w-28 truncate rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">
-                        ✎ {item.customName}
-                      </span>
-                    ) : null}
-                    <span className="text-sm font-bold text-gray-600 shrink-0">{money(item.subtotal)}</span>
+                      <span className="text-sm font-bold text-gray-600 shrink-0">{money(item.subtotal)}</span>
+                    </div>
+                    {(item.selectedOption || item.customName) && (
+                      <div className="flex flex-wrap gap-1.5 pl-2 border-l-2 border-[#85241F]/20">
+                        {item.selectedOption && (
+                          <span className="rounded-lg bg-[#85241F]/5 px-2.5 py-1 text-[10px] font-black text-[#85241F]">{item.selectedOption}</span>
+                        )}
+                        {item.customName && (
+                          <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-[10px] font-black text-amber-700">{formatCustomName(item.customName)}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
                 <div className="border-t border-dashed border-gray-100 pt-2 flex items-center justify-between">

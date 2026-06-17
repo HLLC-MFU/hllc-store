@@ -11,7 +11,7 @@ type ConfirmationModalProps = {
   setConfirm: (val: null) => void;
   confirmApprove: () => Promise<void>;
 
-  statusConfirm: { orderId: string; status: OrderStatus } | null;
+  statusConfirm: { orderId: string; status: OrderStatus; isPickup?: boolean } | null;
   setStatusConfirm: (val: null) => void;
   confirmStatusChange: () => void;
 
@@ -189,7 +189,7 @@ export function ConfirmationModal({
               <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
                 {statusConfirm.status === "cancelled"
                   ? t("admin.modal.cancel_desc")
-                  : t("admin.modal.status_desc", { status: t(`admin.status.${statusConfirm.status}`) })}
+                  : t("admin.modal.status_desc", { status: statusConfirm.isPickup && statusConfirm.status === "shipped" ? t("admin.status.shipped_pickup") : statusConfirm.isPickup && statusConfirm.status === "completed" ? t("admin.status.completed_pickup") : t(`admin.status.${statusConfirm.status}`) })}
               </p>
             </div>
             <div className="flex gap-3 mt-2.5">

@@ -17,6 +17,7 @@ type OrdersPanelProps = {
   onSaveTracking: (orderId: string, trackingNumber: string) => void;
   onCancelOrder: (orderId: string, reason: string) => void;
   onViewSlip: (images: string[], index: number) => void;
+  initialStatusFilter?: OrderStatus | "all" | "shipped_pickup";
   t: (key: string) => string;
 };
 
@@ -44,14 +45,30 @@ export function OrdersPanel({
   onSaveTracking,
   onCancelOrder,
   onViewSlip,
+  initialStatusFilter,
   t,
 }: OrdersPanelProps) {
   const [shippingFilter, setShippingFilter] = React.useState<"all" | "delivery" | "pickup">("all");
-  const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all" | "shipped_pickup">("all");
+  const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all" | "shipped_pickup">(initialStatusFilter ?? "all");
+
+  React.useEffect(() => {
+    if (initialStatusFilter) setStatusFilter(initialStatusFilter);
+  }, [initialStatusFilter]);
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  const filteredOrders = React.useMemo(() => {
+  const shippingFilteredOrders = React.useMemo(() => {
     return orders.filter((o) => {
+      const isPickup = isPickupOrder(o);
+      return (
+        shippingFilter === "all" ||
+        (shippingFilter === "pickup" && isPickup) ||
+        (shippingFilter === "delivery" && !isPickup)
+      );
+    });
+  }, [orders, shippingFilter]);
+
+  const filteredOrders = React.useMemo(() => {
+    return shippingFilteredOrders.filter((o) => {
       const isPickup = isPickupOrder(o);
       const matchStatus =
         statusFilter === "all" ||
@@ -65,14 +82,9 @@ export function OrdersPanel({
         o.customer.phone.includes(q) ||
         o.id.toLowerCase().includes(q);
 
-      const matchShipping =
-        shippingFilter === "all" ||
-        (shippingFilter === "pickup" && isPickup) ||
-        (shippingFilter === "delivery" && !isPickup);
-
-      return matchStatus && matchSearch && matchShipping;
+      return matchStatus && matchSearch;
     });
-  }, [orders, statusFilter, searchQuery, shippingFilter]);
+  }, [shippingFilteredOrders, statusFilter, searchQuery]);
 
   return (
     <div className="flex flex-col lg:flex-row gap-5">
@@ -109,7 +121,7 @@ export function OrdersPanel({
           <CardContent className="p-4 flex flex-col gap-2">
             <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">{t("admin.orders.status_label")}</span>
             <div className="flex flex-col gap-1.5">
-              {buildFilterItems(orders, t).map(({ key, label, count }) => {
+              {buildFilterItems(shippingFilteredOrders, t).map(({ key, label, count }) => {
                 const isActive = statusFilter === key;
                 return (
                   <button
@@ -135,7 +147,7 @@ export function OrdersPanel({
 
         {/* Status pills — mobile only */}
         <div className="lg:hidden flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {buildFilterItems(orders, t).map(({ key, label, count }) => {
+          {buildFilterItems(shippingFilteredOrders, t).map(({ key, label, count }) => {
             const isActive = statusFilter === key;
             return (
               <button
