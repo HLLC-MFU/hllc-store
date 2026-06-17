@@ -53,7 +53,7 @@ export default function AdminRegisterPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4">
+    <main className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-300">
 
         {/* Logo */}

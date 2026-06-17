@@ -45,7 +45,7 @@ export function SingleProductCard({ product }: { product: ShopProduct }) {
       className={`group relative block overflow-hidden rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.10)] active:scale-[0.99] transition-all duration-300 ${isOutOfStock ? "opacity-60" : ""}`}
     >
       {/* Image */}
-      <div className="relative aspect-[4/3] w-full bg-[#f5f5f5] overflow-hidden">
+      <div className="relative aspect-[4/3] w-full bg-gray-100 overflow-hidden">
         {p.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -119,7 +119,7 @@ export function CategoryGrid({ products }: { products: ShopProduct[] }) {
         const needsOption = p.options.length > 0;
         const cardContent = (
           <>
-            <div className="relative aspect-[4/3] bg-[#f5f5f5] overflow-hidden">
+            <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
               {p.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img

@@ -305,7 +305,7 @@ export default function CartPage() {
   }, [loading, selectedItems, deliveryMode, slipImage, clearCart, lang]);
 
   return (
-    <main className="min-h-screen bg-[#f5f5f5]">
+    <main className="min-h-screen bg-gray-100">
       <div className="mx-auto max-w-5xl">
 
         {step === "success" && createdOrder && (

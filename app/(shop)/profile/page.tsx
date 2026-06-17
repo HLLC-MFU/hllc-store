@@ -428,7 +428,7 @@ function ProfileContent() {
 
   return (
     <>
-    <main className="min-h-screen bg-[#f8fafc] px-4 py-6 pb-24">
+    <main className="min-h-screen bg-background px-4 py-6 pb-24">
       <div className="mx-auto max-w-lg">
 
         {/* Search */}
@@ -494,7 +494,7 @@ function ProfileContent() {
 export default function ProfilePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center text-sm font-semibold text-gray-400">
+      <div className="min-h-screen bg-background flex items-center justify-center text-sm font-semibold text-gray-400">
         Loading...
       </div>
     }>

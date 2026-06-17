@@ -386,7 +386,7 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f8fafc]">
+    <main className="min-h-screen bg-background">
       <ConfirmationModal
         confirm={confirm}
         setConfirm={setConfirm}

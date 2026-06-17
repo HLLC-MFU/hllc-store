@@ -24,8 +24,8 @@ export function CategoryBlocks({ blocks, fullPage = false }: { blocks: CategoryB
     ? "group relative flex min-h-0 flex-1 overflow-hidden rounded-[1.75rem] border border-white bg-white shadow-[0_8px_24px_rgba(15,23,42,0.12)] ring-1 ring-gray-900/5 transition-all duration-300 active:scale-[0.99]"
     : "group relative block overflow-hidden rounded-3xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.13)] active:scale-[0.99]";
   const mediaClass = fullPage
-    ? "relative aspect-[4/3] md:aspect-auto md:h-full md:min-h-0 w-full bg-[#f5f5f5]"
-    : "relative aspect-[4/3] w-full bg-[#f5f5f5]";
+    ? "relative aspect-[4/3] md:aspect-auto md:h-full md:min-h-0 w-full bg-gray-100"
+    : "relative aspect-[4/3] w-full bg-gray-100";
 
   return (
     <div className={wrapperClass}>
