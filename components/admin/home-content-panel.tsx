@@ -106,7 +106,7 @@ export function HomeContentPanel({
             </div>
 
             {/* Image */}
-            <div className="px-4">
+            {id !== "charm" && <div className="px-4">
               {b.imageUrl ? (
                 <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -138,7 +138,7 @@ export function HomeContentPanel({
                 disabled={!!uploading}
                 onChange={(e) => handleImage(id, e)}
               />
-            </div>
+            </div>}
 
             {/* Text inputs */}
             <div className="px-4 pb-4 pt-3 flex flex-col gap-2 flex-1">

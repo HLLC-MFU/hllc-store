@@ -65,6 +65,7 @@ export default function CartPage() {
 
   const [shippingRates, setShippingRates] = useState<ShippingSettings>(DEFAULT_SHIPPING_RATES);
   const [charmImages, setCharmImages] = useState<Record<string, string>>({});
+  const [charmOptions, setCharmOptions] = useState<Array<{ label: string; labelEn?: string; imageUrl?: string }>>([]);
 
   const autoSelected = useRef(false);
   useEffect(() => {
@@ -79,9 +80,24 @@ export default function CartPage() {
   useEffect(() => {
     if (synced.current) return;
     synced.current = true;
-    fetchStoreProducts().then(syncFromProducts).catch(() => { });
+    fetchStoreProducts().then(products => {
+      syncFromProducts(products);
+      // Build charm image map from product options (label → imageUrl) for option-based charm products
+      const optionImages: Record<string, string> = {};
+      const opts: Array<{ label: string; labelEn?: string; imageUrl?: string }> = [];
+      for (const p of products) {
+        if (p.allowCustomName && p.options) {
+          for (const opt of p.options) {
+            if (opt.label && opt.imageUrl) optionImages[opt.label] = opt.imageUrl;
+            if (opt.label && !opts.find(o => o.label === opt.label)) opts.push({ label: opt.label, labelEn: opt.labelEn, imageUrl: opt.imageUrl });
+          }
+        }
+      }
+      setCharmImages(prev => ({ ...prev, ...optionImages }));
+      if (opts.length) setCharmOptions(opts);
+    }).catch(() => { });
     fetchShippingSettings().then(setShippingRates).catch(() => { });
-    fetchCharmSettings().then(r => setCharmImages(r.images ?? {})).catch(() => { });
+    fetchCharmSettings().then(r => setCharmImages(prev => ({ ...prev, ...(r.images ?? {}) }))).catch(() => { });
   }, [syncFromProducts]);
 
   const toggleSelectAll = useCallback(() => {
@@ -313,7 +329,7 @@ export default function CartPage() {
         {step === "cart" && !!items.length && (
           <>
             {/* Item list */}
-            <section className="px-4 pt-4 space-y-3">
+            <section className="px-4 pt-4 pb-28 space-y-3">
               <div className="space-y-3">
                 {items.map((item) => (
                   <SwipeableCartItem
@@ -322,6 +338,7 @@ export default function CartPage() {
                     onDecrease={decreaseQty} onIncrease={(i) => updateQty(i.productId, i.quantity + 1, i.selectedOption, i.customName)}
                     onRemove={(i) => removeItem(i.productId, i.selectedOption, i.customName)}
                     charmImages={charmImages}
+                    charmOptions={charmOptions}
                   />
                 ))}
               </div>
@@ -341,7 +358,7 @@ export default function CartPage() {
           <PaymentStep
             lang={lang} t={t}
             selectedPayableTotal={selectedPayableTotal} selectedShippingFee={selectedShippingFee}
-            slipPreview={slipPreview} slipError={slipError}
+            slipPreview={slipPreview} slipError={slipError} orderError={message}
             onSlipFile={handleSlipFile}
             onClearSlip={() => { setSlipPreview(""); setSlipImage(""); setSlipError(""); }}
             onBack={() => setStep("info")} onContinue={confirmPayment}

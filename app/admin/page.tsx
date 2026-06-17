@@ -177,7 +177,7 @@ export default function AdminPage() {
     return () => events.close();
   }, [currentUser, isLoggedIn, loadData, loadSuperAdminData]);
 
-  const pendingSlips = orders.filter((o) => o.slip.status === "pending");
+  const pendingSlips = orders.filter((o) => o.status === "payment_review" && o.slip.status === "pending");
 
   async function handleLogin(form: HTMLFormElement) {
     setLoginLoading(true);
@@ -423,6 +423,7 @@ export default function AdminPage() {
         <AppHeader
           showCart={false}
           showBack={false}
+          showLang={false}
           logoHref="/admin"
           onLogoClick={() => setActiveTab("dashboard")}
           navItems={[
@@ -431,7 +432,10 @@ export default function AdminPage() {
             { label: t("admin.tab.products"),  icon: Package,         onClick: () => setActiveTab("products") },
             { label: t("admin.tab.storefront"), icon: ImageIcon,      onClick: () => setActiveTab("storefront") },
             ...(currentUser?.role === "superAdmin"
-              ? [{ label: "SuperAdmin", icon: LayoutDashboard, onClick: () => setActiveTab("superAdmin") } as NavItem]
+              ? [
+                  { label: "จัดการหลังบ้าน", icon: LayoutDashboard, onClick: () => setActiveTab("superAdmin") } as NavItem,
+                  { label: "Role Management", icon: LayoutDashboard, onClick: () => setActiveTab("adminManagement") } as NavItem,
+                ]
               : []),
             { label: "Logout", icon: LogOut, onClick: handleLogout },
           ]}
@@ -477,21 +481,25 @@ export default function AdminPage() {
             </TabsContent>
 
             {currentUser?.role === "superAdmin" ? (
-              <TabsContent value="superAdmin" className="mt-4 animate-in fade-in duration-200">
-                <div className="flex flex-col gap-4">
-                  <PaymentAccountPanel
-                    key={paymentSettings ? "loaded" : "empty"}
-                    settings={paymentSettings}
-                    loading={loading}
-                    onSave={savePaymentSettings}
-                  />
-                  <ShippingSettingsPanel
-                    key={shippingSettings ? "ship-loaded" : "ship-empty"}
-                    settings={shippingSettings}
-                    loading={loading}
-                    onSave={saveShippingSettings}
-                  />
-                  <TestEmailPanel onNotify={notify} />
+              <>
+                <TabsContent value="superAdmin" className="mt-4 animate-in fade-in duration-200">
+                  <div className="flex flex-col gap-4">
+                    <PaymentAccountPanel
+                      key={paymentSettings ? "loaded" : "empty"}
+                      settings={paymentSettings}
+                      loading={loading}
+                      onSave={savePaymentSettings}
+                    />
+                    <ShippingSettingsPanel
+                      key={shippingSettings ? "ship-loaded" : "ship-empty"}
+                      settings={shippingSettings}
+                      loading={loading}
+                      onSave={saveShippingSettings}
+                    />
+                    <TestEmailPanel onNotify={notify} />
+                  </div>
+                </TabsContent>
+                <TabsContent value="adminManagement" className="mt-4 animate-in fade-in duration-200">
                   <SuperAdminPanel
                     adminUsers={adminUsers}
                     auditLogs={auditLogs}
@@ -501,8 +509,8 @@ export default function AdminPage() {
                     onResetPassword={resetAdminPassword}
                     currentUsername={currentUser.username}
                   />
-                </div>
-              </TabsContent>
+                </TabsContent>
+              </>
             ) : null}
           </Tabs>
         </div>

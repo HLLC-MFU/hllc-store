@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ClipboardList, Images, LayoutDashboard, LogOut, Package, User } from "lucide-react";
+import { ClipboardList, Images, LayoutDashboard, LogOut, Package, Settings, Users } from "lucide-react";
 import { useLanguage } from "@/lib/client/language-context";
 
 type Props = {
@@ -57,8 +57,15 @@ export function AdminSidebar({ onLogout,
       ? [
           {
             key: "superAdmin",
-            icon: User,
-            label: "SuperAdmin",
+            icon: Settings,
+            label: "จัดการหลังบ้าน",
+            count: null,
+            badge: null,
+          },
+          {
+            key: "adminManagement",
+            icon: Users,
+            label: "Role Management",
             count: null,
             badge: null,
           },

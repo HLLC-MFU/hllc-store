@@ -188,24 +188,18 @@ export function CategoryGrid({ products }: { products: ShopProduct[] }) {
             key={p.id}
             className="group relative rounded-3xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.13)] transition-all duration-300 overflow-hidden active:scale-[0.98]"
           >
-            <Link
-              href={`/products/${p.id}`}
-              onClick={(e) => {
-                const card = e.currentTarget;
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                const size = Math.max(rect.width, rect.height);
-                const ripple = document.createElement("span");
-                ripple.className = "ripple";
-                ripple.style.cssText = `width:${size}px;height:${size}px;left:${x - size / 2}px;top:${y - size / 2}px`;
-                card.appendChild(ripple);
-                setTimeout(() => ripple.remove(), 280);
-              }}
-              className="block"
-            >
+            <Link href={`/products/${p.id}`} className="block">
               {cardContent}
             </Link>
+            <div className="px-3 pb-3">
+              <button
+                type="button"
+                onClick={() => goToProduct(p.id)}
+                className="flex h-10 w-full items-center justify-center rounded-2xl bg-[#85241F] px-3 text-xs font-black text-white transition-transform active:scale-[0.98]"
+              >
+                <span className="truncate">{t("shop.choose")}</span>
+              </button>
+            </div>
           </div>
         );
       })}

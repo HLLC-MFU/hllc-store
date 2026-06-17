@@ -34,7 +34,7 @@ function normalizeOptionStock(value: unknown) {
   return assertNumber(value, "option.stock");
 }
 
-type NormalizedOption = { label: string; imageUrl: string; stock?: number };
+type NormalizedOption = { label: string; labelEn?: string; imageUrl: string; stock?: number };
 
 /**
  * `normalizeImage` lets callers run image values through their own validation/normalization
@@ -56,7 +56,7 @@ export function normalizeOptions(
         }
 
         if (item && typeof item === "object") {
-          const option = item as { label?: unknown; name?: unknown; value?: unknown; imageUrl?: unknown; image?: unknown; stock?: unknown };
+          const option = item as { label?: unknown; labelEn?: unknown; name?: unknown; value?: unknown; imageUrl?: unknown; image?: unknown; stock?: unknown };
           const label =
             typeof option.label === "string"
               ? option.label.trim()
@@ -65,6 +65,7 @@ export function normalizeOptions(
                 : typeof option.value === "string"
                   ? option.value.trim()
                   : "";
+          const labelEn = typeof option.labelEn === "string" ? option.labelEn.trim() || undefined : undefined;
           const imageUrl =
             typeof option.imageUrl === "string"
               ? option.imageUrl.trim()
@@ -75,7 +76,7 @@ export function normalizeOptions(
           const optionStock = normalizeOptionStock(option.stock);
 
           return label
-            ? { label, imageUrl: normalizeImage(imageUrl), ...(optionStock !== undefined ? { stock: optionStock } : {}) }
+            ? { label, ...(labelEn ? { labelEn } : {}), imageUrl: normalizeImage(imageUrl), ...(optionStock !== undefined ? { stock: optionStock } : {}) }
             : null;
         }
 

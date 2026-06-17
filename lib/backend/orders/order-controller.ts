@@ -42,6 +42,7 @@ export async function createOrder(request: NextRequest) {
     const order = await orderService.createOrder(body);
     return ok(order, { status: 201 });
   } catch (error) {
+    console.error("[createOrder] 400:", error instanceof Error ? error.message : error);
     return badRequest(error);
   }
 }

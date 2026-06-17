@@ -13,6 +13,8 @@ type Props = {
 };
 
 const TEMPLATES: { value: string; label: string }[] = [
+  { value: "order_confirmed", label: "รับคำสั่งซื้อแล้ว" },
+  { value: "slip_received", label: "ได้รับสลิปแล้ว" },
   { value: "slip_approved", label: "สลิปผ่านการอนุมัติ" },
   { value: "slip_rejected", label: "สลิปไม่ผ่าน (+ข้อความ)" },
   { value: "shipped", label: "จัดส่งสินค้า (เลขพัสดุ)" },

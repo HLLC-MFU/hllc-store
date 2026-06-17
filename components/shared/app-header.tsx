@@ -89,11 +89,12 @@ type AppHeaderProps = {
   navItems?: NavItem[];
   showCart?: boolean;
   showBack?: boolean;
+  showLang?: boolean;
   logoHref?: string;
   onLogoClick?: () => void;
 };
 
-export function AppHeader({ navItems = SHOP_NAV, showCart = true, showBack = true, logoHref = "/home", onLogoClick }: AppHeaderProps) {
+export function AppHeader({ navItems = SHOP_NAV, showCart = true, showBack = true, showLang = true, logoHref = "/home", onLogoClick }: AppHeaderProps) {
   const [open, setOpen] = React.useState(false);
   const { count } = useCart();
   const { t } = useLanguage();
@@ -135,7 +136,7 @@ export function AppHeader({ navItems = SHOP_NAV, showCart = true, showBack = tru
 
         {/* Right — lang + cart */}
         <div className="flex-1 flex items-center justify-end gap-2">
-          <LangToggle />
+          {showLang && <LangToggle />}
           {showCart && <CartButton count={count} />}
         </div>
       </header>

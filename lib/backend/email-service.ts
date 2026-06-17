@@ -318,24 +318,36 @@ export function pickupReadyEmail(
   };
 }
 
+function formatItemValue(i: { name: string; option?: string; customName?: string }): string {
+  let base = i.option ? `${i.name} (${i.option})` : i.name;
+  if (i.customName?.startsWith("charm:")) {
+    const parts = i.customName.slice(6).split(":");
+    const color = parts[0] ?? "";
+    const letters = parts[1] ?? "";
+    base += ` + สายห้อย สี${color}`;
+    if (letters) base += ` · ${letters}`;
+  }
+  return base;
+}
+
 export function orderConfirmedEmail(
   customerName: string,
   to = "",
   opts: {
-    total: number;
-    subtotal: number;
-    shippingFee: number;
-    itemCount: number;
+    items: { name: string; qty: number; option?: string; customName?: string }[];
     deliveryMode: "delivery" | "pickup";
     customerPhone?: string;
   },
 ): EmailPayload {
-  const fmt = new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 });
   const deliveryLabel = opts.deliveryMode === "pickup" ? "รับที่ร้าน" : "จัดส่งพัสดุ";
+  const itemRows = opts.items.map((i) => ({
+    label: `${i.qty}×`,
+    value: formatItemValue(i),
+  }));
   return {
     to,
     subject: "HLLC Store - รับคำสั่งซื้อเรียบร้อยแล้ว",
-    text: `สวัสดีคุณ ${customerName}, เราได้รับคำสั่งซื้อของคุณเรียบร้อยแล้ว ยอดรวม ${fmt.format(opts.total)} กรุณาชำระเงินและส่งสลิปเพื่อยืนยัน`,
+    text: `สวัสดีคุณ ${customerName}, เราได้รับคำสั่งซื้อของคุณเรียบร้อยแล้ว: ${opts.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}`,
     html: baseEmailHtml({
       badge: "รับคำสั่งซื้อแล้ว",
       badgeBg: "#ede9fe",
@@ -343,17 +355,34 @@ export function orderConfirmedEmail(
       alert: "เราได้รับคำสั่งซื้อของคุณเรียบร้อยแล้ว",
       icon: "check",
       headline: "ขอบคุณที่สั่งซื้อกับเรา!",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณถูกบันทึกเรียบร้อยแล้ว กรุณาชำระเงินและอัปโหลดสลิปในแอปเพื่อยืนยันการสั่งซื้อ`,
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณถูกบันทึกเรียบร้อยแล้ว`,
       detailRows: [
-        { label: "จำนวนสินค้า", value: `${opts.itemCount} รายการ` },
-        { label: "ค่าสินค้า", value: fmt.format(opts.subtotal) },
-        { label: "ค่าจัดส่ง", value: opts.shippingFee > 0 ? fmt.format(opts.shippingFee) : "ฟรี", color: opts.shippingFee > 0 ? "#111827" : "#166534" },
-        { label: "ยอดรวมทั้งหมด", value: fmt.format(opts.total), color: "#5b21b6" },
+        ...itemRows,
         { label: "วิธีรับสินค้า", value: deliveryLabel },
         { label: "สถานะ", value: "รอชำระเงิน", color: "#92400e" },
       ],
-      note: { label: "ขั้นตอนถัดไป", text: "กรุณาโอนเงินและอัปโหลดสลิปการชำระเงินในแอปภายใน 24 ชั่วโมง เพื่อให้เราดำเนินการต่อได้" },
       customerPhone: opts.customerPhone,
+    }),
+  };
+}
+
+export function slipReceivedEmail(customerName: string, to = "", customerPhone?: string): EmailPayload {
+  return {
+    to,
+    subject: "HLLC Store - ได้รับสลิปของคุณแล้ว",
+    text: `สวัสดีคุณ ${customerName}, เราได้รับสลิปการชำระเงินของคุณแล้ว กำลังตรวจสอบและจะแจ้งผลให้ทราบโดยเร็ว`,
+    html: baseEmailHtml({
+      badge: "รอตรวจสลิป",
+      badgeBg: "#fef3c7",
+      badgeColor: "#92400e",
+      alert: "เราได้รับสลิปของคุณแล้ว กำลังตรวจสอบ",
+      icon: "target",
+      headline: "ได้รับสลิปเรียบร้อยแล้ว",
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>เราได้รับสลิปการชำระเงินของคุณแล้ว ทีมงานกำลังตรวจสอบและจะแจ้งผลให้ทราบทางอีเมลนี้โดยเร็วที่สุด`,
+      detailRows: [
+        { label: "สถานะสลิป", value: "รอตรวจสอบ", color: "#92400e" },
+      ],
+      customerPhone,
     }),
   };
 }

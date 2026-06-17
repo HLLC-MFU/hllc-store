@@ -63,6 +63,8 @@ const RESUBMIT_STATUS = {
 
 function statusMetaForOrder(order: Order) {
   if (order.status === "pending_payment" && order.slip.status === "rejected") return RESUBMIT_STATUS;
+  if (order.status === "shipped" && order.deliveryMode === "pickup")
+    return { ...STATUS_LABEL.shipped, th: "พร้อมรับสินค้า", en: "Ready for Pickup" };
   return STATUS_LABEL[order.status] ?? STATUS_LABEL.pending_payment;
 }
 
@@ -264,18 +266,18 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
 
           {showTracking && (
             <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <Truck className="h-4 w-4 text-emerald-600 shrink-0" />
-                <div>
+                <div className="min-w-0">
                   <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider">
                     {lang === "th" ? "เลขพัสดุ" : "Tracking No."}
                   </p>
-                  <p className="mt-0.5 font-mono text-sm font-black text-gray-900 tracking-wide">{order.trackingNumber}</p>
+                  <p className="mt-0.5 font-mono text-sm font-black text-gray-900 tracking-wide break-all">{order.trackingNumber}</p>
                 </div>
               </div>
               <button
                 onClick={copyTracking}
-                className="flex items-center gap-1.5 rounded-xl bg-white border border-emerald-200 px-3 py-1.5 text-[11px] font-black text-emerald-700 hover:bg-emerald-100 active:scale-95 transition-all cursor-pointer"
+                className="shrink-0 flex items-center gap-1.5 rounded-xl bg-white border border-emerald-200 px-3 py-1.5 text-[11px] font-black text-emerald-700 hover:bg-emerald-100 active:scale-95 transition-all cursor-pointer"
               >
                 {copied
                   ? <><Check className="h-3.5 w-3.5" />{lang === "th" ? "คัดลอกแล้ว" : "Copied"}</>

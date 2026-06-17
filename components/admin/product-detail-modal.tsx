@@ -36,7 +36,7 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Image */}
-        <div className="relative w-full aspect-video bg-gray-50 shrink-0">
+        <div className="relative w-full aspect-video bg-gray-50 shrink-0 overflow-hidden">
           {product.imageUrls && product.imageUrls[0] ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={product.imageUrls[0]} alt={product.name.th} className="w-full h-full object-cover" />

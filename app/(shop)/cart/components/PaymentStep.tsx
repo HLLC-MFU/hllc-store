@@ -15,6 +15,7 @@ type Props = {
   selectedShippingFee: number;
   slipPreview: string;
   slipError: string;
+  orderError?: string;
   onSlipFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onClearSlip: () => void;
   onBack: () => void;
@@ -23,7 +24,7 @@ type Props = {
 
 export function PaymentStep({
   lang, t, selectedPayableTotal, selectedShippingFee,
-  slipPreview, slipError, onSlipFile, onClearSlip, onBack, onContinue,
+  slipPreview, slipError, orderError, onSlipFile, onClearSlip, onBack, onContinue,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = useState<PaymentSettings | null>(null);
@@ -37,6 +38,13 @@ export function PaymentStep({
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToastMsg(""), 3000);
   }, [slipError]);
+
+  useEffect(() => {
+    if (!orderError) return;
+    setToastMsg(orderError);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToastMsg(""), 5000);
+  }, [orderError]);
 
   useEffect(() => {
     let alive = true;

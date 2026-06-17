@@ -1,6 +1,6 @@
 // Flash Express remote/special areas — detected by destination postal code
 // (this is how Flash actually applies the remote-area surcharge).
-// Source: https://wefastexpress.com/flash-express/flash-express-remote-areas/
+// Source: https://www.flashexpress.co.th/fle/outer/remote
 // 49 postal codes across 10 provinces. Edit here if Flash updates the list.
 
 export const REMOTE_POSTAL_CODES: ReadonlySet<string> = new Set([

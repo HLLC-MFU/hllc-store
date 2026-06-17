@@ -18,6 +18,7 @@ import {
   Package,
   Pencil,
   Phone,
+  Store,
   Trash2,
   Truck,
   X,
@@ -63,10 +64,13 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
   ];
 
   const currentIdx = timelineSteps.indexOf(order.status);
-  const statusButtonLabel = (status?: OrderStatus) => {
+  const isPickup = order.deliveryMode === "pickup";
+  const statusLabel = (status?: OrderStatus) => {
     if (!status) return "";
+    if (status === "shipped" && isPickup) return t("admin.status.shipped_pickup");
     return t(`admin.status.${status}`);
   };
+  const statusButtonLabel = statusLabel;
 
   return (
     <>
@@ -95,7 +99,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
 
         <div className="shrink-0 flex items-center gap-2">
           <Badge className={`text-xs font-black px-3 py-1 rounded-full border-0 ${STATUS_COLOR[order.status]}`}>
-            {t(`admin.status.${order.status}`)}
+            {statusLabel(order.status)}
           </Badge>
           {useModal
             ? <ArrowRight className="w-4 h-4 text-gray-300" />
@@ -174,7 +178,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                 </div>
               </CardContent>
               {/* Carousel */}
-              <div className="relative h-48 bg-gray-100">
+              <div className="relative h-52 md:h-72 bg-gray-100">
                 <div
                   ref={slipScrollRef}
                   onScroll={(e) => {
@@ -195,8 +199,8 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={src} alt={`slip ${i + 1}`} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 flex items-end px-3 pb-3 transition-colors">
-                        <span className="opacity-0 group-hover:opacity-100 text-white text-[9px] font-black bg-black/60 px-2 py-1 rounded-lg">ขยาย</span>
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center transition-colors group-hover:bg-black/45">
+                        <span className="text-white text-[11px] font-black bg-black/50 px-3 py-1.5 rounded-xl">กดเพื่อดูสลิป</span>
                       </div>
                     </button>
                   ))}
@@ -334,7 +338,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                   const active = idx === currentIdx;
                   const StepIcon = s === "payment_review" ? FileCheck2
                     : s === "packing" ? Package
-                    : s === "shipped" ? Truck
+                    : s === "shipped" ? (isPickup ? Store : Truck)
                     : Check;
                   return (
                     <div key={s} className="flex flex-col items-center z-10">
@@ -348,7 +352,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       <span className={`text-[10px] font-bold mt-2 text-center max-w-16 truncate block ${
                         active ? "text-[#85241F] font-black" : done ? "text-emerald-600" : "text-gray-400"
                       }`}>
-                        {t(`admin.status.${s}`)}
+                        {statusLabel(s)}
                       </span>
                     </div>
                   );
@@ -394,78 +398,98 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                   </div>
                 </div>
               ) : order.status === "packing" ? (
-                <div className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-black text-gray-500">หมายเลขพัสดุ / Tracking</span>
-                    <div className="relative">
-                      <input
-                        value={tracking}
-                        onChange={(e) => setTracking(e.target.value)}
-                        placeholder="EG123456789TH"
-                        readOnly={!editingTracking}
-                        className={`w-full text-xs font-mono text-gray-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 pr-9 outline-none focus:border-[#85241F]/40 focus:ring-2 focus:ring-[#85241F]/10 placeholder:text-gray-400 transition-all ${!editingTracking ? "cursor-default" : ""}`}
-                      />
-                      {!editingTracking && (
-                        <button type="button" onClick={() => setEditingTracking(true)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#85241F] transition-colors cursor-pointer">
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                isPickup ? (
                   <Button
-                    disabled={!tracking.trim()}
-                    onClick={() => {
-                      onSaveTracking(order.id, tracking.trim());
-                      setEditingTracking(false);
-                      onStatusChange(order.id, "shipped");
-                    }}
-                    className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-[#85241F]/15 disabled:opacity-40 disabled:cursor-not-allowed"
+                    onClick={() => onStatusChange(order.id, "shipped")}
+                    className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-[#85241F]/15"
                   >
-                    <Truck className="w-4 h-4" />
-                    <span className="font-black">ยืนยันจัดส่ง</span>
+                    <Store className="w-4 h-4" />
+                    <span className="font-black">พร้อมให้รับสินค้าแล้ว</span>
                   </Button>
-                </div>
-              ) : order.status === "shipped" ? (
-                <div className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-black text-gray-500">หมายเลขพัสดุ / Tracking</span>
-                    <div className="relative">
-                      <input
-                        value={tracking}
-                        onChange={(e) => setTracking(e.target.value)}
-                        placeholder="EG123456789TH"
-                        readOnly={!editingTracking}
-                        className={`w-full text-xs font-mono text-gray-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 pr-9 outline-none focus:border-[#85241F]/40 focus:ring-2 focus:ring-[#85241F]/10 placeholder:text-gray-400 transition-all ${!editingTracking ? "cursor-default" : ""}`}
-                      />
-                      {!editingTracking && (
-                        <button type="button" onClick={() => setEditingTracking(true)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#85241F] transition-colors cursor-pointer">
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-xs font-black text-gray-500">หมายเลขพัสดุ / Tracking</span>
+                      <div className="relative">
+                        <input
+                          value={tracking}
+                          onChange={(e) => setTracking(e.target.value)}
+                          placeholder="EG123456789TH"
+                          readOnly={!editingTracking}
+                          className={`w-full text-xs font-mono text-gray-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 pr-9 outline-none focus:border-[#85241F]/40 focus:ring-2 focus:ring-[#85241F]/10 placeholder:text-gray-400 transition-all ${!editingTracking ? "cursor-default" : ""}`}
+                        />
+                        {!editingTracking && (
+                          <button type="button" onClick={() => setEditingTracking(true)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#85241F] transition-colors cursor-pointer">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    {order.trackingNumber && (
-                      <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
-                        <Check className="w-3 h-3" strokeWidth={3} />
-                        <span className="font-mono">{order.trackingNumber}</span>
-                      </p>
-                    )}
-                  </div>
-                  <Button
-                    disabled={!tracking.trim() || tracking.trim() === (order.trackingNumber ?? "")}
-                    onClick={() => {
-                      if (tracking.trim() && tracking.trim() !== (order.trackingNumber ?? "")) {
+                    <Button
+                      disabled={!tracking.trim()}
+                      onClick={() => {
                         onSaveTracking(order.id, tracking.trim());
                         setEditingTracking(false);
-                      }
-                    }}
-                    className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-[#85241F]/15 disabled:opacity-40 disabled:cursor-not-allowed"
+                        onStatusChange(order.id, "shipped");
+                      }}
+                      className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-[#85241F]/15 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Truck className="w-4 h-4" />
+                      <span className="font-black">ยืนยันจัดส่ง</span>
+                    </Button>
+                  </div>
+                )
+              ) : order.status === "shipped" ? (
+                isPickup ? (
+                  <Button
+                    onClick={() => onStatusChange(order.id, "completed")}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm"
                   >
-                    <Check className="w-4 h-4" />
-                    <span className="font-black">{t("admin.order.save_tracking")}</span>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span className="font-black">ยืนยันลูกค้ารับสินค้าแล้ว</span>
                   </Button>
-                </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-xs font-black text-gray-500">หมายเลขพัสดุ / Tracking</span>
+                      <div className="relative">
+                        <input
+                          value={tracking}
+                          onChange={(e) => setTracking(e.target.value)}
+                          placeholder="EG123456789TH"
+                          readOnly={!editingTracking}
+                          className={`w-full text-xs font-mono text-gray-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 pr-9 outline-none focus:border-[#85241F]/40 focus:ring-2 focus:ring-[#85241F]/10 placeholder:text-gray-400 transition-all ${!editingTracking ? "cursor-default" : ""}`}
+                        />
+                        {!editingTracking && (
+                          <button type="button" onClick={() => setEditingTracking(true)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#85241F] transition-colors cursor-pointer">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      {order.trackingNumber && (
+                        <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                          <Check className="w-3 h-3" strokeWidth={3} />
+                          <span className="font-mono">{order.trackingNumber}</span>
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      disabled={!tracking.trim() || tracking.trim() === (order.trackingNumber ?? "")}
+                      onClick={() => {
+                        if (tracking.trim() && tracking.trim() !== (order.trackingNumber ?? "")) {
+                          onSaveTracking(order.id, tracking.trim());
+                          setEditingTracking(false);
+                        }
+                      }}
+                      className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-[#85241F]/15 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span className="font-black">{t("admin.order.save_tracking")}</span>
+                    </Button>
+                  </div>
+                )
               ) : order.status === "cancelled" ? (
                 <div className="bg-red-50/50 border border-red-100 rounded-xl p-3.5 flex items-center gap-2.5 text-red-700 text-xs font-bold">
                   <X className="w-4 h-4 text-red-500 shrink-0" />
@@ -496,7 +520,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-[#85241F]/15"
                     >
                       <ArrowRight className="w-4 h-4" />
-                      <span className="font-black">{t(`admin.status.${timelineSteps[currentIdx + 1]}`)}</span>
+                      <span className="font-black">{statusLabel(timelineSteps[currentIdx + 1])}</span>
                     </Button>
                   )}
                   {currentIdx > 1 && (
@@ -568,10 +592,10 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 animate-in fade-in duration-150" style={{zIndex:50}} onClick={() => setOpen(false)}>
         <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
           {/* Modal header — name + X */}
-          <div className="flex items-center justify-between px-5 pt-4 pb-3 shrink-0">
-            <div>
-              <p className="font-black text-sm text-gray-900">{order.customer.name}</p>
-              <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{order.items.map((i) => `${i.name[lang] || i.name.th} ×${i.quantity}`).join(", ")}</p>
+          <div className="flex items-center justify-between px-5 pt-4 pb-3 shrink-0 gap-2">
+            <div className="min-w-0">
+              <p className="font-black text-sm text-gray-900 truncate">{order.customer.name}</p>
+              <p className="text-xs text-gray-400 mt-0.5 truncate">{order.items.map((i) => `${i.name[lang] || i.name.th} ×${i.quantity}`).join(", ")}</p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
               {canCancel && !showCancel && (
@@ -599,14 +623,14 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                 {timelineSteps.map((s, idx) => {
                   const done = idx < currentIdx || order.status === "shipped";
                   const active = idx === currentIdx;
-                  const StepIcon = s === "payment_review" ? FileCheck2 : s === "packing" ? Package : s === "shipped" ? Truck : Check;
+                  const StepIcon = s === "payment_review" ? FileCheck2 : s === "packing" ? Package : s === "shipped" ? (isPickup ? Store : Truck) : Check;
                   return (
                     <div key={s} className="flex flex-col items-center z-10">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all shadow-sm ${done ? "bg-emerald-500 border-emerald-500 text-white" : active ? "bg-white border-[#85241F] text-[#85241F] scale-110 ring-4 ring-[#85241F]/5" : "bg-white border-gray-200 text-gray-300"}`}>
                         {done ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : <StepIcon className="w-3.5 h-3.5" />}
                       </div>
                       <span className={`text-[10px] font-bold mt-1.5 text-center max-w-16 truncate block ${active ? "text-[#85241F] font-black" : done ? "text-emerald-600" : "text-gray-400"}`}>
-                        {t(`admin.status.${s}`)}
+                        {statusLabel(s)}
                       </span>
                     </div>
                   );
@@ -659,7 +683,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                   </div>
                 </CardContent>
                 {/* Carousel */}
-                <div className="relative h-48 bg-gray-100">
+                <div className="relative h-52 md:h-72 bg-gray-100">
                   <div
                     ref={slipScrollRef}
                     onScroll={(e) => {
@@ -818,6 +842,15 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                     </div>
                   </div>
                 ) : order.status === "packing" ? (
+                  isPickup ? (
+                    <Button
+                      onClick={() => onStatusChange(order.id, "shipped")}
+                      className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl gap-2"
+                    >
+                      <Store className="w-4 h-4" />
+                      พร้อมให้รับสินค้าแล้ว
+                    </Button>
+                  ) : (
                   <div className="flex flex-col gap-3">
                     <div className="flex flex-col gap-1.5">
                       <span className="text-xs font-black text-gray-500">หมายเลขพัสดุ / Tracking</span>
@@ -838,6 +871,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       disabled={!tracking.trim()}
                       onClick={() => {
                         onSaveTracking(order.id, tracking.trim());
+                        setEditingTracking(false);
                         onStatusChange(order.id, "shipped");
                       }}
                       className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl gap-2 disabled:opacity-40"
@@ -846,7 +880,17 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       ยืนยันจัดส่ง
                     </Button>
                   </div>
+                  )
                 ) : order.status === "shipped" ? (
+                  isPickup ? (
+                    <Button
+                      onClick={() => onStatusChange(order.id, "completed")}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black h-9 rounded-xl gap-2"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      ยืนยันลูกค้ารับสินค้าแล้ว
+                    </Button>
+                  ) : (
                   <div className="flex flex-col gap-3">
                     <div className="flex flex-col gap-1.5">
                       <span className="text-xs font-black text-gray-500">หมายเลขพัสดุ / Tracking</span>
@@ -878,6 +922,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       {t("admin.order.save_tracking")}
                     </Button>
                   </div>
+                  )
                 ) : order.status === "cancelled" ? (
                   <div className="bg-red-50/50 border border-red-100 rounded-xl p-3.5 flex items-center gap-2.5 text-red-700 text-xs font-bold">
                     <X className="w-4 h-4 text-red-500 shrink-0" />{t("admin.order.cancelled_msg")}
@@ -892,7 +937,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                   <div className="flex flex-col gap-2">
                     {currentIdx < timelineSteps.length - 1 && (
                       <Button onClick={() => { onStatusChange(order.id, timelineSteps[currentIdx + 1]); }} className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl gap-2">
-                        <ArrowRight className="w-4 h-4" />{t(`admin.status.${timelineSteps[currentIdx + 1]}`)}
+                        <ArrowRight className="w-4 h-4" />{statusLabel(timelineSteps[currentIdx + 1])}
                       </Button>
                     )}
                   </div>

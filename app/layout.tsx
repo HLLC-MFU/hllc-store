@@ -1,13 +1,19 @@
 import type { Metadata } from "next";
-import { Itim } from "next/font/google";
+import { Noto_Sans_Thai, Nunito } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 //import { Agentation } from "agentation";
 
-const itim = Itim({
-  variable: "--font-itim",
-  subsets: ["thai", "latin"],
-  weight: "400",
+const notoSansThai = Noto_Sans_Thai({
+  variable: "--font-noto-sans-thai",
+  subsets: ["thai"],
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+const nunito = Nunito({
+  variable: "--font-nunito",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -23,7 +29,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${itim.variable} font-[family-name:var(--font-itim)] h-full antialiased`}
+      className={`${notoSansThai.variable} ${nunito.variable} h-full antialiased`}
     >
       {/* {process.env.NODE_ENV === "development" && <Agentation />} */}
       <body className="min-h-full">

@@ -7,7 +7,6 @@ import { useCart } from "@/lib/client/cart";
 import { useCartFly } from "@/lib/client/cart-fly";
 import { vibrateTap } from "@/lib/client/haptics";
 import { useLanguage } from "@/lib/client/language-context";
-import { CHARM_COLORS } from "@/lib/config/catalog";
 import { ShopFooter } from "@/components/shop/shop-footer";
 
 export type LocalizedText = {
@@ -17,6 +16,7 @@ export type LocalizedText = {
 
 export type ProductOption = {
   label: string;
+  labelEn?: string;
   imageUrl?: string;
   stock?: number;
 };
@@ -108,11 +108,12 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   const charmCustomName = charmColor ? `charm:${charmColor}:${charmLetters.join("")}` : undefined;
   const tempExtraLetters = Math.max(0, tempLetters.length - FREE_LETTERS);
   const tempCharmAddon = tempColor ? CHARM_PRICE + tempExtraLetters * LETTER_PRICE : 0;
-  const selectedCharmMeta = CHARM_COLORS.find((c) => c.id === charmColor);
-  const tempCharmMeta = CHARM_COLORS.find((c) => c.id === tempColor);
+  const charmOptions = product.options ?? [];
+  const selectedCharmOption = charmOptions.find((o) => o.label === charmColor);
+  const tempCharmOption = charmOptions.find((o) => o.label === tempColor);
 
   // Cycle through charm images in the "add" button when no charm is selected
-  const charmImageValues = Object.values(product.charmImages ?? {}).filter(Boolean);
+  const charmImageValues = charmOptions.map((o) => o.imageUrl).filter(Boolean) as string[];
   const [cycleIdx, setCycleIdx] = useState(0);
   useEffect(() => {
     if (charmImageValues.length < 2 || charmColor) return;
@@ -395,19 +396,19 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
           {product.allowCustomName && (
             <>
               <div className="border-t border-gray-100" />
-              {charmColor && selectedCharmMeta ? (
+              {charmColor && selectedCharmOption ? (
                 <div className="flex items-center gap-3 px-4 py-3.5">
                   <div className="h-9 w-9 shrink-0 rounded-xl overflow-hidden border border-gray-200 shadow-sm flex items-center justify-center">
-                    {product.charmImages?.[charmColor] ? (
+                    {selectedCharmOption.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={product.charmImages[charmColor]} alt={selectedCharmMeta.label[lang] ?? selectedCharmMeta.label.th} className="h-full w-full object-cover" />
+                      <img src={selectedCharmOption.imageUrl} alt={selectedCharmOption.labelEn || selectedCharmOption.label} className="h-full w-full object-cover" />
                     ) : (
-                      <div className="h-full w-full" style={{ backgroundColor: selectedCharmMeta.hex }} />
+                      <div className="h-full w-full bg-gray-200" />
                     )}
                   </div>
                   <button type="button" onClick={openCharmModal} className="flex-1 min-w-0 text-left">
                     <p className="text-[11px] font-black text-gray-900">
-                      {t("charm.keychain")} — {selectedCharmMeta.label[lang] ?? selectedCharmMeta.label.th}
+                      {t("charm.keychain")} — {lang === "en" && selectedCharmOption.labelEn ? selectedCharmOption.labelEn : selectedCharmOption.label}
                     </p>
                     {charmLetters.length > 0 ? (
                       <p className="mt-0.5 text-[11px] font-black tracking-widest text-[#85241F]">
@@ -531,29 +532,29 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                         {t("charm.choose_color_heading", { price: CHARM_PRICE })}
                       </p>
                       <div className="grid grid-cols-4 gap-3">
-                        {CHARM_COLORS.map((color) => {
-                          const selected = tempColor === color.id;
+                        {charmOptions.map((option) => {
+                          const selected = tempColor === option.label;
+                          const displayName = lang === "en" && option.labelEn ? option.labelEn : option.label;
                           return (
                             <button
-                              key={color.id}
+                              key={option.label}
                               type="button"
-                              onClick={() => setTempColor(color.id)}
-                              className="flex flex-col items-center gap-1.5 p-1 transition-all cursor-pointer"
+                              onClick={() => setTempColor(option.label)}
+                              className="flex flex-col items-center gap-0.5 p-1 transition-all cursor-pointer"
                             >
-                              <span className={`text-[9px] font-black ${selected ? "text-[#85241F]" : "text-gray-400"}`}>
-                                {color.label[lang] ?? color.label.th}
+                              <span className={`text-[9px] font-black leading-tight text-center ${selected ? "text-[#85241F]" : "text-gray-400"}`}>
+                                {displayName}
                               </span>
-                              {product.charmImages?.[color.id] ? (
+                              {option.imageUrl ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
-                                  src={product.charmImages[color.id]}
-                                  alt={color.label[lang] ?? color.label.th}
+                                  src={option.imageUrl}
+                                  alt={displayName}
                                   className={`h-16 w-16 rounded-2xl object-cover border-2 transition-all ${selected ? "border-[#85241F] scale-105" : "border-transparent"}`}
                                 />
                               ) : (
                                 <div
-                                  className={`h-14 w-14 rounded-2xl border-2 transition-all ${selected ? "border-[#85241F] scale-105" : "border-transparent"}`}
-                                  style={{ backgroundColor: color.hex }}
+                                  className={`h-14 w-14 rounded-2xl border-2 transition-all bg-gray-200 ${selected ? "border-[#85241F] scale-105" : "border-transparent"}`}
                                 />
                               )}
                             </button>
@@ -622,8 +623,9 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                       {/* Price breakdown */}
                       <div className="mb-4 flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5 text-[11px]">
                         <div className="flex items-center gap-1.5">
-                          {tempCharmMeta && (
-                            <div className="h-4 w-4 rounded-full border border-white shadow-sm" style={{ backgroundColor: tempCharmMeta.hex }} />
+                          {tempCharmOption?.imageUrl && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={tempCharmOption.imageUrl} alt="" className="h-4 w-4 rounded-full border border-white shadow-sm object-cover" />
                           )}
                           <span className="font-semibold text-gray-500">
                             {t("charm.charm_label")} +{CHARM_PRICE}฿

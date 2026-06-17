@@ -7,7 +7,7 @@ import { calcShippingFee } from "@/lib/config/shipping";
 import { isRemoteArea } from "@/lib/data/remote-areas";
 import { isIslandArea } from "@/lib/data/island-areas";
 import { getShippingSettings } from "@/lib/backend/settings/settings-service";
-import { sendEmail, trackingNumberEmail, pickupReadyEmail, orderCancelledEmail, orderConfirmedEmail } from "@/lib/backend/email-service";
+import { sendEmail, trackingNumberEmail, pickupReadyEmail, orderCancelledEmail, orderConfirmedEmail, slipReceivedEmail } from "@/lib/backend/email-service";
 import { getOrdersCollection } from "./order-module";
 import type {
   CreateOrderInput,
@@ -150,8 +150,9 @@ export async function createOrder(input: CreateOrderInput) {
       ? productOptions.find((option) => option.label === selectedOption)
       : undefined;
 
-    if (productOptions.length > 0 && !matchedOption) {
-      throw new Error(`please select a valid option: ${product.name}`);
+    if (selectedOption && productOptions.length > 0 && !matchedOption) {
+      const pName = typeof product.name === "object" ? (product.name as { th?: string }).th ?? "" : String(product.name);
+      throw new Error(`invalid option selected: ${pName}`);
     }
 
     const optionStock = matchedOption?.stock ?? product.stock;
@@ -226,10 +227,11 @@ export async function createOrder(input: CreateOrderInput) {
   if (customer.email) {
     notifyEmail(
       orderConfirmedEmail(customer.name, customer.email, {
-        total,
-        subtotal,
-        shippingFee,
-        itemCount: storedItems.reduce((sum, i) => sum + i.quantity, 0),
+        items: storedItems.map((si) => {
+          const product = products.find((p) => p._id.equals(si.productId));
+          const name = typeof product?.name === "object" ? ((product.name as { th?: string }).th ?? "") : String(product?.name ?? "");
+          return { name, qty: si.quantity, option: si.selectedOption || undefined, customName: si.customName || undefined };
+        }),
         deliveryMode,
         customerPhone: customer.phone,
       }),
@@ -336,7 +338,13 @@ export async function attachPaymentSlip(orderId: string, input: PaymentSlipInput
   }
 
   publishOrdersUpdated();
-  return toOrder(result);
+
+  const updated = toOrder(result);
+  if (updated.customer.email) {
+    notifyEmail(slipReceivedEmail(updated.customer.name, updated.customer.email, updated.customer.phone));
+  }
+
+  return updated;
 }
 
 export async function reviewPaymentSlip(orderId: string, input: ReviewSlipInput) {

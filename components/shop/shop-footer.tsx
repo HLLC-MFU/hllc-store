@@ -28,12 +28,12 @@ function MailIcon({ className }: { className?: string }) {
 }
 
 const CONTACT = {
-  email: "hllcstore@email.com",
-  emailUrl: "mailto:hllcstore@email.com",
-  instagram: "@hllc_store",
-  instagramUrl: "https://instagram.com/hllc_store",
-  facebook: "HLLC Store",
-  facebookUrl: "https://facebook.com/hllcstore",
+  email: "activity@email.com",
+  emailUrl: "activity@mfu.ac.th",
+  instagram: "@mfu_activities",
+  instagramUrl: "https://instagram.com/mfu_activities",
+  facebook: "MFU Activities",
+  facebookUrl: "https://facebook.com/mfuactivities",
 };
 
 export function ShopFooter() {

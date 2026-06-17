@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, CheckCircle2, Clock, FileCheck2, Package, Truck, XCircle } from "lucide-react";
+import { Check, CheckCircle2, Clock, FileCheck2, Package, Store, Truck, XCircle } from "lucide-react";
 
 type OrderStatus =
   | "pending_payment"
@@ -14,16 +14,23 @@ type OrderStatus =
 
 type Order = {
   status: OrderStatus;
+  deliveryMode?: "delivery" | "pickup";
   slip?: { status?: string };
   updatedAt: string;
 };
 
 type StepStatus = "payment_review" | "packing" | "shipped" | "completed";
 
-const STEPS: { status: StepStatus; th: string; en: string; Icon: React.ElementType }[] = [
+const STEPS_DELIVERY: { status: StepStatus; th: string; en: string; Icon: React.ElementType }[] = [
   { status: "payment_review", th: "ยืนยันชำระเงิน", en: "Payment confirmed", Icon: FileCheck2 },
   { status: "packing",        th: "กำลังแพ็คสินค้า", en: "Packing",           Icon: Package   },
   { status: "shipped",        th: "จัดส่งแล้ว",       en: "On the way",        Icon: Truck     },
+];
+
+const STEPS_PICKUP: { status: StepStatus; th: string; en: string; Icon: React.ElementType }[] = [
+  { status: "payment_review", th: "ยืนยันชำระเงิน",  en: "Payment confirmed",  Icon: FileCheck2 },
+  { status: "packing",        th: "กำลังแพ็คสินค้า",  en: "Packing",            Icon: Package    },
+  { status: "shipped",        th: "พร้อมรับสินค้า",   en: "Ready for Pickup",   Icon: Store      },
 ];
 
 const STATUS_META: Record<OrderStatus, { th: string; en: string; color: string; bg: string; icon: React.ElementType }> = {
@@ -52,9 +59,14 @@ function stepIndex(status: OrderStatus) {
 }
 
 export function LogisticsProgress({ order, lang }: { order: Order; lang: "th" | "en" }) {
-  const meta = order.status === "pending_payment" && order.slip?.status === "rejected"
+  const isPickup = order.deliveryMode === "pickup";
+  const STEPS = isPickup ? STEPS_PICKUP : STEPS_DELIVERY;
+  const baseMeta = order.status === "pending_payment" && order.slip?.status === "rejected"
     ? RESUBMIT_META
     : STATUS_META[order.status];
+  const meta = isPickup && order.status === "shipped"
+    ? { ...baseMeta, th: "พร้อมรับสินค้า", en: "Ready for Pickup", icon: Store }
+    : baseMeta;
   const StatusIcon = meta.icon;
   const currentIdx = stepIndex(order.status);
   const cancelled = order.status === "cancelled";

@@ -132,10 +132,11 @@ const DICTIONARY: TranslationDict = {
 
   // Admin Order Row & Stepper
   "admin.status.pending_payment": { th: "รอชำระเงิน", en: "Awaiting Payment" },
-  "admin.status.payment_review": { th: "กำลังตรวจสลิป", en: "Checking Slip" },
+  "admin.status.payment_review": { th: "รอตรวจสลิป", en: "Checking Slip" },
   "admin.status.paid": { th: "ชำระแล้ว", en: "Paid" },
   "admin.status.packing": { th: "กำลังแพ็ค", en: "Packing" },
   "admin.status.shipped": { th: "จัดส่งแล้ว", en: "Shipped" },
+  "admin.status.shipped_pickup": { th: "พร้อมรับสินค้า", en: "Ready for Pickup" },
   "admin.status.completed": { th: "ถึงมือแล้ว", en: "Delivered" },
   "admin.status.cancelled": { th: "ยกเลิกแล้ว", en: "Cancelled" },
 
@@ -285,7 +286,7 @@ const DICTIONARY: TranslationDict = {
   // Checkout Footer shipping rates
   "checkout.shipping_rates": { th: "อัตราค่าจัดส่ง", en: "Shipping rates" },
   "shipping.standard": { th: "ทั่วไป", en: "Standard" },
-  "shipping.remote": { th: "ห่างไกล", en: "Remote" },
+  "shipping.remote": { th: "ห่างไกล", en: "Remote Area" },
   "shipping.island": { th: "พิเศษ", en: "Island" },
   "shipping.first_item": { th: "ชิ้นแรก", en: "1st item" },
   "shipping.each_after": { th: "ชิ้นต่อไป", en: "each after" },
@@ -303,13 +304,13 @@ const DICTIONARY: TranslationDict = {
   "checkout.placeholder.address": { th: "บ้านเลขที่, อาคาร, หมู่, ถนน", en: "House no., building, street" },
   "checkout.pickup_at_d1": { th: "รับสินค้าเองที่ D1", en: "Pickup at D1" },
   "checkout.pickup_time_note": { th: "กรุณาระบุเวลาที่สะดวกมารับสินค้า", en: "Please select your preferred pickup time." },
-  "checkout.proceed_to_pay": { th: "ไปหน้าชำระเงิน", en: "Proceed to pay" },
+  "checkout.proceed_to_pay": { th: "ชำระเงิน", en: " Pay" },
   "checkout.back": { th: "กลับ", en: "Back" },
 
   // Admin order-row inline strings
   "admin.order.save_tracking": { th: "บันทึกหมายเลขพัสดุ", en: "Save Tracking" },
   "admin.order.cancelled_msg": { th: "คำสั่งซื้อถูกยกเลิกแล้ว", en: "Order has been cancelled" },
-  "admin.order.shipped_done": { th: "จัดส่งแล้ว ✓", en: "Shipped ✓" },
+  "admin.order.shipped_done": { th: "ลูกค้ารับสินค้าแล้ว ✓", en: "Customer received the Product ✓" },
 
   // Products panel
   "admin.products.search_placeholder": { th: "ค้นหาสินค้า...", en: "Search products..." },

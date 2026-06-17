@@ -44,15 +44,15 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
   const [placement, setPlacement] = React.useState(() =>
     placementValue(product?.category, product?.group, product?.charmType),
   );
-  type BottleColor = { id: string; label: string; imageUrl: string };
+  type BottleColor = { id: string; label: string; labelEn: string; imageUrl: string };
   const [bottleColors, setBottleColors] = React.useState<BottleColor[]>(() => {
     if (product?.category !== "bottle" || !product?.options?.length) return [];
-    return product.options.map((opt, i) => ({ id: String(i), label: opt.label, imageUrl: opt.imageUrl ?? "" }));
+    return product.options.map((opt, i) => ({ id: String(i), label: opt.label, labelEn: opt.labelEn ?? "", imageUrl: opt.imageUrl ?? "" }));
   });
   const [colorUploading, setColorUploading] = React.useState<string | null>(null);
 
   function addBottleColor() {
-    setBottleColors(prev => [...prev, { id: `${Date.now()}`, label: "", imageUrl: "" }]);
+    setBottleColors(prev => [{ id: `${Date.now()}`, label: "", labelEn: "", imageUrl: "" }, ...prev]);
   }
   function removeBottleColor(id: string) {
     setBottleColors(prev => prev.filter(c => c.id !== id));
@@ -214,7 +214,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
     if (imagePreviews[0]) fd.set("imageUrl", imagePreviews[0]);
     fd.set("imageUrls", JSON.stringify(imagePreviews));
     const bottleOptions = placement === "bottle"
-      ? bottleColors.filter(c => c.label.trim()).map(c => ({ label: c.label, imageUrl: c.imageUrl }))
+      ? bottleColors.filter(c => c.label.trim()).map(c => ({ label: c.label, labelEn: c.labelEn || undefined, imageUrl: c.imageUrl }))
       : [];
     fd.set("options", JSON.stringify(bottleOptions));
     fd.set("placement", placement);
@@ -249,7 +249,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
         imageUrl: imagePreviews[0] ?? product.imageUrl,
         imageUrls: imagePreviews.length > 0 ? imagePreviews : undefined,
         options: placement === "bottle"
-          ? bottleColors.filter(c => c.label.trim()).map(c => ({ label: c.label, imageUrl: c.imageUrl }))
+          ? bottleColors.filter(c => c.label.trim()).map(c => ({ label: c.label, labelEn: c.labelEn || undefined, imageUrl: c.imageUrl }))
           : [],
         });
       } catch {
@@ -448,13 +448,22 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                                   onChange={(e) => handleColorUpload(color.id, e)} />
                               </label>
                             )}
-                            <input
-                              type="text"
-                              value={color.label}
-                              onChange={(e) => updateBottleColor(color.id, { label: e.target.value })}
-                              placeholder="ชื่อสี เช่น ฟ้า, แดง"
-                              className="flex-1 min-w-0 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-800 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-[#85241F]/30"
-                            />
+                            <div className="flex flex-1 min-w-0 flex-col gap-1.5">
+                              <input
+                                type="text"
+                                value={color.label}
+                                onChange={(e) => updateBottleColor(color.id, { label: e.target.value })}
+                                placeholder="ชื่อสี เช่น ฟ้า, แดง"
+                                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-800 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-[#85241F]/30"
+                              />
+                              <input
+                                type="text"
+                                value={color.labelEn}
+                                onChange={(e) => updateBottleColor(color.id, { labelEn: e.target.value })}
+                                placeholder="Color name e.g. Blue"
+                                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-800 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-[#85241F]/30"
+                              />
+                            </div>
                             <button type="button" onClick={() => removeBottleColor(color.id)}
                               className="shrink-0 text-gray-300 hover:text-red-400 transition-colors">
                               <XCircle className="h-4 w-4" />
@@ -546,13 +555,17 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-[10px] mb-1.5 flex items-center gap-1 font-bold text-gray-500"><span className="bg-gray-100 text-gray-500 px-1 py-0.5 rounded text-[8px] font-black leading-none">TH</span> รายละเอียด</Label>
+              <div className="flex flex-col gap-2.5">
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-[10px] flex items-center gap-1 font-bold text-gray-500">
+                    <span className="bg-gray-100 text-gray-500 px-1 py-0.5 rounded text-[8px] font-black leading-none">TH</span> รายละเอียด
+                  </Label>
                   <Textarea name="description" rows={4} value={descriptionTh} onChange={(e) => { setDescriptionTh(e.target.value); if (e.target.value.trim()) clearError("descriptionTh"); }} placeholder="รายละเอียดภาษาไทย..." className={`rounded-xl text-xs resize-none ${err("descriptionTh") ? "border-red-400 focus-visible:ring-red-300" : "border-gray-200"}`} />
                 </div>
-                <div>
-                  <Label className="text-[10px] mb-1.5 flex items-center gap-1 font-bold text-gray-500"><span className="bg-gray-100 text-gray-500 px-1 py-0.5 rounded text-[8px] font-black leading-none">EN</span> Description</Label>
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-[10px] flex items-center gap-1 font-bold text-gray-500">
+                    <span className="bg-gray-100 text-gray-500 px-1 py-0.5 rounded text-[8px] font-black leading-none">EN</span> Description
+                  </Label>
                   <Textarea name="descriptionEn" rows={4} value={descriptionEn} onChange={(e) => { setDescriptionEn(e.target.value); if (e.target.value.trim()) clearError("descriptionEn"); }} placeholder="Description in English..." className={`rounded-xl text-xs resize-none ${err("descriptionEn") ? "border-red-400 focus-visible:ring-red-300" : "border-gray-200"}`} />
                 </div>
               </div>
