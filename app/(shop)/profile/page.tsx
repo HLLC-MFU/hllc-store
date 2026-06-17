@@ -262,7 +262,7 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
                 type="button"
                 disabled={uploadingSlip || !slipImage}
                 onClick={() => setConfirmSlip(true)}
-                className="mt-3 h-10 w-full rounded-xl bg-[#85241F] px-4 text-xs font-black hover:bg-[#B72D2A] disabled:opacity-50"
+                className="mt-3 h-10 w-full rounded-xl bg-brand px-4 text-xs font-black hover:bg-brand-hover disabled:opacity-50"
               >
                 {uploadingSlip
                   ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
@@ -304,7 +304,7 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
                 <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-black text-gray-500">{itemCount}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-black text-[#85241F]">{money(order.total)}</span>
+                <span className="text-sm font-black text-brand">{money(order.total)}</span>
                 {itemsOpen ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
               </div>
             </button>
@@ -319,9 +319,9 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
                       <span className="text-sm font-bold text-gray-600 shrink-0">{money(item.subtotal)}</span>
                     </div>
                     {(item.selectedOption || item.customName) && (
-                      <div className="flex flex-wrap gap-1.5 pl-2 border-l-2 border-[#85241F]/20">
+                      <div className="flex flex-wrap gap-1.5 pl-2 border-l-2 border-brand/20">
                         {item.selectedOption && (
-                          <span className="rounded-lg bg-[#85241F]/5 px-2.5 py-1 text-[10px] font-black text-[#85241F]">{item.selectedOption}</span>
+                          <span className="rounded-lg bg-brand/5 px-2.5 py-1 text-[10px] font-black text-brand">{item.selectedOption}</span>
                         )}
                         {item.customName && (
                           <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-[10px] font-black text-amber-700">{formatCustomName(item.customName)}</span>
@@ -446,7 +446,7 @@ function ProfileContent() {
             />
             <Button
               disabled={loading}
-              className="h-11 rounded-2xl bg-[#85241F] font-black hover:bg-[#B72D2A] shrink-0"
+              className="h-11 rounded-2xl bg-brand font-black hover:bg-brand-hover shrink-0"
               type="submit"
             >
               {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
@@ -533,7 +533,7 @@ export default function ProfilePage() {
                   <span className="text-xs font-black text-gray-500">
                     {t("admin.order.item")}
                   </span>
-                  <span className="text-sm font-black text-[#85241F]">
+                  <span className="text-sm font-black text-brand">
                     {money(order.total)}
                   </span>
                 </div>
@@ -545,7 +545,7 @@ export default function ProfilePage() {
                           {typeof item.name === "object" ? (item.name[lang] || item.name.th) : item.name} x {item.quantity}
                         </span>
                         {item.selectedOption ? (
-                          <span className="mt-0.5 block truncate text-[10px] font-black text-[#85241F]">
+                          <span className="mt-0.5 block truncate text-[10px] font-black text-brand">
                             {item.selectedOption}
                           </span>
                         ) : null}

@@ -89,14 +89,14 @@ export function SuperAdminPanel({ adminUsers, auditLogs, loading, onCreateAccoun
             <div className="grid h-11 grid-cols-2 rounded-xl border border-gray-200 bg-gray-50 p-1 shadow-inner">
               <label className="group relative cursor-pointer">
                 <input className="peer sr-only" type="radio" name="role" value="admin" defaultChecked />
-                <span className="flex h-full items-center justify-center rounded-lg text-sm font-black text-gray-500 transition-all peer-checked:bg-white peer-checked:text-[#85241F] peer-checked:shadow-sm">Admin</span>
+                <span className="flex h-full items-center justify-center rounded-lg text-sm font-black text-gray-500 transition-all peer-checked:bg-white peer-checked:text-brand peer-checked:shadow-sm">Admin</span>
               </label>
               <label className="group relative cursor-pointer">
                 <input className="peer sr-only" type="radio" name="role" value="superAdmin" />
-                <span className="flex h-full items-center justify-center rounded-lg text-sm font-black text-gray-500 transition-all peer-checked:bg-[#85241F] peer-checked:text-white peer-checked:shadow-sm">SuperAdmin</span>
+                <span className="flex h-full items-center justify-center rounded-lg text-sm font-black text-gray-500 transition-all peer-checked:bg-brand peer-checked:text-white peer-checked:shadow-sm">SuperAdmin</span>
               </label>
             </div>
-            <Button disabled={loading} className="h-11 w-full rounded-xl bg-[#85241F] font-black hover:bg-[#B72D2A]">
+            <Button disabled={loading} className="h-11 w-full rounded-xl bg-brand font-black hover:bg-brand-hover">
               สร้างบัญชี
             </Button>
           </form>
@@ -115,7 +115,7 @@ export function SuperAdminPanel({ adminUsers, auditLogs, loading, onCreateAccoun
                     <p className="text-xs font-black text-gray-900 truncate">{user.username}</p>
                     <p className="text-[10px] font-bold text-gray-400">{user.registered ? "registered" : "รอตั้งรหัสผ่าน"}</p>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black ${user.role === "superAdmin" ? "bg-[#85241F]/10 text-[#85241F]" : "bg-slate-100 text-slate-600"}`}>
+                  <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black ${user.role === "superAdmin" ? "bg-brand/10 text-brand" : "bg-slate-100 text-slate-600"}`}>
                     {user.role}
                   </span>
                   {!isSelf && (
@@ -154,7 +154,7 @@ export function SuperAdminPanel({ adminUsers, auditLogs, loading, onCreateAccoun
               <h2 className="text-base font-black text-gray-900">Audit Logs</h2>
               <p className="text-xs text-gray-400 mt-0.5">{auditLogs.length} รายการทั้งหมด</p>
             </div>
-            <div className="ml-auto flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 w-56 focus-within:border-[#85241F] transition-colors">
+            <div className="ml-auto flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 w-56 focus-within:border-brand transition-colors">
               <Search className="h-3.5 w-3.5 text-gray-400 shrink-0" />
               <input
                 value={search}
@@ -220,7 +220,7 @@ export function SuperAdminPanel({ adminUsers, auditLogs, loading, onCreateAccoun
                       {/* Actor */}
                       <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
                         <span className="text-gray-400">โดย</span>
-                        <span className={`font-black px-2 py-0.5 rounded-md ${isSuperAdmin ? "bg-[#85241F]/8 text-[#85241F]" : "bg-gray-100 text-gray-600"}`}>
+                        <span className={`font-black px-2 py-0.5 rounded-md ${isSuperAdmin ? "bg-brand/8 text-brand" : "bg-gray-100 text-gray-600"}`}>
                           {log.actorUsername}
                         </span>
                         <span className="text-gray-400">· {isSuperAdmin ? "Super Admin" : "Admin"}</span>

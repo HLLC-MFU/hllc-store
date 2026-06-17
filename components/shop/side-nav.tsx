@@ -47,7 +47,7 @@ export function SideNav() {
               <div className="relative shrink-0">
                 <Icon className="w-5 h-5" />
                 {badge && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 bg-[#85241F] text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
+                  <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 bg-brand text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
                     {badge > 9 ? "9+" : badge}
                   </span>
                 )}

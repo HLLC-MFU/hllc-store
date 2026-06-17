@@ -60,7 +60,7 @@ export function TestEmailPanel({ defaultTo = "", onNotify }: Props) {
                 onClick={() => setTemplate(tpl.value)}
                 className={`rounded-xl border px-3 py-2 text-left text-xs font-bold transition-colors ${
                   template === tpl.value
-                    ? "border-[#85241F] bg-[#85241F]/5 text-[#85241F]"
+                    ? "border-brand bg-brand/5 text-brand"
                     : "border-gray-200 text-gray-600 hover:border-gray-300"
                 }`}
               >
@@ -89,7 +89,7 @@ export function TestEmailPanel({ defaultTo = "", onNotify }: Props) {
           <Button
             disabled={sending}
             onClick={send}
-            className="h-11 rounded-xl bg-[#85241F] font-black hover:bg-[#B72D2A]"
+            className="h-11 rounded-xl bg-brand font-black hover:bg-brand-hover"
           >
             <Send className="h-4 w-4" /> {sending ? "กำลังส่ง..." : "ส่งอีเมลทดสอบ"}
           </Button>

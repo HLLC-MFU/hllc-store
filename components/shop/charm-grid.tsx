@@ -63,7 +63,7 @@ function CharmCard({ product, lang }: { product: ShopProduct; lang: "th" | "en" 
     >
       {/* Cart badge top-left */}
       {cartCount > 0 && (
-        <div className="absolute top-2 left-2 z-10 min-w-5 h-5 rounded-full bg-[#85241F] text-white text-[10px] font-black flex items-center justify-center px-1 shadow-md">
+        <div className="absolute top-2 left-2 z-10 min-w-5 h-5 rounded-full bg-brand text-white text-[10px] font-black flex items-center justify-center px-1 shadow-md">
           {cartCount}
         </div>
       )}
@@ -103,13 +103,13 @@ function CharmCard({ product, lang }: { product: ShopProduct; lang: "th" | "en" 
               </button>
               <span className="w-4 text-center text-xs font-black text-gray-800">{directQty}</span>
               <button type="button" onClick={handleIncrease} disabled={directQty >= product.stock}
-                className="flex h-5 w-5 items-center justify-center rounded border border-[#85241F] text-[#85241F] disabled:opacity-30 active:bg-[#85241F] active:text-white transition-colors">
+                className="flex h-5 w-5 items-center justify-center rounded border border-brand text-brand disabled:opacity-30 active:bg-brand active:text-white transition-colors">
                 <Plus className="h-2.5 w-2.5" />
               </button>
             </div>
           ) : (
             <button ref={addBtnRef} type="button" onClick={handleAdd} disabled={isOutOfStock || hasOptions}
-              className="flex h-6 w-6 items-center justify-center rounded border border-[#85241F] text-[#85241F] disabled:opacity-25 active:bg-[#85241F] active:text-white transition-colors shrink-0">
+              className="flex h-6 w-6 items-center justify-center rounded border border-brand text-brand disabled:opacity-25 active:bg-brand active:text-white transition-colors shrink-0">
               <ShoppingCart className="h-3 w-3" />
             </button>
           )}
@@ -154,7 +154,7 @@ export function CharmGrid({ products }: { products: ShopProduct[] }) {
           >
             {tab.label}
             {filter === tab.id && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-[#85241F]" />
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-brand" />
             )}
           </button>
         ))}
@@ -168,9 +168,9 @@ export function CharmGrid({ products }: { products: ShopProduct[] }) {
               <div className="flex items-center gap-3 mb-5">
                 <div className="flex-1 h-px bg-gray-100" />
                 <div className="flex gap-1">
-                  <div className="w-1 h-1 rounded-full bg-[#85241F]/30" />
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#85241F]/50" />
-                  <div className="w-1 h-1 rounded-full bg-[#85241F]/30" />
+                  <div className="w-1 h-1 rounded-full bg-brand/30" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-brand/50" />
+                  <div className="w-1 h-1 rounded-full bg-brand/30" />
                 </div>
                 <div className="flex-1 h-px bg-gray-100" />
               </div>

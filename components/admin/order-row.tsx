@@ -131,7 +131,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       </div>
                       <div className="pb-2 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[10px] font-black text-[#85241F] bg-[#85241F]/5 px-1.5 py-0.5 rounded-md">{n.action}</span>
+                          <span className="text-[10px] font-black text-brand bg-brand/5 px-1.5 py-0.5 rounded-md">{n.action}</span>
                           <span className="text-[10px] text-gray-400">โดย {n.by}</span>
                           <span className="text-[10px] text-gray-300">·</span>
                           <span className="text-[10px] text-gray-400">
@@ -304,7 +304,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                     <div className="flex shrink-0 flex-col items-end gap-1 ml-3">
                       <span className="text-sm font-black text-gray-900">{money(item.subtotal)}</span>
                       {item.selectedOption ? (
-                        <span className="max-w-32 truncate rounded-md bg-[#85241F]/5 px-2 py-0.5 text-[10px] font-black text-[#85241F]">
+                        <span className="max-w-32 truncate rounded-md bg-brand/5 px-2 py-0.5 text-[10px] font-black text-brand">
                           {item.selectedOption}
                         </span>
                       ) : null}
@@ -364,13 +364,13 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-sm ${
                         done ? "bg-emerald-500 border-emerald-500 text-white" :
                         active && isPickup ? "bg-white border-emerald-500 text-emerald-500 scale-110 ring-4 ring-emerald-500/5" :
-                        active ? "bg-white border-[#85241F] text-[#85241F] scale-110 ring-4 ring-[#85241F]/5" :
+                        active ? "bg-white border-brand text-brand scale-110 ring-4 ring-brand/5" :
                         "bg-white border-gray-200 text-gray-300"
                       }`}>
                         {done ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : <StepIcon className="w-3.5 h-3.5" />}
                       </div>
                       <span className={`text-[10px] font-bold mt-2 text-center max-w-16 truncate block ${
-                        active && !isPickup ? "text-[#85241F] font-black" : (active || done) ? "text-emerald-600 font-black" : "text-gray-400"
+                        active && !isPickup ? "text-brand font-black" : (active || done) ? "text-emerald-600 font-black" : "text-gray-400"
                       }`}>
                         {statusLabel(s)}
                       </span>
@@ -396,7 +396,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       onChange={(e) => setNote(e.target.value)}
                       placeholder="ข้อความถึงลูกค้า (ไม่บังคับ)..."
                       rows={2}
-                      className="w-full text-xs text-gray-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 resize-none outline-none focus:border-[#85241F]/40 focus:ring-2 focus:ring-[#85241F]/10 placeholder:text-gray-400 transition-all"
+                      className="w-full text-xs text-gray-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 resize-none outline-none focus:border-brand/40 focus:ring-2 focus:ring-brand/10 placeholder:text-gray-400 transition-all"
                     />
                   </div>
 
@@ -421,7 +421,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                 isPickup ? (
                   <Button
                     onClick={() => onStatusChange(order.id, "shipped")}
-                    className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-[#85241F]/15"
+                    className="w-full bg-linear-to-r from-brand to-brand-hover hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-brand/15"
                   >
                     <Store className="w-4 h-4" />
                     <span className="font-black">พร้อมให้รับสินค้าแล้ว</span>
@@ -436,11 +436,11 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                           onChange={(e) => setTracking(e.target.value)}
                           placeholder="EG123456789TH"
                           readOnly={!editingTracking}
-                          className={`w-full text-xs font-mono text-gray-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 pr-9 outline-none focus:border-[#85241F]/40 focus:ring-2 focus:ring-[#85241F]/10 placeholder:text-gray-400 transition-all ${!editingTracking ? "cursor-default" : ""}`}
+                          className={`w-full text-xs font-mono text-gray-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 pr-9 outline-none focus:border-brand/40 focus:ring-2 focus:ring-brand/10 placeholder:text-gray-400 transition-all ${!editingTracking ? "cursor-default" : ""}`}
                         />
                         {!editingTracking && (
                           <button type="button" onClick={() => setEditingTracking(true)}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#85241F] transition-colors cursor-pointer">
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand transition-colors cursor-pointer">
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
                         )}
@@ -453,7 +453,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                         setEditingTracking(false);
                         onStatusChange(order.id, "shipped");
                       }}
-                      className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-[#85241F]/15 disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="w-full bg-linear-to-r from-brand to-brand-hover hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-brand/15 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <Truck className="w-4 h-4" />
                       <span className="font-black">ยืนยันจัดส่ง</span>
@@ -479,11 +479,11 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                           onChange={(e) => setTracking(e.target.value)}
                           placeholder="EG123456789TH"
                           readOnly={!editingTracking}
-                          className={`w-full text-xs font-mono text-gray-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 pr-9 outline-none focus:border-[#85241F]/40 focus:ring-2 focus:ring-[#85241F]/10 placeholder:text-gray-400 transition-all ${!editingTracking ? "cursor-default" : ""}`}
+                          className={`w-full text-xs font-mono text-gray-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 pr-9 outline-none focus:border-brand/40 focus:ring-2 focus:ring-brand/10 placeholder:text-gray-400 transition-all ${!editingTracking ? "cursor-default" : ""}`}
                         />
                         {!editingTracking && (
                           <button type="button" onClick={() => setEditingTracking(true)}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#85241F] transition-colors cursor-pointer">
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand transition-colors cursor-pointer">
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
                         )}
@@ -503,7 +503,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                           setEditingTracking(false);
                         }
                       }}
-                      className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-[#85241F]/15 disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="w-full bg-linear-to-r from-brand to-brand-hover hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-brand/15 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <Check className="w-4 h-4" />
                       <span className="font-black">{t("admin.order.save_tracking")}</span>
@@ -537,7 +537,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                   {currentIdx < timelineSteps.length - 1 && (
                     <Button
                       onClick={() => onStatusChange(order.id, timelineSteps[currentIdx + 1])}
-                      className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-[#85241F]/15"
+                      className="w-full bg-linear-to-r from-brand to-brand-hover hover:opacity-95 text-white font-black h-9 rounded-xl flex items-center gap-2 shadow-sm shadow-brand/15"
                     >
                       <ArrowRight className="w-4 h-4" />
                       <span className="font-black">{statusLabel(timelineSteps[currentIdx + 1])}</span>
@@ -681,10 +681,10 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                   const StepIcon = s === "payment_review" ? FileCheck2 : s === "packing" ? Package : s === "shipped" ? (isPickup ? Store : Truck) : CheckCircle2;
                   return (
                     <div key={s} className="flex flex-col items-center z-10">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all shadow-sm ${done ? "bg-emerald-500 border-emerald-500 text-white" : active && isPickup ? "bg-white border-emerald-500 text-emerald-500 scale-110 ring-4 ring-emerald-500/5" : active ? "bg-white border-[#85241F] text-[#85241F] scale-110 ring-4 ring-[#85241F]/5" : "bg-white border-gray-200 text-gray-300"}`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all shadow-sm ${done ? "bg-emerald-500 border-emerald-500 text-white" : active && isPickup ? "bg-white border-emerald-500 text-emerald-500 scale-110 ring-4 ring-emerald-500/5" : active ? "bg-white border-brand text-brand scale-110 ring-4 ring-brand/5" : "bg-white border-gray-200 text-gray-300"}`}>
                         {done ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : <StepIcon className="w-3.5 h-3.5" />}
                       </div>
-                      <span className={`text-[10px] font-bold mt-1.5 text-center max-w-16 truncate block ${active && !isPickup ? "text-[#85241F] font-black" : (active || done) ? "text-emerald-600 font-black" : "text-gray-400"}`}>
+                      <span className={`text-[10px] font-bold mt-1.5 text-center max-w-16 truncate block ${active && !isPickup ? "text-brand font-black" : (active || done) ? "text-emerald-600 font-black" : "text-gray-400"}`}>
                         {statusLabel(s)}
                       </span>
                     </div>
@@ -767,7 +767,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                     <div key={i} className="flex gap-2.5">
                       <div className="w-1.5 h-1.5 rounded-full bg-slate-300 mt-1.5 shrink-0" />
                       <div className="pb-1 flex-1">
-                        <span className="text-[10px] font-black text-[#85241F] bg-[#85241F]/5 px-1.5 py-0.5 rounded-md">{n.action}</span>
+                        <span className="text-[10px] font-black text-brand bg-brand/5 px-1.5 py-0.5 rounded-md">{n.action}</span>
                         <span className="text-[10px] text-gray-400 ml-1">โดย {n.by}</span>
                         {n.text && <p className="text-xs text-gray-600 mt-0.5">{n.text}</p>}
                       </div>
@@ -813,7 +813,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                         {new Date(order.createdAt).toLocaleDateString(lang === "th" ? "th-TH" : "en-GB", { day: "2-digit", month: "short", year: "numeric" })}
                       </span>
                       <span className="text-gray-300 text-[10px]">·</span>
-                      <span className="text-[10px] font-black text-[#85241F]">
+                      <span className="text-[10px] font-black text-brand">
                         {new Date(order.createdAt).toLocaleTimeString(lang === "th" ? "th-TH" : "en-GB", { hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
@@ -826,11 +826,11 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                         <span className="text-sm font-black text-gray-900 shrink-0 ml-3">{money(item.subtotal)}</span>
                       </div>
                       {(item.selectedOption || item.customName) && (
-                        <div className="flex flex-wrap gap-1.5 pl-2 border-l-2 border-[#85241F]/20">
+                        <div className="flex flex-wrap gap-1.5 pl-2 border-l-2 border-brand/20">
                           {item.selectedOption && (
-                            <div className="flex items-center gap-1 rounded-lg bg-[#85241F]/5 px-2.5 py-1">
+                            <div className="flex items-center gap-1 rounded-lg bg-brand/5 px-2.5 py-1">
                               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">ตัวเลือก</span>
-                              <span className="text-[11px] font-black text-[#85241F]">{item.selectedOption}</span>
+                              <span className="text-[11px] font-black text-brand">{item.selectedOption}</span>
                             </div>
                           )}
                           {item.customName && (
@@ -880,7 +880,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                 {order.status === "payment_review" && order.slip.status === "pending" ? (
                   <div className="flex flex-col gap-2.5">
                     <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="ข้อความถึงลูกค้า (ไม่บังคับ)..." rows={2}
-                      className="w-full text-xs text-gray-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 resize-none outline-none focus:border-[#85241F]/40 placeholder:text-gray-400 transition-all" />
+                      className="w-full text-xs text-gray-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 resize-none outline-none focus:border-brand/40 placeholder:text-gray-400 transition-all" />
                     <div className="grid grid-cols-2 gap-2">
                       <Button onClick={() => { onApproveSlip(order.id, true, note || undefined); setNote(""); }}
                         className="bg-linear-to-r from-emerald-500 to-emerald-600 hover:opacity-95 text-white font-black h-9 rounded-xl gap-1.5">
@@ -896,7 +896,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                   isPickup ? (
                     <Button
                       onClick={() => onStatusChange(order.id, "shipped")}
-                      className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl gap-2"
+                      className="w-full bg-linear-to-r from-brand to-brand-hover hover:opacity-95 text-white font-black h-9 rounded-xl gap-2"
                     >
                       <Store className="w-4 h-4" />
                       พร้อมให้รับสินค้าแล้ว
@@ -909,10 +909,10 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                         <input value={tracking} onChange={(e) => setTracking(e.target.value)}
                           readOnly={!editingTracking}
                           placeholder="EG123456789TH"
-                          className={`w-full text-xs font-mono text-gray-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 pr-9 outline-none focus:border-[#85241F]/40 placeholder:text-gray-400 transition-all ${!editingTracking ? "cursor-default" : ""}`} />
+                          className={`w-full text-xs font-mono text-gray-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 pr-9 outline-none focus:border-brand/40 placeholder:text-gray-400 transition-all ${!editingTracking ? "cursor-default" : ""}`} />
                         {!editingTracking && (
                           <button type="button" onClick={() => setEditingTracking(true)}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#85241F] transition-colors cursor-pointer">
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand transition-colors cursor-pointer">
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
                         )}
@@ -925,7 +925,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                         setEditingTracking(false);
                         onStatusChange(order.id, "shipped");
                       }}
-                      className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl gap-2 disabled:opacity-40"
+                      className="w-full bg-linear-to-r from-brand to-brand-hover hover:opacity-95 text-white font-black h-9 rounded-xl gap-2 disabled:opacity-40"
                     >
                       <Truck className="w-4 h-4" />
                       ยืนยันจัดส่ง
@@ -949,10 +949,10 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                         <input value={tracking} onChange={(e) => setTracking(e.target.value)}
                           readOnly={!editingTracking}
                           placeholder="EG123456789TH"
-                          className={`w-full text-xs font-mono text-gray-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 pr-9 outline-none focus:border-[#85241F]/40 placeholder:text-gray-400 transition-all ${!editingTracking ? "cursor-default" : ""}`} />
+                          className={`w-full text-xs font-mono text-gray-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 pr-9 outline-none focus:border-brand/40 placeholder:text-gray-400 transition-all ${!editingTracking ? "cursor-default" : ""}`} />
                         {!editingTracking && (
                           <button type="button" onClick={() => setEditingTracking(true)}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#85241F] transition-colors cursor-pointer">
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand transition-colors cursor-pointer">
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
                         )}
@@ -967,7 +967,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                           setEditingTracking(false);
                         }
                       }}
-                      className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl gap-2 disabled:opacity-40"
+                      className="w-full bg-linear-to-r from-brand to-brand-hover hover:opacity-95 text-white font-black h-9 rounded-xl gap-2 disabled:opacity-40"
                     >
                       <Check className="w-4 h-4" />
                       {t("admin.order.save_tracking")}
@@ -987,7 +987,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                 ) : (
                   <div className="flex flex-col gap-2">
                     {currentIdx < timelineSteps.length - 1 && (
-                      <Button onClick={() => { onStatusChange(order.id, timelineSteps[currentIdx + 1]); }} className="w-full bg-linear-to-r from-[#85241F] to-[#B72D2A] hover:opacity-95 text-white font-black h-9 rounded-xl gap-2">
+                      <Button onClick={() => { onStatusChange(order.id, timelineSteps[currentIdx + 1]); }} className="w-full bg-linear-to-r from-brand to-brand-hover hover:opacity-95 text-white font-black h-9 rounded-xl gap-2">
                         <ArrowRight className="w-4 h-4" />{statusLabel(timelineSteps[currentIdx + 1])}
                       </Button>
                     )}

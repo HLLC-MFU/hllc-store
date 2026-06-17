@@ -26,7 +26,7 @@ function ComboboxInput({
     <div className="relative flex items-center">
       <ComboboxPrimitive.Input
         className={cn(
-          "h-12 w-full rounded-2xl border border-gray-300 bg-white px-3.5 pr-10 text-sm font-semibold text-gray-900 outline-none transition-colors placeholder:font-semibold placeholder:text-gray-400 focus:border-[#85241F] focus:ring-1 focus:ring-[#85241F]/20",
+          "h-12 w-full rounded-2xl border border-gray-300 bg-white px-3.5 pr-10 text-sm font-semibold text-gray-900 outline-none transition-colors placeholder:font-semibold placeholder:text-gray-400 focus:border-brand focus:ring-1 focus:ring-brand/20",
           className
         )}
         {...props}
@@ -93,7 +93,7 @@ function ComboboxItem({
     <ComboboxPrimitive.Item
       className={cn(
         "relative flex w-full cursor-pointer select-none items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 outline-none transition-colors",
-        "data-highlighted:bg-gray-50 data-selected:font-black data-selected:text-[#85241F]",
+        "data-highlighted:bg-gray-50 data-selected:font-black data-selected:text-brand",
         "data-disabled:pointer-events-none data-disabled:opacity-50",
         className
       )}
@@ -101,7 +101,7 @@ function ComboboxItem({
     >
       {children}
       <ComboboxPrimitive.ItemIndicator className="ml-auto shrink-0">
-        <Check className="h-3.5 w-3.5 text-[#85241F]" />
+        <Check className="h-3.5 w-3.5 text-brand" />
       </ComboboxPrimitive.ItemIndicator>
     </ComboboxPrimitive.Item>
   )

@@ -38,7 +38,7 @@ export function ConfirmOrderModal({
         </p>
         <div className="mt-3 rounded-2xl bg-gray-50 p-3 text-center">
           <p className="text-xs font-bold text-gray-500">{selectedCount} {t("shop.items_count")}</p>
-          <p className="mt-0.5 text-xl font-black text-[#85241F]">{money(selectedPayableTotal)}</p>
+          <p className="mt-0.5 text-xl font-black text-brand">{money(selectedPayableTotal)}</p>
           {selectedShippingFee > 0 && (
             <p className="mt-1 text-[11px] font-bold text-gray-500">
               {t("checkout.shipping")}: {money(selectedShippingFee)}
@@ -83,7 +83,7 @@ export function RemoveItemModal({ lang, item, confirmText, onCancel, onConfirm }
           <p className="truncate text-sm font-black text-gray-900">
             {item.name[lang] || item.name.th}
           </p>
-          <p className="mt-1 text-xs font-bold text-[#85241F]">
+          <p className="mt-1 text-xs font-bold text-brand">
             {money(item.price)} x {item.quantity}
           </p>
         </div>

@@ -162,7 +162,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
         {/* Action buttons revealed on swipe */}
         <div className={`absolute inset-y-2 right-2 flex gap-1.5 ${swipeX === 0 ? "invisible" : ""}`}>
           {isBottleNoCharm && (
-            <div className="w-16 rounded-2xl bg-[#85241F] flex flex-col items-center justify-center gap-1">
+            <div className="w-16 rounded-2xl bg-brand flex flex-col items-center justify-center gap-1">
               <button
                 type="button"
                 onClick={() => { setSwipeX(0); openCharmEdit(); }}
@@ -173,7 +173,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
               </button>
             </div>
           )}
-          <div className="w-16 rounded-2xl bg-[#85241F] flex flex-col items-center justify-center gap-1">
+          <div className="w-16 rounded-2xl bg-brand flex flex-col items-center justify-center gap-1">
             <button
               type="button"
               onClick={() => { setConfirmDelete(true); setSwipeX(0); }}
@@ -210,7 +210,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                 aria-checked={selected}
                 role="checkbox"
               >
-                <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-colors ${selected ? "bg-[#85241F] border-[#85241F]" : "border-gray-300 bg-white"}`}>
+                <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-colors ${selected ? "bg-brand border-brand" : "border-gray-300 bg-white"}`}>
                   {selected && <Check className="h-3 w-3 text-white" />}
                 </div>
               </button>
@@ -243,7 +243,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                       <p className="mt-0.5 text-[10px] text-gray-400">{item.selectedOption}</p>
                     )}
                     {item.customName && !charmInfo && (
-                      <p className="mt-0.5 text-[10px] font-bold text-[#85241F]">
+                      <p className="mt-0.5 text-[10px] font-bold text-brand">
                         {t("cart.custom_name_label")}: {item.customName}
                       </p>
                     )}
@@ -251,7 +251,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setSwipeX(swipeX < 0 ? 0 : -MAX); }}
-                    className={`shrink-0 text-[11px] font-bold cursor-pointer leading-snug transition-colors ${swipeX < 0 ? "text-[#85241F]" : "text-gray-400 hover:text-gray-600"}`}
+                    className={`shrink-0 text-[11px] font-bold cursor-pointer leading-snug transition-colors ${swipeX < 0 ? "text-brand" : "text-gray-400 hover:text-gray-600"}`}
                   >
                     {swipeX < 0 ? t("cart.done") : t("cart.edit")}
                   </button>
@@ -260,7 +260,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                 {/* Price + qty bottom row */}
                 <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
                   <div>
-                    <p className="text-base font-black text-[#85241F]">{money((item.price + charmTotal) * item.quantity)}</p>
+                    <p className="text-base font-black text-brand">{money((item.price + charmTotal) * item.quantity)}</p>
                     {(charmInfo || item.quantity > 1) && (
                       <p className="text-[10px] text-gray-400">
                         {charmInfo
@@ -274,7 +274,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                       <Minus className="h-2.5 w-2.5" />
                     </button>
                     <span className="w-5 text-center text-sm font-black text-gray-900">{item.quantity}</span>
-                    <button type="button" onClick={() => onIncrease(item)} disabled={item.stock !== undefined && item.quantity >= item.stock} className="h-6 w-6 rounded-lg bg-[#85241F] flex items-center justify-center text-white disabled:opacity-30 cursor-pointer">
+                    <button type="button" onClick={() => onIncrease(item)} disabled={item.stock !== undefined && item.quantity >= item.stock} className="h-6 w-6 rounded-lg bg-brand flex items-center justify-center text-white disabled:opacity-30 cursor-pointer">
                       <Plus className="h-2.5 w-2.5" />
                     </button>
                   </div>
@@ -290,7 +290,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                   <button
                     type="button"
                     onClick={openCharmEdit}
-                    className="flex items-center gap-1.5 rounded-xl border border-[#85241F] px-3 py-1.5 text-[11px] font-black text-[#85241F] cursor-pointer active:bg-[#85241F] active:text-white transition-colors"
+                    className="flex items-center gap-1.5 rounded-xl border border-brand px-3 py-1.5 text-[11px] font-black text-brand cursor-pointer active:bg-brand active:text-white transition-colors"
                   >
                     <Plus className="h-3 w-3" />
                     {t("cart.add_keychain")}
@@ -320,7 +320,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-black text-[#85241F]">{t("cart.keychain_plus")}</p>
+                    <p className="text-[11px] font-black text-brand">{t("cart.keychain_plus")}</p>
                     <p className="text-[10px] text-gray-500 truncate">
                       {getColorName(charmInfo.colorId, lang, charmOptions)}
                       {charmInfo.letters ? ` · ${charmInfo.letters}` : ""}
@@ -351,7 +351,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
               <button type="button" onClick={() => setConfirmDeleteCharm(false)} className="flex-1 rounded-2xl border border-gray-200 py-3 text-sm font-bold text-gray-600 cursor-pointer">
                 {t("cart.cancel")}
               </button>
-              <button type="button" onClick={() => { removeCharmOnly(); setConfirmDeleteCharm(false); }} className="flex-1 rounded-2xl bg-[#85241F] py-3 text-sm font-black text-white cursor-pointer">
+              <button type="button" onClick={() => { removeCharmOnly(); setConfirmDeleteCharm(false); }} className="flex-1 rounded-2xl bg-brand py-3 text-sm font-black text-white cursor-pointer">
                 {t("cart.remove")}
               </button>
             </div>
@@ -398,7 +398,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                     ) : (
                       <div className="h-3 w-3 rounded-full bg-gray-300 border border-white shadow-sm shrink-0" />
                     )}
-                    <p className="text-[10px] font-bold text-[#85241F]">
+                    <p className="text-[10px] font-bold text-brand">
                       {t("cart.keychain_label")} {getColorName(charmInfo.colorId, lang, charmOptions)}
                       {charmInfo.letters ? ` — ${charmInfo.letters.split("").join(" ")}` : ""}
                     </p>
@@ -417,7 +417,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
               <button
                 type="button"
                 onClick={() => { onRemove(item); setConfirmDelete(false); }}
-                className="flex-1 rounded-2xl bg-[#85241F] py-3 text-sm font-black text-white cursor-pointer"
+                className="flex-1 rounded-2xl bg-brand py-3 text-sm font-black text-white cursor-pointer"
               >
                 {t("cart.remove")}
               </button>
@@ -435,14 +435,14 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
             {/* Header with stepper */}
             <div className="flex items-center justify-between px-5 pt-5 pb-4">
               <div className="flex items-center gap-2">
-                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black transition-colors ${charmStep === "color" ? "bg-[#85241F] text-white" : "bg-emerald-500 text-white"}`}>
+                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black transition-colors ${charmStep === "color" ? "bg-brand text-white" : "bg-emerald-500 text-white"}`}>
                   {charmStep === "color" ? "1" : "✓"}
                 </div>
                 <span className={`text-[11px] font-black ${charmStep === "color" ? "text-gray-900" : "text-emerald-600"}`}>
                   {t("charm.color_step")}
                 </span>
                 <div className={`h-px w-6 ${charmStep === "color" ? "bg-gray-200" : "bg-emerald-300"}`} />
-                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black transition-colors ${charmStep === "letters" ? "bg-[#85241F] text-white" : "bg-gray-100 text-gray-400"}`}>
+                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black transition-colors ${charmStep === "letters" ? "bg-brand text-white" : "bg-gray-100 text-gray-400"}`}>
                   2
                 </div>
                 <span className={`text-[11px] font-black ${charmStep === "letters" ? "text-gray-900" : "text-gray-400"}`}>
@@ -475,7 +475,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                         onClick={() => setTempColor(option.label)}
                         className="flex flex-col items-center gap-0.5 p-1 transition-all cursor-pointer"
                       >
-                        <span className={`text-[9px] font-black leading-tight text-center ${isActive ? "text-[#85241F]" : "text-gray-400"}`}>
+                        <span className={`text-[9px] font-black leading-tight text-center ${isActive ? "text-brand" : "text-gray-400"}`}>
                           {displayName}
                         </span>
                         {option.imageUrl ? (
@@ -483,10 +483,10 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                           <img
                             src={option.imageUrl}
                             alt={displayName}
-                            className={`h-16 w-16 rounded-2xl object-cover border-2 transition-all ${isActive ? "border-[#85241F] scale-105" : "border-transparent"}`}
+                            className={`h-16 w-16 rounded-2xl object-cover border-2 transition-all ${isActive ? "border-brand scale-105" : "border-transparent"}`}
                           />
                         ) : (
-                          <div className={`h-14 w-14 rounded-2xl border-2 transition-all bg-gray-200 ${isActive ? "border-[#85241F] scale-105" : "border-transparent"}`} />
+                          <div className={`h-14 w-14 rounded-2xl border-2 transition-all bg-gray-200 ${isActive ? "border-brand scale-105" : "border-transparent"}`} />
                         )}
                       </button>
                     );
@@ -496,7 +496,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                   type="button"
                   onClick={() => setCharmStep("letters")}
                   disabled={!tempColor}
-                  className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#85241F] text-sm font-black text-white shadow-lg shadow-[#85241F]/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
+                  className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-brand text-sm font-black text-white shadow-lg shadow-brand/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
                 >
                   {t("charm.next_add_letters")}
                 </button>
@@ -510,7 +510,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                 <div className="mb-3 flex items-center gap-2">
                   <div className="flex items-center gap-1">
                     {Array.from({ length: FREE_LETTERS }).map((_, i) => (
-                      <span key={i} className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black ${i < tempLetters.length ? "bg-[#85241F] text-white" : "bg-gray-900 text-white opacity-20"}`}>
+                      <span key={i} className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black ${i < tempLetters.length ? "bg-brand text-white" : "bg-gray-900 text-white opacity-20"}`}>
                         {tempLetters[i] ?? "•"}
                       </span>
                     ))}
@@ -530,7 +530,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                       tempLetters.map((letter, idx) => (
                         <span
                           key={idx}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-[#85241F] text-sm font-black text-white shadow-sm"
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-sm font-black text-white shadow-sm"
                         >
                           {letter}
                         </span>
@@ -563,7 +563,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                       {tempExtraLetters > 0 && ` · ตัวอักษร +${tempExtraLetters}×${LETTER_PRICE}฿`}
                     </span>
                   </div>
-                  <span className="font-black text-[#85241F]">+{tempCharmAddon}฿</span>
+                  <span className="font-black text-brand">+{tempCharmAddon}฿</span>
                 </div>
 
                 {/* A–Z grid */}
@@ -578,7 +578,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                         }
                       }}
                       disabled={tempLetters.length >= MAX_LETTERS}
-                      className="flex h-10 w-full items-center justify-center rounded-xl bg-gray-100 text-sm font-black text-gray-700 transition-all hover:bg-[#fce8e7] hover:text-[#85241F] active:scale-90 disabled:opacity-30"
+                      className="flex h-10 w-full items-center justify-center rounded-xl bg-gray-100 text-sm font-black text-gray-700 transition-all hover:bg-brand-tint hover:text-brand active:scale-90 disabled:opacity-30"
                     >
                       {letter}
                     </button>
@@ -598,7 +598,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                     type="button"
                     onClick={confirmCharmEdit}
                     disabled={tempLetters.length < 2}
-                    className="flex h-12 flex-1 items-center justify-center rounded-2xl bg-[#85241F] text-sm font-black text-white shadow-lg shadow-[#85241F]/20 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none disabled:shadow-none"
+                    className="flex h-12 flex-1 items-center justify-center rounded-2xl bg-brand text-sm font-black text-white shadow-lg shadow-brand/20 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none disabled:shadow-none"
                   >
                     {t("charm.confirm")}
                   </button>

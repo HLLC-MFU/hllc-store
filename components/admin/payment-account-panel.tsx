@@ -58,7 +58,7 @@ export function PaymentAccountPanel({ settings, loading, onSave }: Props) {
             </div>
           </div>
 
-          <Button disabled={loading} className="h-11 rounded-xl bg-[#85241F] font-black hover:bg-[#B72D2A]" type="submit">
+          <Button disabled={loading} className="h-11 rounded-xl bg-brand font-black hover:bg-brand-hover" type="submit">
             <Save className="h-4 w-4" /> บันทึกบัญชีรับเงิน
           </Button>
         </form>

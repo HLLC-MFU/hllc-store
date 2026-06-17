@@ -80,9 +80,9 @@ function GroupedSections({
                 <div className="flex items-center gap-3 md:hidden">
                   <div className="flex-1 h-px bg-gray-100" />
                   <div className="flex gap-1">
-                    <div className="w-1 h-1 rounded-full bg-[#85241F]/30" />
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#85241F]/50" />
-                    <div className="w-1 h-1 rounded-full bg-[#85241F]/30" />
+                    <div className="w-1 h-1 rounded-full bg-brand/30" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-brand/50" />
+                    <div className="w-1 h-1 rounded-full bg-brand/30" />
                   </div>
                   <div className="flex-1 h-px bg-gray-100" />
                 </div>
@@ -110,9 +110,9 @@ function GroupedSections({
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-gray-100" />
               <div className="flex gap-1">
-                <div className="w-1 h-1 rounded-full bg-[#85241F]/30" />
-                <div className="w-1.5 h-1.5 rounded-full bg-[#85241F]/50" />
-                <div className="w-1 h-1 rounded-full bg-[#85241F]/30" />
+                <div className="w-1 h-1 rounded-full bg-brand/30" />
+                <div className="w-1.5 h-1.5 rounded-full bg-brand/50" />
+                <div className="w-1 h-1 rounded-full bg-brand/30" />
               </div>
               <div className="flex-1 h-px bg-gray-100" />
             </div>

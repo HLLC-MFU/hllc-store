@@ -122,9 +122,9 @@ export function HomeContentPanel({
               ) : (
                 <label
                   htmlFor={`home-img-${id}`}
-                  className="flex w-full aspect-[4/3] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-[#85241F]/30 transition-colors bg-gray-50"
+                  className="flex w-full aspect-[4/3] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-brand/30 transition-colors bg-gray-50"
                 >
-                  <Upload className={`h-5 w-5 ${uploading === id ? "text-[#85241F] animate-pulse" : "text-gray-300"}`} />
+                  <Upload className={`h-5 w-5 ${uploading === id ? "text-brand animate-pulse" : "text-gray-300"}`} />
                   <span className="text-xs font-bold text-gray-400">
                     {uploading === id ? "กำลังอัปโหลด..." : "แตะเพื่ออัปโหลดรูป"}
                   </span>

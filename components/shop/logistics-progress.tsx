@@ -108,7 +108,7 @@ export function LogisticsProgress({ order, lang }: { order: Order; lang: "th" | 
                   <div className="flex flex-col items-center">
                     <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
                       done   ? "bg-emerald-500 border-emerald-500 text-white" :
-                      active ? "bg-white border-[#85241F] text-[#85241F] ring-4 ring-[#85241F]/10" :
+                      active ? "bg-white border-brand text-brand ring-4 ring-brand/10" :
                                "bg-white border-gray-200 text-gray-300"
                     }`}>
                       {done
@@ -123,7 +123,7 @@ export function LogisticsProgress({ order, lang }: { order: Order; lang: "th" | 
                   <div className={`pb-4 pt-1 flex-1 ${isLast ? "pb-0" : ""}`}>
                     <p className={`text-sm font-black leading-none ${
                       done   ? "text-emerald-700" :
-                      active ? "text-[#85241F]" :
+                      active ? "text-brand" :
                                "text-gray-300"
                     }`}>
                       {lang === "th" ? th : en}

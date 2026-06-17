@@ -366,9 +366,9 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
           <div className="flex items-start justify-between gap-3 px-4 py-4">
             <h1 className="flex-1 min-w-0 text-xl font-black text-gray-900 leading-snug">
               {product.name[lang] || product.name.th}
-              <span className="ml-1.5 text-[#85241F]">✦</span>
+              <span className="ml-1.5 text-brand">✦</span>
             </h1>
-            <span className="shrink-0 bg-[#85241F] text-white text-sm font-black px-3 py-1 rounded-full whitespace-nowrap">
+            <span className="shrink-0 bg-brand text-white text-sm font-black px-3 py-1 rounded-full whitespace-nowrap">
               {money(product.price)}
             </span>
           </div>
@@ -382,7 +382,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                 <ul className="space-y-1.5">
                   {descriptionText.split("\n").filter((line) => line.trim()).map((line, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-gray-500 leading-relaxed">
-                      <span className="text-[#85241F] shrink-0 mt-0.5">•</span>
+                      <span className="text-brand shrink-0 mt-0.5">•</span>
                       <span>{line.replace(/^[•\-*]\s*/, "")}</span>
                     </li>
                   ))}
@@ -411,7 +411,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                       {t("charm.keychain")} — {lang === "en" && selectedCharmOption.labelEn ? selectedCharmOption.labelEn : selectedCharmOption.label}
                     </p>
                     {charmLetters.length > 0 ? (
-                      <p className="mt-0.5 text-[11px] font-black tracking-widest text-[#85241F]">
+                      <p className="mt-0.5 text-[11px] font-black tracking-widest text-brand">
                         {charmLetters.join(" ")}
                       </p>
                     ) : (
@@ -420,7 +420,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                       </p>
                     )}
                   </button>
-                  <span className="shrink-0 text-sm font-black text-[#85241F]">+{charmAddon}฿</span>
+                  <span className="shrink-0 text-sm font-black text-brand">+{charmAddon}฿</span>
                   <button
                     type="button"
                     onClick={removeCharm}
@@ -434,30 +434,30 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                   <button
                     type="button"
                     onClick={openCharmModal}
-                    className="flex w-full items-center gap-3 px-3 py-3 rounded-2xl bg-[#fdf3f3] border border-[#85241F]/20 hover:bg-[#fce8e7] hover:border-[#85241F]/40 active:scale-[0.98] transition-all duration-150 cursor-pointer"
+                    className="flex w-full items-center gap-3 px-3 py-3 rounded-2xl bg-[#fdf3f3] border border-brand/20 hover:bg-brand-tint hover:border-brand/40 active:scale-[0.98] transition-all duration-150 cursor-pointer"
                   >
                     <div className="relative h-11 w-11 shrink-0">
-                      <div className="h-full w-full rounded-xl overflow-hidden border border-[#85241F]/20 bg-white flex items-center justify-center shadow-sm">
+                      <div className="h-full w-full rounded-xl overflow-hidden border border-brand/20 bg-white flex items-center justify-center shadow-sm">
                         {charmImageValues[cycleIdx] ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img key={cycleIdx} src={charmImageValues[cycleIdx]} alt="keychain" className="h-full w-full object-cover animate-in fade-in duration-700" />
                         ) : (
-                          <Plus className="h-4 w-4 text-[#85241F]" />
+                          <Plus className="h-4 w-4 text-brand" />
                         )}
                       </div>
-                      <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-[#85241F] flex items-center justify-center shadow-sm">
+                      <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-brand flex items-center justify-center shadow-sm">
                         <Plus className="h-2.5 w-2.5 text-white" />
                       </div>
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="text-sm font-black text-[#85241F]">
+                      <p className="text-sm font-black text-brand">
                         {t("charm.add_keychain")}
                       </p>
-                      <p className="text-[10px] font-semibold text-[#85241F]/60">
+                      <p className="text-[10px] font-semibold text-brand/60">
                         {t("charm.pick_color_letters")}
                       </p>
                     </div>
-                    <span className="text-xs font-black text-white bg-[#85241F] px-3 py-1.5 rounded-xl shadow-sm shadow-[#85241F]/30">+{CHARM_PRICE}฿</span>
+                    <span className="text-xs font-black text-white bg-brand px-3 py-1.5 rounded-xl shadow-sm shadow-brand/30">+{CHARM_PRICE}฿</span>
                   </button>
                 </div>
               )}
@@ -485,7 +485,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                         onClick={() => selectOption(option.label)}
                         className={`flex h-9 items-center justify-center rounded-2xl border-2 px-4 text-sm font-black transition-all ${
                           selected
-                            ? "border-[#85241F] bg-[#fce8e7] text-[#85241F]"
+                            ? "border-brand bg-brand-tint text-brand"
                             : soldOut
                             ? "cursor-not-allowed border-gray-100 bg-gray-50 text-gray-300"
                             : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
@@ -521,7 +521,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                 type="button"
                 onClick={() => setQuantity((q) => Math.min(selectedOptionStock, q + 1))}
                 disabled={mustSelectOption || selectedOptionOutOfStock || quantity >= selectedOptionStock}
-                className="w-8 h-8 rounded-full bg-[#85241F] flex items-center justify-center text-white hover:bg-[#6b1c18] transition-colors text-lg leading-none disabled:bg-gray-200 disabled:text-gray-400"
+                className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-white hover:bg-[#6b1c18] transition-colors text-lg leading-none disabled:bg-gray-200 disabled:text-gray-400"
               >
                 +
               </button>
@@ -539,14 +539,14 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                   <div className="flex items-center justify-between px-5 pt-5 pb-4">
                     {/* Step indicator */}
                     <div className="flex items-center gap-2">
-                      <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black transition-colors ${charmStep === "color" ? "bg-[#85241F] text-white" : "bg-emerald-500 text-white"}`}>
+                      <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black transition-colors ${charmStep === "color" ? "bg-brand text-white" : "bg-emerald-500 text-white"}`}>
                         {charmStep === "color" ? "1" : "✓"}
                       </div>
                       <span className={`text-[11px] font-black ${charmStep === "color" ? "text-gray-900" : "text-emerald-600"}`}>
                         {t("charm.color_step")}
                       </span>
                       <div className={`h-px w-6 ${charmStep === "color" ? "bg-gray-200" : "bg-emerald-300"}`} />
-                      <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black transition-colors ${charmStep === "letters" ? "bg-[#85241F] text-white" : "bg-gray-100 text-gray-400"}`}>
+                      <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black transition-colors ${charmStep === "letters" ? "bg-brand text-white" : "bg-gray-100 text-gray-400"}`}>
                         2
                       </div>
                       <span className={`text-[11px] font-black ${charmStep === "letters" ? "text-gray-900" : "text-gray-400"}`}>
@@ -579,7 +579,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                               onClick={() => setTempColor(option.label)}
                               className="flex flex-col items-center gap-0.5 p-1 transition-all cursor-pointer"
                             >
-                              <span className={`text-[9px] font-black leading-tight text-center ${selected ? "text-[#85241F]" : "text-gray-400"}`}>
+                              <span className={`text-[9px] font-black leading-tight text-center ${selected ? "text-brand" : "text-gray-400"}`}>
                                 {displayName}
                               </span>
                               {option.imageUrl ? (
@@ -587,11 +587,11 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                                 <img
                                   src={option.imageUrl}
                                   alt={displayName}
-                                  className={`h-16 w-16 rounded-2xl object-cover border-2 transition-all ${selected ? "border-[#85241F] scale-105" : "border-transparent"}`}
+                                  className={`h-16 w-16 rounded-2xl object-cover border-2 transition-all ${selected ? "border-brand scale-105" : "border-transparent"}`}
                                 />
                               ) : (
                                 <div
-                                  className={`h-14 w-14 rounded-2xl border-2 transition-all bg-gray-200 ${selected ? "border-[#85241F] scale-105" : "border-transparent"}`}
+                                  className={`h-14 w-14 rounded-2xl border-2 transition-all bg-gray-200 ${selected ? "border-brand scale-105" : "border-transparent"}`}
                                 />
                               )}
                             </button>
@@ -602,7 +602,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                         type="button"
                         onClick={() => setCharmStep("letters")}
                         disabled={!tempColor}
-                        className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#85241F] text-sm font-black text-white shadow-lg shadow-[#85241F]/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
+                        className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-brand text-sm font-black text-white shadow-lg shadow-brand/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
                       >
                         {t("charm.next_add_letters")}
                       </button>
@@ -616,7 +616,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                       <div className="mb-3 flex items-center gap-2">
                         <div className="flex items-center gap-1">
                           {Array.from({ length: FREE_LETTERS }).map((_, i) => (
-                            <span key={i} className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black ${i < tempLetters.length ? "bg-[#85241F] text-white" : "bg-gray-900 text-white opacity-20"}`}>
+                            <span key={i} className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black ${i < tempLetters.length ? "bg-brand text-white" : "bg-gray-900 text-white opacity-20"}`}>
                               {tempLetters[i] ?? "•"}
                             </span>
                           ))}
@@ -636,7 +636,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                             tempLetters.map((letter, idx) => (
                               <span
                                 key={idx}
-                                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#85241F] text-sm font-black text-white shadow-sm"
+                                className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-sm font-black text-white shadow-sm"
                               >
                                 {letter}
                               </span>
@@ -669,7 +669,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                             {tempExtraLetters > 0 && ` · ตัวอักษร +${tempExtraLetters}×${LETTER_PRICE}฿`}
                           </span>
                         </div>
-                        <span className="font-black text-[#85241F]">+{tempCharmAddon}฿</span>
+                        <span className="font-black text-brand">+{tempCharmAddon}฿</span>
                       </div>
 
                       {/* A–Z grid */}
@@ -684,7 +684,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                               }
                             }}
                             disabled={tempLetters.length >= MAX_LETTERS}
-                            className="flex h-10 w-full items-center justify-center rounded-xl bg-gray-100 text-sm font-black text-gray-700 transition-all hover:bg-[#fce8e7] hover:text-[#85241F] active:scale-90 disabled:opacity-30"
+                            className="flex h-10 w-full items-center justify-center rounded-xl bg-gray-100 text-sm font-black text-gray-700 transition-all hover:bg-brand-tint hover:text-brand active:scale-90 disabled:opacity-30"
                           >
                             {letter}
                           </button>
@@ -704,7 +704,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                           type="button"
                           onClick={confirmCharm}
                           disabled={tempLetters.length < 2}
-                          className="flex h-12 flex-1 items-center justify-center rounded-2xl bg-[#85241F] text-sm font-black text-white shadow-lg shadow-[#85241F]/20 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none disabled:shadow-none"
+                          className="flex h-12 flex-1 items-center justify-center rounded-2xl bg-brand text-sm font-black text-white shadow-lg shadow-brand/20 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none disabled:shadow-none"
                         >
                           {t("charm.confirm")}
                         </button>
@@ -727,7 +727,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                 type="button"
                 onClick={(e) => handleAddToCart(e.currentTarget)}
                 disabled={mustSelectOption || selectedOptionOutOfStock}
-                className="flex items-center justify-center w-11 h-11 rounded-2xl bg-[#fce8e7] text-[#85241F] active:scale-95 transition-transform shrink-0 disabled:opacity-45 disabled:active:scale-100"
+                className="flex items-center justify-center w-11 h-11 rounded-2xl bg-brand-tint text-brand active:scale-95 transition-transform shrink-0 disabled:opacity-45 disabled:active:scale-100"
               >
                 <span className="relative">
                   <ShoppingCart className="h-5 w-5" />
@@ -738,7 +738,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                 type="button"
                 onClick={handleBuyNow}
                 disabled={mustSelectOption || selectedOptionOutOfStock}
-                className="flex-1 flex items-center justify-center rounded-2xl bg-[#85241F] h-11 text-sm font-bold text-white active:scale-95 transition-transform disabled:bg-gray-300 disabled:text-gray-500 disabled:active:scale-100"
+                className="flex-1 flex items-center justify-center rounded-2xl bg-brand h-11 text-sm font-bold text-white active:scale-95 transition-transform disabled:bg-gray-300 disabled:text-gray-500 disabled:active:scale-100"
               >
                 {t("product.buy_now")}
               </button>
@@ -761,7 +761,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
               type="button"
               onClick={(e) => handleAddToCart(e.currentTarget)}
               disabled={mustSelectOption || selectedOptionOutOfStock}
-              className="flex items-center justify-center w-11 h-11 rounded-2xl bg-[#fce8e7] text-[#85241F] active:scale-95 transition-transform shrink-0 disabled:opacity-45 disabled:active:scale-100"
+              className="flex items-center justify-center w-11 h-11 rounded-2xl bg-brand-tint text-brand active:scale-95 transition-transform shrink-0 disabled:opacity-45 disabled:active:scale-100"
             >
               <span className="relative">
                 <ShoppingCart className="h-5 w-5" />
@@ -772,7 +772,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
               type="button"
               onClick={handleBuyNow}
               disabled={mustSelectOption || selectedOptionOutOfStock}
-              className="flex-1 flex items-center justify-center rounded-2xl bg-[#85241F] h-11 text-sm font-bold text-white active:scale-95 transition-transform disabled:bg-gray-300 disabled:text-gray-500 disabled:active:scale-100"
+              className="flex-1 flex items-center justify-center rounded-2xl bg-brand h-11 text-sm font-bold text-white active:scale-95 transition-transform disabled:bg-gray-300 disabled:text-gray-500 disabled:active:scale-100"
             >
               {t("product.buy_now")}
             </button>
@@ -814,7 +814,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                 setCharmPrompt(null);
                 openCharmModal();
               }}
-              className="w-full rounded-2xl bg-[#85241F] py-3.5 text-sm font-black text-white cursor-pointer active:scale-[0.98] transition-transform"
+              className="w-full rounded-2xl bg-brand py-3.5 text-sm font-black text-white cursor-pointer active:scale-[0.98] transition-transform"
             >
               {t("charm.add_with_price")}
             </button>

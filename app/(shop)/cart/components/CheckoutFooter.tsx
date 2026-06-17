@@ -77,14 +77,14 @@ export function CheckoutFooter({
               <button
                 type="button"
                 onClick={() => setShowRates((v) => !v)}
-                className={`flex items-center justify-center h-9 w-9 rounded-xl transition-colors shrink-0 ${showRates ? "bg-[#85241F] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+                className={`flex items-center justify-center h-9 w-9 rounded-xl transition-colors shrink-0 ${showRates ? "bg-brand text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
               >
                 <Truck className="h-4 w-4" />
               </button>
               <span className="text-gray-300">|</span>
             </>
           )}
-          <span className="text-base font-black text-[#85241F]">{money(total)}</span>
+          <span className="text-base font-black text-brand">{money(total)}</span>
         </div>
 
         <Button
@@ -92,7 +92,7 @@ export function CheckoutFooter({
           form={buttonType === "submit" ? formId : undefined}
           onClick={onButtonClick}
           disabled={disabled || loading}
-          className="h-13 w-[35%] shrink-0 rounded-2xl bg-[#85241F] px-5 text-base font-black hover:bg-[#B72D2A] shadow-lg shadow-[#85241F]/20"
+          className="h-13 w-[35%] shrink-0 rounded-2xl bg-brand px-5 text-base font-black hover:bg-brand-hover shadow-lg shadow-brand/20"
         >
           {loading ? "..." : buttonLabel}{count != null ? ` (${count})` : ""}
         </Button>

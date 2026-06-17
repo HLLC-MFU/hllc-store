@@ -26,7 +26,7 @@ function TimePickerSelect({ value, onChange, placeholder }: { value: string; onC
         type="button"
         onClick={() => setOpen(true)}
         className={`flex h-11 w-full items-center gap-2 rounded-xl border bg-white px-3 text-left shadow-sm transition-all text-sm ${
-          value ? "border-[#85241F] ring-4 ring-[#85241F]/10" : "border-input hover:border-[#85241F]/40"
+          value ? "border-brand ring-4 ring-brand/10" : "border-input hover:border-brand/40"
         }`}
       >
         <Clock3 className="h-4 w-4 shrink-0 text-gray-400" />
@@ -53,7 +53,7 @@ function TimePickerSelect({ value, onChange, placeholder }: { value: string; onC
                     type="button"
                     onClick={() => { onChange(slot); setOpen(false); }}
                     className={`flex h-10 items-center justify-center gap-1 rounded-xl text-xs font-black transition-all ${
-                      selected ? "bg-[#85241F] text-white shadow-sm" : "bg-gray-50 text-gray-600 hover:bg-[#85241F]/10 hover:text-[#85241F]"
+                      selected ? "bg-brand text-white shadow-sm" : "bg-gray-50 text-gray-600 hover:bg-brand/10 hover:text-brand"
                     }`}
                   >
                     {selected && <Check className="h-3 w-3" />}
@@ -195,7 +195,7 @@ export function ShippingSettingsPanel({ settings, loading, onSave }: Props) {
             </div>
           </div>
 
-          <Button disabled={loading} className="h-11 rounded-xl bg-[#85241F] font-black hover:bg-[#B72D2A]" type="submit">
+          <Button disabled={loading} className="h-11 rounded-xl bg-brand font-black hover:bg-brand-hover" type="submit">
             <Save className="h-4 w-4" /> บันทึกค่าจัดส่ง
           </Button>
         </form>

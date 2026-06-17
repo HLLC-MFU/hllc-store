@@ -77,9 +77,9 @@ export function PaymentStep({
         {lang === "th" ? "กลับ" : "Back"}
       </button>
 
-      <div className="rounded-2xl bg-[#85241F]/5 p-4 text-center">
+      <div className="rounded-2xl bg-brand/5 p-4 text-center">
         <p className="text-xs font-bold text-gray-500">{t("checkout.payment_amount")}</p>
-        <p className="mt-1 text-2xl font-black text-[#85241F]">{money(selectedPayableTotal)}</p>
+        <p className="mt-1 text-2xl font-black text-brand">{money(selectedPayableTotal)}</p>
       </div>
 
       {!settings ? (
@@ -87,7 +87,7 @@ export function PaymentStep({
       ) : (
         <div className={`rounded-2xl border p-3 transition-all duration-300 ${copied ? "border-emerald-500 bg-emerald-50/70 ring-1 ring-emerald-500/10" : "border-gray-200 bg-white"}`}>
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#85241F]/10 text-[#85241F]">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
               <Landmark className="h-6 w-6" />
             </div>
             <div className="min-w-0 flex-1">
@@ -96,7 +96,7 @@ export function PaymentStep({
               </p>
               <p className="mt-0.5 text-sm font-black text-gray-950">{settings.bankName}</p>
               <p className="mt-1 truncate text-xs font-bold text-gray-500">{settings.bankAccountName}</p>
-              <p className="mt-1 font-mono text-lg font-black tracking-wide text-[#85241F]">{settings.bankAccountNumber}</p>
+              <p className="mt-1 font-mono text-lg font-black tracking-wide text-brand">{settings.bankAccountNumber}</p>
             </div>
             <button
               type="button"

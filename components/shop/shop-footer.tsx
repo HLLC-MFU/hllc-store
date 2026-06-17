@@ -37,7 +37,7 @@ const CONTACT = {
 
 export function ShopFooter() {
   return (
-    <footer className="bg-[#85241F]">
+    <footer className="bg-brand">
       <div className="mx-auto max-w-sm px-6 pt-8 pb-28 flex flex-col items-center gap-5">
 
         <p className="text-[11px] font-black uppercase tracking-widest text-white/50">ติดต่อเรา</p>

@@ -46,7 +46,7 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
             </div>
           )}
           {product.discount ? (
-            <Badge className="absolute top-3 left-3 bg-[#85241F] text-white text-[10px] font-black px-2 py-0.5 rounded-lg">
+            <Badge className="absolute top-3 left-3 bg-brand text-white text-[10px] font-black px-2 py-0.5 rounded-lg">
               -{product.discount}%
             </Badge>
           ) : null}
@@ -69,11 +69,11 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
             <div className="flex flex-col gap-0.5">
               {discountedPrice ? (
                 <>
-                  <span className="text-2xl font-black text-[#85241F]">{money(discountedPrice)}</span>
+                  <span className="text-2xl font-black text-brand">{money(discountedPrice)}</span>
                   <span className="text-xs text-gray-400 line-through font-bold">{money(product.price)}</span>
                 </>
               ) : (
-                <span className="text-2xl font-black text-[#85241F]">{money(product.price)}</span>
+                <span className="text-2xl font-black text-brand">{money(product.price)}</span>
               )}
             </div>
             <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-xl px-3 py-1.5">
@@ -125,7 +125,7 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
             <div className="flex gap-2 pt-1">
               <Button
                 onClick={() => { onEdit(product); onClose(); }}
-                className="flex-1 bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-10 text-xs font-bold cursor-pointer"
+                className="flex-1 bg-brand hover:bg-brand-hover rounded-xl h-10 text-xs font-bold cursor-pointer"
               >
                 <Pencil className="w-3.5 h-3.5 mr-1.5" /> แก้ไข
               </Button>

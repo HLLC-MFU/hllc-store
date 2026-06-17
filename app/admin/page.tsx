@@ -524,7 +524,7 @@ export default function AdminPage() {
       {activeTab === "products" && (
         <button
           onClick={() => setShowAddProduct(true)}
-          className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-[#85241F] hover:bg-[#B72D2A] text-white rounded-full shadow-xl shadow-[#85241F]/30 flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+          className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-brand hover:bg-brand-hover text-white rounded-full shadow-xl shadow-brand/30 flex items-center justify-center transition-all active:scale-95 cursor-pointer"
         >
           <PackagePlus className="w-6 h-6" />
         </button>
@@ -578,7 +578,7 @@ function StorefrontPanel({ notify }: { notify: (msg: string) => void }) {
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 rounded-2xl bg-[#85241F] hover:bg-[#B72D2A] disabled:opacity-50 text-white px-8 py-2.5 text-sm font-black transition-colors cursor-pointer"
+          className="flex items-center gap-2 rounded-2xl bg-brand hover:bg-brand-hover disabled:opacity-50 text-white px-8 py-2.5 text-sm font-black transition-colors cursor-pointer"
         >
           {saving ? "กำลังบันทึก..." : "บันทึก"}
         </button>

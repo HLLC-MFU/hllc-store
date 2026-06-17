@@ -31,7 +31,7 @@ export function EmailPanel({ lang, emailForm, setEmailForm, emailSending, onSubm
               <h2 className="text-sm font-black text-gray-900">Email Mockup</h2>
               <p className="mt-1 text-xs font-semibold text-gray-400">Send a Gmail test message from the admin panel.</p>
             </div>
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#85241F]/10 text-[#85241F]">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
               <Mail className="h-5 w-5" />
             </div>
           </div>
@@ -64,7 +64,7 @@ export function EmailPanel({ lang, emailForm, setEmailForm, emailSending, onSubm
                 onChange={(e) => setEmailForm((f) => ({ ...f, text: e.target.value }))}
                 placeholder="Email text"
                 rows={5}
-                className="min-h-28 rounded-xl border border-gray-200 bg-white px-3 py-3 text-xs font-semibold text-gray-700 outline-none transition-colors placeholder:text-gray-300 focus:border-[#85241F]"
+                className="min-h-28 rounded-xl border border-gray-200 bg-white px-3 py-3 text-xs font-semibold text-gray-700 outline-none transition-colors placeholder:text-gray-300 focus:border-brand"
               />
             </label>
             <label className="grid gap-1.5">
@@ -74,10 +74,10 @@ export function EmailPanel({ lang, emailForm, setEmailForm, emailSending, onSubm
                 onChange={(e) => setEmailForm((f) => ({ ...f, html: e.target.value }))}
                 placeholder="<p>Email html</p>"
                 rows={5}
-                className="min-h-28 rounded-xl border border-gray-200 bg-white px-3 py-3 font-mono text-xs text-gray-700 outline-none transition-colors placeholder:text-gray-300 focus:border-[#85241F]"
+                className="min-h-28 rounded-xl border border-gray-200 bg-white px-3 py-3 font-mono text-xs text-gray-700 outline-none transition-colors placeholder:text-gray-300 focus:border-brand"
               />
             </label>
-            <Button disabled={emailSending} className="mt-2 h-11 rounded-xl bg-[#85241F] font-black hover:bg-[#B72D2A]">
+            <Button disabled={emailSending} className="mt-2 h-11 rounded-xl bg-brand font-black hover:bg-brand-hover">
               <Send className="h-4 w-4" />
               {emailSending ? "Sending..." : "Send Test Email"}
             </Button>

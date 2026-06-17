@@ -63,7 +63,7 @@ export function CategoryBlocks({ blocks, fullPage = false }: { blocks: CategoryB
             </div>
 
             <div className="absolute bottom-5 right-5">
-              <span className="inline-flex h-9 items-center justify-center gap-1.5 rounded-2xl bg-[#85241F] px-4 text-xs font-black text-white shadow-lg shadow-black/20">
+              <span className="inline-flex h-9 items-center justify-center gap-1.5 rounded-2xl bg-brand px-4 text-xs font-black text-white shadow-lg shadow-black/20">
                 {block.hasSubBlocks
                   ? (lang === "th" ? "เลือกดู" : "Browse")
                   : (lang === "th" ? "ช้อปเลย" : "Shop now")}

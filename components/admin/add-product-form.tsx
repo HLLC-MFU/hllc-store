@@ -277,8 +277,8 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
             {isEditMode
-              ? <Pencil className="w-5 h-5 text-[#85241F]" />
-              : <PackagePlus className="w-5 h-5 text-[#85241F]" />}
+              ? <Pencil className="w-5 h-5 text-brand" />
+              : <PackagePlus className="w-5 h-5 text-brand" />}
             <span className="font-black text-gray-900">
               {isEditMode
               ? t("admin.products.edit.title")
@@ -306,10 +306,10 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                 return (
                   <React.Fragment key={n}>
                     <div className="flex flex-col items-center gap-1 min-w-0">
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${done ? "bg-emerald-500 text-white" : active ? "bg-[#85241F] text-white" : "bg-gray-100 text-gray-400"}`}>
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${done ? "bg-emerald-500 text-white" : active ? "bg-brand text-white" : "bg-gray-100 text-gray-400"}`}>
                         {done ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : <s.Icon className="w-3.5 h-3.5" />}
                       </div>
-                      <span className={`text-[9px] font-black whitespace-nowrap ${active ? "text-[#85241F]" : done ? "text-emerald-600" : "text-gray-300"}`}>{s.label}</span>
+                      <span className={`text-[9px] font-black whitespace-nowrap ${active ? "text-brand" : done ? "text-emerald-600" : "text-gray-300"}`}>{s.label}</span>
                     </div>
                     {i < steps.length - 1 && (
                       <div className={`flex-1 h-0.5 mb-4 mx-1 rounded-full transition-all ${n < step ? "bg-emerald-400" : "bg-gray-100"}`} />
@@ -348,7 +348,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={src} alt="" className="w-full h-full object-cover rounded-xl border border-gray-200" />
                         {idx === 0 && (
-                          <span className="absolute top-1 left-1 bg-[#85241F] text-white text-[8px] font-black px-1.5 py-0.5 rounded-md">{t("admin.products.image.primary")}</span>
+                          <span className="absolute top-1 left-1 bg-brand text-white text-[8px] font-black px-1.5 py-0.5 rounded-md">{t("admin.products.image.primary")}</span>
                         )}
                         <button type="button" onClick={() => removeImage(idx)} disabled={uploading}
                           className="absolute top-1 right-1 w-6 h-6 bg-white rounded-full shadow flex items-center justify-center cursor-pointer">
@@ -358,7 +358,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                     ))}
                     {imagePreviews.length < MAX_IMAGES && (
                       <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
-                        className="aspect-square border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 hover:border-[#85241F]/30 transition-colors cursor-pointer disabled:opacity-50">
+                        className="aspect-square border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 hover:border-brand/30 transition-colors cursor-pointer disabled:opacity-50">
                         <Upload className="w-4 h-4 text-gray-400" />
                         <span className="text-[9px] text-gray-400 font-bold">{uploading ? "กำลังอัปโหลด..." : t("admin.products.image.add")}</span>
                       </button>
@@ -366,7 +366,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                   </div>
                 ) : (
                   <button type="button" onClick={() => { fileRef.current?.click(); setImageError(false); clearError("image"); }} disabled={uploading}
-                    className={`w-full border-2 border-dashed rounded-xl py-6 flex flex-col items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 ${imageError || err("image") ? "border-red-400 bg-red-50" : "border-gray-200 hover:border-[#85241F]/30"}`}>
+                    className={`w-full border-2 border-dashed rounded-xl py-6 flex flex-col items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 ${imageError || err("image") ? "border-red-400 bg-red-50" : "border-gray-200 hover:border-brand/30"}`}>
                     <Upload className={`w-5 h-5 ${imageError ? "text-red-400" : "text-gray-400"}`} />
                     <span className={`text-xs font-bold ${imageError ? "text-red-500" : "text-gray-400"}`}>
                       {uploading ? "กำลังอัปโหลด..." : imageError ? t("admin.products.image.required") : t("admin.products.image.upload")}
@@ -419,7 +419,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                   <div className="flex items-center justify-between">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">ตัวเลือกสี <span className="normal-case font-medium tracking-normal text-gray-300">(ไม่บังคับ)</span></p>
                     <button type="button" onClick={addBottleColor}
-                      className="flex items-center gap-1 text-[10px] font-black text-[#85241F] hover:text-[#B72D2A] transition-colors">
+                      className="flex items-center gap-1 text-[10px] font-black text-brand hover:text-brand-hover transition-colors">
                       <Plus className="h-3 w-3" /> เพิ่มสี
                     </button>
                   </div>
@@ -441,8 +441,8 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                                 </button>
                               </div>
                             ) : (
-                              <label className="flex h-11 w-11 shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border-2 border-dashed border-gray-200 hover:border-[#85241F]/40 transition-colors">
-                                <Upload className={`h-3 w-3 ${isUp ? "text-[#85241F] animate-pulse" : "text-gray-300"}`} />
+                              <label className="flex h-11 w-11 shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border-2 border-dashed border-gray-200 hover:border-brand/40 transition-colors">
+                                <Upload className={`h-3 w-3 ${isUp ? "text-brand animate-pulse" : "text-gray-300"}`} />
                                 <span className="text-[7px] font-bold text-gray-300">{isUp ? "..." : "รูป"}</span>
                                 <input type="file" accept="image/*" className="hidden" disabled={!!colorUploading || uploading}
                                   onChange={(e) => handleColorUpload(color.id, e)} />
@@ -454,14 +454,14 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                                 value={color.label}
                                 onChange={(e) => updateBottleColor(color.id, { label: e.target.value })}
                                 placeholder="ชื่อสี เช่น ฟ้า, แดง"
-                                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-800 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-[#85241F]/30"
+                                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-800 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-brand/30"
                               />
                               <input
                                 type="text"
                                 value={color.labelEn}
                                 onChange={(e) => updateBottleColor(color.id, { labelEn: e.target.value })}
                                 placeholder="Color name e.g. Blue"
-                                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-800 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-[#85241F]/30"
+                                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-800 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-brand/30"
                               />
                             </div>
                             <button type="button" onClick={() => removeBottleColor(color.id)}
@@ -544,7 +544,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                 <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
                   <label className="flex items-center justify-between gap-2 cursor-pointer">
                     <span className="text-[11px] font-bold text-gray-600">ให้ลูกค้าใส่ชื่อกำหนดเอง (สติกเกอร์ชื่อ)</span>
-                    <input type="checkbox" checked={allowCustomName} onChange={(e) => setAllowCustomName(e.target.checked)} className="h-4 w-4 accent-[#85241F]" />
+                    <input type="checkbox" checked={allowCustomName} onChange={(e) => setAllowCustomName(e.target.checked)} className="h-4 w-4 accent-brand" />
                   </label>
                   {allowCustomName && (
                     <div className="mt-2.5 flex items-center gap-2">
@@ -593,7 +593,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                     setStep((s) => s + 1);
                     setTimeout(() => { blockSubmit.current = false; }, 400);
                   }}
-                  className="flex-1 bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-11 text-xs font-bold text-white disabled:opacity-40"
+                  className="flex-1 bg-brand hover:bg-brand-hover rounded-xl h-11 text-xs font-bold text-white disabled:opacity-40"
                 >
                   ถัดไป →
                 </Button>
@@ -609,7 +609,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                     }
                     formRef.current?.requestSubmit();
                   }}
-                  className="flex-1 bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-11 text-xs font-bold shadow-md shadow-[#85241F]/10 disabled:opacity-50"
+                  className="flex-1 bg-brand hover:bg-brand-hover rounded-xl h-11 text-xs font-bold shadow-md shadow-brand/10 disabled:opacity-50"
                 >
                   {isEditMode
                     ? <><Pencil className="w-4 h-4 mr-1" /> บันทึก</>
@@ -649,7 +649,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
             <Button
               type="button"
               onClick={() => setValidationMissing(null)}
-              className="mt-4 h-11 w-full rounded-2xl bg-[#85241F] text-xs font-bold text-white shadow-md shadow-[#85241F]/10 hover:bg-[#B72D2A]"
+              className="mt-4 h-11 w-full rounded-2xl bg-brand text-xs font-bold text-white shadow-md shadow-brand/10 hover:bg-brand-hover"
             >
               กลับไปกรอกข้อมูล
             </Button>

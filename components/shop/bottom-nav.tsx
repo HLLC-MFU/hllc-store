@@ -32,7 +32,7 @@ export function BottomNav() {
               <div className="relative" id={href === "/cart" ? "nav-cart-icon" : undefined}>
                 <Icon className={`w-6 h-6 transition-colors ${active ? "text-blue-600" : "text-gray-400"}`} />
                 {href === "/cart" && count > 0 ? (
-                  <span className="absolute -top-2 -right-2 min-w-4 h-4 rounded-full bg-[#85241F] px-1 text-[9px] leading-4 text-white font-black text-center">
+                  <span className="absolute -top-2 -right-2 min-w-4 h-4 rounded-full bg-brand px-1 text-[9px] leading-4 text-white font-black text-center">
                     {count > 9 ? "9+" : count}
                   </span>
                 ) : null}

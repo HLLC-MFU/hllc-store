@@ -321,7 +321,7 @@ export default function CartPage() {
               <p className="text-lg font-black text-gray-900">{lang === "th" ? "รถเข็นว่างเปล่าเลย!" : "Your cart is empty!"}</p>
               <p className="mt-1 text-sm text-gray-400 font-medium">{lang === "th" ? "ไปเลือกสินค้าที่ถูกใจก่อนนะ" : "Go pick something you like"}</p>
             </div>
-            <Link href="/home" className="mt-2 bg-[#85241F] hover:bg-[#B72D2A] text-white font-black text-sm px-6 py-3 rounded-2xl transition-all active:scale-95 shadow-md shadow-[#85241F]/20">
+            <Link href="/home" className="mt-2 bg-brand hover:bg-brand-hover text-white font-black text-sm px-6 py-3 rounded-2xl transition-all active:scale-95 shadow-md shadow-brand/20">
               {lang === "th" ? "ไปเลือกสินค้า" : "Start shopping"}
             </Link>
           </div>

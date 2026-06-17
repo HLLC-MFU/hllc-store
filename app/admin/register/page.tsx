@@ -80,7 +80,7 @@ export default function AdminRegisterPage() {
                   required
                   placeholder="username"
                   autoComplete="username"
-                  className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-4 text-sm font-semibold text-gray-900 placeholder:text-gray-300 outline-none focus:border-[#85241F] focus:ring-2 focus:ring-[#85241F]/10 transition-all"
+                  className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-4 text-sm font-semibold text-gray-900 placeholder:text-gray-300 outline-none focus:border-brand focus:ring-2 focus:ring-brand/10 transition-all"
                 />
               </div>
             </div>
@@ -97,7 +97,7 @@ export default function AdminRegisterPage() {
                   minLength={8}
                   placeholder="อย่างน้อย 8 ตัวอักษร"
                   autoComplete="new-password"
-                  className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-10 text-sm font-semibold text-gray-900 placeholder:text-gray-300 outline-none focus:border-[#85241F] focus:ring-2 focus:ring-[#85241F]/10 transition-all"
+                  className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-10 text-sm font-semibold text-gray-900 placeholder:text-gray-300 outline-none focus:border-brand focus:ring-2 focus:ring-brand/10 transition-all"
                 />
                 <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer">
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -117,7 +117,7 @@ export default function AdminRegisterPage() {
                   minLength={8}
                   placeholder="••••••••"
                   autoComplete="new-password"
-                  className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-10 text-sm font-semibold text-gray-900 placeholder:text-gray-300 outline-none focus:border-[#85241F] focus:ring-2 focus:ring-[#85241F]/10 transition-all"
+                  className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-10 text-sm font-semibold text-gray-900 placeholder:text-gray-300 outline-none focus:border-brand focus:ring-2 focus:ring-brand/10 transition-all"
                 />
                 <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer">
                   {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -140,7 +140,7 @@ export default function AdminRegisterPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full h-12 bg-[#85241F] hover:bg-[#B72D2A] text-white font-black rounded-2xl text-sm shadow-md shadow-[#85241F]/20 active:scale-[0.98] transition-all cursor-pointer mt-1"
+              className="w-full h-12 bg-brand hover:bg-brand-hover text-white font-black rounded-2xl text-sm shadow-md shadow-brand/20 active:scale-[0.98] transition-all cursor-pointer mt-1"
             >
               {loading ? (
                 <span className="flex items-center gap-2">
@@ -153,7 +153,7 @@ export default function AdminRegisterPage() {
 
           <Link
             href="/admin"
-            className="text-center text-xs font-semibold text-gray-400 hover:text-[#85241F] transition-colors"
+            className="text-center text-xs font-semibold text-gray-400 hover:text-brand transition-colors"
           >
             กลับไปหน้า Login
           </Link>

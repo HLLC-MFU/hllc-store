@@ -85,7 +85,7 @@ export function InfoStep({
             <button
               type="button"
               onClick={() => setDeliveryMode("delivery")}
-              className={`flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-black transition-all ${deliveryMode === "delivery" ? "bg-white text-[#85241F] shadow-sm" : "text-gray-500"}`}
+              className={`flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-black transition-all ${deliveryMode === "delivery" ? "bg-white text-brand shadow-sm" : "text-gray-500"}`}
             >
               <Truck className="h-4 w-4" />
               {t("checkout.delivery")}
@@ -93,7 +93,7 @@ export function InfoStep({
             <button
               type="button"
               onClick={() => setDeliveryMode("pickup")}
-              className={`flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-black transition-all ${deliveryMode === "pickup" ? "bg-white text-[#85241F] shadow-sm" : "text-gray-500"}`}
+              className={`flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-black transition-all ${deliveryMode === "pickup" ? "bg-white text-brand shadow-sm" : "text-gray-500"}`}
             >
               <Store className="h-4 w-4" />
               {t("checkout.pickup")}
@@ -182,8 +182,8 @@ export function InfoStep({
         ) : (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <Store className="h-4 w-4 text-[#85241F]" />
-              <p className="text-sm font-black text-[#85241F]">
+              <Store className="h-4 w-4 text-brand" />
+              <p className="text-sm font-black text-brand">
                 {pickupLocation ? `รับสินค้าเองที่ ${pickupLocation}` : t("checkout.pickup_at_d1")}
               </p>
             </div>
@@ -199,7 +199,7 @@ export function InfoStep({
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3 space-y-2 text-sm font-bold">
           <div className="flex items-center justify-between text-gray-500">
             <span>{selectedCount} {t("shop.items_count")}</span>
-            <span className="text-[#85241F]">{money(selectedTotal)}</span>
+            <span className="text-brand">{money(selectedTotal)}</span>
           </div>
           <div className="flex items-center justify-between text-gray-500">
             <span>{t("checkout.shipping")}</span>
@@ -207,7 +207,7 @@ export function InfoStep({
           </div>
           <div className="flex items-center justify-between border-t border-gray-100 pt-2 text-gray-900">
             <span>{t("checkout.total")}</span>
-            <span className="text-[#85241F]">{money(selectedPayableTotal)}</span>
+            <span className="text-brand">{money(selectedPayableTotal)}</span>
           </div>
         </div>
 

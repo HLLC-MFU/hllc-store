@@ -59,7 +59,7 @@ export function ProductsPanel({
     <div className="flex flex-col gap-4">
       {/* Header row — title + search */}
       <div className="flex items-center gap-3">
-        <div className="flex-1 flex items-center gap-3 rounded-2xl border border-gray-200/60 bg-white px-4 py-3 shadow-2xs focus-within:border-[#85241F] focus-within:ring-2 focus-within:ring-[#85241F]/5 transition-all">
+        <div className="flex-1 flex items-center gap-3 rounded-2xl border border-gray-200/60 bg-white px-4 py-3 shadow-2xs focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/5 transition-all">
           <Search className="h-4 w-4 shrink-0 text-gray-400" />
           <Input
             value={productSearch}

@@ -204,7 +204,7 @@ export function ConfirmationModal({
                 onClick={confirmStatusChange}
                 className={`flex-1 py-2.5 rounded-xl text-xs font-bold text-white cursor-pointer transition-all shadow-md active:scale-98 ${statusConfirm.status === "cancelled"
                     ? "bg-red-500 hover:bg-red-600 shadow-red-500/20"
-                    : "bg-[#85241F] hover:bg-[#B72D2A] shadow-[#85241F]/20"
+                    : "bg-brand hover:bg-brand-hover shadow-brand/20"
                   }`}
               >
                 {t("admin.modal.confirm")}

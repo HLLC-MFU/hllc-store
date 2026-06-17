@@ -97,17 +97,17 @@ export function ShippingLabel({ name, address, phone, lang }: Props) {
     <div className="w-full">
       <div
         id="shipping-label-print"
-        className="label w-full border-2 border-[#85241F] rounded-2xl p-5 bg-white"
+        className="label w-full border-2 border-brand rounded-2xl p-5 bg-white"
       >
         {/* Title */}
-        <p className="recipient-title text-[10px] font-black text-[#85241F] uppercase tracking-widest mb-4">
+        <p className="recipient-title text-[10px] font-black text-brand uppercase tracking-widest mb-4">
           ผู้รับ / Recipient
         </p>
 
         {/* Name */}
         <div className="field-row flex items-end gap-2 mb-3">
           <span className="field-label text-[9px] font-bold text-gray-400 shrink-0 pb-0.5">ชื่อ</span>
-          <div className="field-value flex-1 border-b border-dotted border-[#85241F] pb-0.5 min-h-6 flex items-end">
+          <div className="field-value flex-1 border-b border-dotted border-brand pb-0.5 min-h-6 flex items-end">
             <span className="text-[14px] font-black text-gray-900 leading-none">{name}</span>
           </div>
         </div>
@@ -115,7 +115,7 @@ export function ShippingLabel({ name, address, phone, lang }: Props) {
         {/* Phone */}
         <div className="field-row flex items-end gap-2 mb-3">
           <span className="field-label text-[9px] font-bold text-gray-400 shrink-0 pb-0.5">โทร.</span>
-          <div className="field-value flex-1 border-b border-dotted border-[#85241F] pb-0.5 min-h-6 flex items-end">
+          <div className="field-value flex-1 border-b border-dotted border-brand pb-0.5 min-h-6 flex items-end">
             <span className="text-[13px] font-bold text-gray-900 leading-none font-mono">{phone}</span>
           </div>
         </div>
@@ -123,10 +123,10 @@ export function ShippingLabel({ name, address, phone, lang }: Props) {
         {/* Address */}
         <div className="mb-0">
           <span className="address-label text-[9px] font-bold text-gray-400 block mb-1.5">ที่อยู่</span>
-          <div className="address-value border-b border-dotted border-[#85241F] pb-0.5 min-h-6 flex items-end mb-2.5">
+          <div className="address-value border-b border-dotted border-brand pb-0.5 min-h-6 flex items-end mb-2.5">
             <span className="text-[11px] font-semibold text-gray-900 leading-relaxed">{addressWithoutPostal}</span>
           </div>
-          <div className="address-blank border-b border-dotted border-[#85241F] min-h-6" />
+          <div className="address-blank border-b border-dotted border-brand min-h-6" />
         </div>
 
         {/* Postal code */}
@@ -136,7 +136,7 @@ export function ShippingLabel({ name, address, phone, lang }: Props) {
             {Array.from({ length: 5 }).map((_, i) => (
               <div
                 key={i}
-                className="postal-box w-7 h-7 border-2 border-[#85241F] rounded flex items-center justify-center text-sm font-black text-gray-900"
+                className="postal-box w-7 h-7 border-2 border-brand rounded flex items-center justify-center text-sm font-black text-gray-900"
               >
                 {postalDigits[i] ?? ""}
               </div>
@@ -149,7 +149,7 @@ export function ShippingLabel({ name, address, phone, lang }: Props) {
         type="button"
         onClick={handlePrint}
         variant="outline"
-        className="mt-3 w-full h-11 rounded-2xl border-[#85241F] text-[#85241F] font-black text-sm hover:bg-[#85241F]/5 cursor-pointer"
+        className="mt-3 w-full h-11 rounded-2xl border-brand text-brand font-black text-sm hover:bg-brand/5 cursor-pointer"
       >
         <Printer className="h-4 w-4" />
         {lang === "th" ? "พิมพ์ใบติดพัสดุ" : "Print Shipping Label"}

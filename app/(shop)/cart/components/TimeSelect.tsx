@@ -50,12 +50,12 @@ export function TimeSelect({ name, error, pickupHours }: TimeSelectProps) {
           error
             ? "border-red-400 ring-4 ring-red-100"
             : value
-            ? "border-[#85241F] ring-4 ring-[#85241F]/10"
-            : "border-[#85241F]/15 hover:border-[#85241F]/40"
+            ? "border-brand ring-4 ring-brand/10"
+            : "border-brand/15 hover:border-brand/40"
         }`}
         aria-expanded={open}
       >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#85241F]/10 text-[#85241F]">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
           <Clock3 className="h-5 w-5" />
         </span>
         <span className="min-w-0 flex-1">
@@ -94,8 +94,8 @@ export function TimeSelect({ name, error, pickupHours }: TimeSelectProps) {
                     onClick={() => { setValue(slot); setOpen(false); }}
                     className={`flex h-12 items-center justify-center gap-1.5 rounded-2xl text-sm font-black transition-all ${
                       selected
-                        ? "bg-[#85241F] text-white shadow-sm"
-                        : "bg-gray-50 text-gray-600 hover:bg-[#85241F]/10 hover:text-[#85241F]"
+                        ? "bg-brand text-white shadow-sm"
+                        : "bg-gray-50 text-gray-600 hover:bg-brand/10 hover:text-brand"
                     }`}
                   >
                     {selected && <Check className="h-3.5 w-3.5" />}

@@ -79,7 +79,7 @@ export function SingleProductCard({ product }: { product: ShopProduct }) {
               {money(p.price)}
             </p>
           </div>
-          <span className="shrink-0 inline-flex h-9 items-center justify-center gap-1.5 rounded-2xl bg-[#85241F] px-4 text-xs font-black text-white shadow-lg shadow-black/20">
+          <span className="shrink-0 inline-flex h-9 items-center justify-center gap-1.5 rounded-2xl bg-brand px-4 text-xs font-black text-white shadow-lg shadow-black/20">
             {t("shop.shop_now")}
             <ArrowRight className="h-3.5 w-3.5" />
           </span>
@@ -140,7 +140,7 @@ export function CategoryGrid({ products }: { products: ShopProduct[] }) {
             </div>
             <div className="px-4 py-3.5 flex flex-col gap-0.5">
               <p className="truncate text-sm font-black text-gray-900">{p.name[lang] || p.name.th}</p>
-              <p className="mt-2 text-base font-black text-[#85241F]">{money(p.price)}</p>
+              <p className="mt-2 text-base font-black text-brand">{money(p.price)}</p>
             </div>
           </>
         );
@@ -158,7 +158,7 @@ export function CategoryGrid({ products }: { products: ShopProduct[] }) {
                 <button
                   type="button"
                   onClick={() => goToProduct(p.id)}
-                  className="flex h-10 w-full items-center justify-center rounded-2xl bg-[#85241F] px-3 text-xs font-black text-white transition-transform active:scale-[0.98]"
+                  className="flex h-10 w-full items-center justify-center rounded-2xl bg-brand px-3 text-xs font-black text-white transition-transform active:scale-[0.98]"
                 >
                   <span className="truncate">{t("shop.choose")}</span>
                 </button>
@@ -195,7 +195,7 @@ export function CategoryGrid({ products }: { products: ShopProduct[] }) {
               <button
                 type="button"
                 onClick={() => goToProduct(p.id)}
-                className="flex h-10 w-full items-center justify-center rounded-2xl bg-[#85241F] px-3 text-xs font-black text-white transition-transform active:scale-[0.98]"
+                className="flex h-10 w-full items-center justify-center rounded-2xl bg-brand px-3 text-xs font-black text-white transition-transform active:scale-[0.98]"
               >
                 <span className="truncate">{t("shop.choose")}</span>
               </button>

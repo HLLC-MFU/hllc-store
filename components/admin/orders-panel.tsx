@@ -128,7 +128,7 @@ export function OrdersPanel({
                     key={key}
                     onClick={() => setStatusFilter(key as typeof statusFilter)}
                     className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      isActive ? "bg-[#85241F] text-white" : "bg-slate-50 text-gray-600 hover:bg-slate-100"
+                      isActive ? "bg-brand text-white" : "bg-slate-50 text-gray-600 hover:bg-slate-100"
                     }`}
                   >
                     <span>{label}</span>
@@ -155,7 +155,7 @@ export function OrdersPanel({
                 onClick={() => setStatusFilter(key as typeof statusFilter)}
                 className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-bold transition-all cursor-pointer border-2 ${
                   isActive
-                    ? "bg-[#85241F] text-white border-[#85241F] shadow-md shadow-[#85241F]/20"
+                    ? "bg-brand text-white border-brand shadow-md shadow-brand/20"
                     : "bg-white text-gray-700 border-gray-200 hover:border-gray-400"
                 }`}
               >
@@ -167,7 +167,7 @@ export function OrdersPanel({
         </div>
 
         {/* Search */}
-        <div className="bg-white border border-gray-200/60 rounded-2xl px-4 py-3 shadow-2xs flex items-center gap-3 focus-within:border-[#85241F] focus-within:ring-2 focus-within:ring-[#85241F]/5 transition-all">
+        <div className="bg-white border border-gray-200/60 rounded-2xl px-4 py-3 shadow-2xs flex items-center gap-3 focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/5 transition-all">
           <Search className="w-4 h-4 text-gray-400 shrink-0" />
           <Input
             value={searchQuery}
