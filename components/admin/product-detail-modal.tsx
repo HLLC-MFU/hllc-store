@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { Image as ImageIcon, Package, Pencil, Trash2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,8 +39,7 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
         {/* Image */}
         <div className="relative w-full aspect-video bg-gray-50 shrink-0 overflow-hidden">
           {product.imageUrls && product.imageUrls[0] ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.imageUrls[0]} alt={product.name.th} className="w-full h-full object-cover" />
+            <Image fill src={product.imageUrls[0]} alt={product.name.th} className="object-cover" sizes="(max-width: 768px) 100vw, 640px" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <ImageIcon className="w-12 h-12 text-gray-200" />

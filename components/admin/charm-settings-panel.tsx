@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { Upload, XCircle } from "lucide-react";
 import * as settingsApi from "@/lib/modules/settings";
 import type { CharmSettings } from "@/lib/modules/settings";
 import { CHARM_COLORS } from "@/lib/config/catalog";
+import { csrfHeaders } from "@/components/admin/api-client";
 
 export function CharmSettingsPanel({ notify, saveRef }: { notify?: (msg: string) => void; saveRef?: React.MutableRefObject<(() => Promise<void>) | null> }) {
   const [images, setImages] = React.useState<Record<string, string>>({});
@@ -32,7 +34,7 @@ export function CharmSettingsPanel({ notify, saveRef }: { notify?: (msg: string)
     setUploading(colorId);
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const res = await fetch("/api/upload", { method: "POST", headers: csrfHeaders(), body: fd });
     setUploading(null);
     if (!res.ok) { notify?.("อัปโหลดรูปไม่สำเร็จ"); return; }
     const data = await res.json() as { url: string };
@@ -75,8 +77,7 @@ export function CharmSettingsPanel({ notify, saveRef }: { notify?: (msg: string)
 
               {imgUrl ? (
                 <div className="relative aspect-square">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={imgUrl} alt={color.label} className="h-full w-full rounded-xl border border-gray-200 object-cover" />
+                  <Image fill src={imgUrl} alt={color.label} className="rounded-xl border border-gray-200 object-cover" sizes="120px" />
                   <button
                     type="button"
                     onClick={() => setImages((prev) => ({ ...prev, [color.id]: "" }))}

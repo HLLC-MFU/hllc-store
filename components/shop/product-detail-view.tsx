@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useRef, useCallback, useMemo, useEffect, type RefObject } from "react";
 import { ChevronLeft, ChevronRight, ShoppingCart, Plus, AlertCircle, X, Delete } from "lucide-react";
@@ -302,15 +303,15 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
               {displayImages.map((src, i) => (
                 <div
                   key={i}
-                  className="w-full h-full shrink-0 snap-center flex items-center justify-center"
+                  className="relative w-full h-full shrink-0 snap-center"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
+                    fill
                     src={src}
                     alt={`${product.name[lang] || product.name.th} ${i + 1}`}
-                    className="w-full h-full object-contain"
-                    loading={i === 0 ? "eager" : "lazy"}
-                    fetchPriority={i === 0 ? "high" : "auto"}
+                    className="object-contain"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    priority={i === 0}
                   />
                 </div>
               ))}
@@ -400,8 +401,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                 <div className="flex items-center gap-3 px-4 py-3.5">
                   <div className="h-9 w-9 shrink-0 rounded-xl overflow-hidden border border-gray-200 shadow-sm flex items-center justify-center">
                     {selectedCharmOption.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={selectedCharmOption.imageUrl} alt={selectedCharmOption.labelEn || selectedCharmOption.label} className="h-full w-full object-cover" />
+                      <Image src={selectedCharmOption.imageUrl} alt={selectedCharmOption.labelEn || selectedCharmOption.label} width={36} height={36} className="h-full w-full object-cover" />
                     ) : (
                       <div className="h-full w-full bg-gray-200" />
                     )}
@@ -439,8 +439,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                     <div className="relative h-11 w-11 shrink-0">
                       <div className="h-full w-full rounded-xl overflow-hidden border border-brand/20 bg-white flex items-center justify-center shadow-sm">
                         {charmImageValues[cycleIdx] ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img key={cycleIdx} src={charmImageValues[cycleIdx]} alt="keychain" className="h-full w-full object-cover animate-in fade-in duration-700" />
+                          <Image key={cycleIdx} src={charmImageValues[cycleIdx]} alt="keychain" width={44} height={44} className="h-full w-full object-cover animate-in fade-in duration-700" />
                         ) : (
                           <Plus className="h-4 w-4 text-brand" />
                         )}
@@ -583,10 +582,11 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                                 {displayName}
                               </span>
                               {option.imageUrl ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
+                                <Image
                                   src={option.imageUrl}
                                   alt={displayName}
+                                  width={64}
+                                  height={64}
                                   className={`h-16 w-16 rounded-2xl object-cover border-2 transition-all ${selected ? "border-brand scale-105" : "border-transparent"}`}
                                 />
                               ) : (
@@ -661,8 +661,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                       <div className="mb-4 flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5 text-[11px]">
                         <div className="flex items-center gap-1.5">
                           {tempCharmOption?.imageUrl && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={tempCharmOption.imageUrl} alt="" className="h-4 w-4 rounded-full border border-white shadow-sm object-cover" />
+                            <Image src={tempCharmOption.imageUrl} alt="" width={16} height={16} className="h-4 w-4 rounded-full border border-white shadow-sm object-cover" />
                           )}
                           <span className="font-semibold text-gray-500">
                             {t("charm.charm_label")} +{CHARM_PRICE}฿
@@ -797,8 +796,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
           {charmImageValues.length > 0 && (
             <div className="flex justify-center gap-2 mb-4">
               {charmImageValues.slice(0, 4).map((url, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={i} src={url} alt="keychain" className="h-12 w-12 rounded-xl object-cover border border-gray-100" />
+                <Image key={i} src={url} alt="keychain" width={48} height={48} className="h-12 w-12 rounded-xl object-cover border border-gray-100" />
               ))}
             </div>
           )}

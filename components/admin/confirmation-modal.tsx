@@ -90,6 +90,7 @@ function SlipLightbox({ images, index, onClose }: { images: string[]; index: num
                 <img
                   src={src}
                   alt={`slip ${idx + 1}`}
+                  loading="lazy"
                   onLoad={() => setLoadStates(prev => ({ ...prev, [idx]: "ok" }))}
                   onError={() => setLoadStates(prev => ({ ...prev, [idx]: "error" }))}
                   className={`max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl border border-white/10 transition-opacity duration-300 ${loadStates[idx] === "ok" ? "opacity-100" : "opacity-0"}`}

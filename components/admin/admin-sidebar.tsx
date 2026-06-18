@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ClipboardList, Images, LayoutDashboard, LogOut, Package, Settings, Users } from "lucide-react";
 import { useLanguage } from "@/lib/client/language-context";
@@ -79,8 +80,7 @@ export function AdminSidebar({ onLogout,
       {/* Brand */}
       <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100">
         <Link href="/admin" className="hover:opacity-80 transition-opacity">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/HLLCLOGO.png" alt="HLLC" className="h-10 w-auto object-contain" />
+          <Image src="/images/HLLCLOGO.png" alt="HLLC" width={160} height={40} className="h-10 w-auto object-contain" priority />
         </Link>
       </div>
 
@@ -109,7 +109,7 @@ export function AdminSidebar({ onLogout,
               <span className="font-semibold text-sm flex-1">{label}</span>
               {count !== null && (
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                  active ? "bg-white/20 text-white" : "bg-gray-100 text-gray-400"
+                  active ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"
                 }`}>
                   {count}
                 </span>
@@ -125,7 +125,7 @@ export function AdminSidebar({ onLogout,
           <button
             type="button"
             onClick={onLogout}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-500 hover:bg-red-50 hover:text-red-500 transition-all cursor-pointer"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-red-50 hover:text-red-600 transition-all cursor-pointer"
           >
             <LogOut className="w-5 h-5 shrink-0" />
             <span className="font-semibold text-sm">ออกจากระบบ</span>

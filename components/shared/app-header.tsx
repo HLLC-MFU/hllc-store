@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { type LucideIcon, ChevronLeft, ClipboardList, Home, LayoutDashboard, Mail, Menu, Package, ShoppingCart, User, X } from "lucide-react";
@@ -130,8 +131,7 @@ export function AppHeader({ navItems = SHOP_NAV, showCart = true, showBack = tru
 
         {/* Center — logo */}
         <Link href={logoHref} onClick={onLogoClick} className="absolute left-1/2 -translate-x-1/2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/HLLCLOGO.png" alt="HLLC" className="h-8 w-auto object-contain" />
+          <Image src="/images/HLLCLOGO.png" alt="HLLC" width={160} height={32} className="h-8 w-auto object-contain" priority />
         </Link>
 
         {/* Right — lang + cart */}

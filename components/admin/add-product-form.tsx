@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
+import NextImage from "next/image";
 import { AlertCircle, Check, DollarSign, FileText, Image, PackagePlus, Pencil, Plus, Upload, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PLACEMENTS, placementByValue, placementValue } from "@/lib/config/catalog";
+import { csrfHeaders } from "@/components/admin/api-client";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Product } from "./types";
 
@@ -69,7 +71,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const res = await fetch("/api/upload", { method: "POST", headers: csrfHeaders(), body: fd });
       if (!res.ok) throw new Error();
       const data = await res.json() as { url: string };
       updateBottleColor(colorId, { imageUrl: data.url });
@@ -177,7 +179,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
         files.slice(0, MAX_IMAGES).map(async (file) => {
           const fd = new FormData();
           fd.append("file", file);
-          const res = await fetch("/api/upload", { method: "POST", body: fd });
+          const res = await fetch("/api/upload", { method: "POST", headers: csrfHeaders(), body: fd });
           if (!res.ok) throw new Error("Upload failed");
           const data = await res.json() as { url: string };
           return data.url;
@@ -345,8 +347,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                   <div className="grid grid-cols-3 gap-2">
                     {imagePreviews.map((src, idx) => (
                       <div key={idx} className="relative aspect-square">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={src} alt="" className="w-full h-full object-cover rounded-xl border border-gray-200" />
+                        <NextImage fill src={src} alt="" className="object-cover rounded-xl border border-gray-200" sizes="(max-width: 640px) 50vw, 200px" />
                         {idx === 0 && (
                           <span className="absolute top-1 left-1 bg-brand text-white text-[8px] font-black px-1.5 py-0.5 rounded-md">{t("admin.products.image.primary")}</span>
                         )}
@@ -433,8 +434,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                           <div key={color.id} className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-2.5 py-2">
                             {color.imageUrl ? (
                               <div className="relative h-11 w-11 shrink-0">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={color.imageUrl} alt={color.label} className="h-full w-full rounded-lg border border-gray-200 object-cover" />
+                                <NextImage src={color.imageUrl} alt={color.label} width={44} height={44} className="h-full w-full rounded-lg border border-gray-200 object-cover" />
                                 <button type="button" onClick={() => updateBottleColor(color.id, { imageUrl: "" })}
                                   className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white shadow">
                                   <XCircle className="h-3 w-3 text-gray-400" />

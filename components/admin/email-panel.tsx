@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Mail, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,8 +97,7 @@ export function EmailPanel({ lang, emailForm, setEmailForm, emailSending, onSubm
             <div className="min-h-72 px-4 py-5">
               <div className="mx-auto max-w-sm rounded-2xl border border-gray-100">
                 <div className="border-b border-gray-100 px-4 py-4">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/images/HLLCLOGO.png" alt="HLLC" className="h-12 w-auto object-contain" />
+                  <Image src="/images/HLLCLOGO.png" alt="HLLC" width={180} height={48} className="h-12 w-auto object-contain" priority />
                 </div>
                 <div className="px-4 py-5">
                   {emailForm.html.trim() ? (

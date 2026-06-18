@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -47,11 +48,12 @@ export function SingleProductCard({ product }: { product: ShopProduct }) {
       {/* Image */}
       <div className="relative aspect-[4/3] w-full bg-gray-100 overflow-hidden">
         {p.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
+            fill
             src={p.imageUrl}
             alt={p.name[lang] || p.name.th}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            sizes="(max-width: 640px) 100vw, 640px"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
@@ -121,11 +123,12 @@ export function CategoryGrid({ products }: { products: ShopProduct[] }) {
           <>
             <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
               {p.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
+                  fill
                   src={p.imageUrl}
                   alt={p.name[lang] || p.name.th}
-                  className={`h-full w-full object-cover ${isOutOfStock ? "" : "transition-transform duration-300 group-hover:scale-105"}`}
+                  className={`object-cover ${isOutOfStock ? "" : "transition-transform duration-300 group-hover:scale-105"}`}
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">

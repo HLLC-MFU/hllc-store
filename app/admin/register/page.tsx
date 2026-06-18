@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Lock, User, KeyRound, Eye, EyeOff } from "lucide-react";
@@ -58,8 +59,7 @@ export default function AdminRegisterPage() {
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/HLLCLOGO.png" alt="HLLC" className="h-16 w-auto object-contain mb-4" />
+          <Image src="/images/HLLCLOGO.png" alt="HLLC" width={240} height={64} className="h-16 w-auto object-contain mb-4" priority />
           <h1 className="text-xl font-black text-gray-900">ตั้งรหัสผ่าน</h1>
           <p className="mt-1 text-xs font-semibold text-gray-400 text-center">
             ใช้ username ที่ superAdmin สร้างไว้ แล้วตั้งรหัสผ่านของคุณเอง

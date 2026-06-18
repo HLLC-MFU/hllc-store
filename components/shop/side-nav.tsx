@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Package, ShoppingCart } from "lucide-react";
@@ -24,8 +25,7 @@ export function SideNav() {
       {/* Brand */}
       <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100">
         <Link href="/home" className="hover:opacity-80 transition-opacity">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/HLLCLOGO.png" alt="HLLC" className="h-10 w-auto object-contain" />
+          <Image src="/images/HLLCLOGO.png" alt="HLLC" width={160} height={40} className="h-10 w-auto object-contain" priority />
         </Link>
         <LanguageChip />
       </div>

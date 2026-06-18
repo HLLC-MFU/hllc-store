@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { createPortal } from "react-dom";
 import {
   ArrowLeft,
@@ -199,8 +200,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       onClick={() => onViewSlip(slipImages, i)}
                       className="w-full h-full shrink-0 snap-center relative group cursor-pointer block"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={src} alt={`slip ${i + 1}`} className="w-full h-full object-cover" />
+                      <Image fill src={src} alt={`slip ${i + 1}`} className="object-cover" sizes="(max-width: 768px) 100vw, 640px" />
                       <div className="absolute inset-0 bg-black/30 flex items-center justify-center transition-colors group-hover:bg-black/45">
                         <span className="text-white text-[11px] font-black bg-black/50 px-3 py-1.5 rounded-xl">กดเพื่อดูสลิป</span>
                       </div>
@@ -715,8 +715,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                   {slipImages.map((src, i) => (
                     <button key={`${src}-${i}`} type="button" onClick={() => onViewSlip(slipImages, i)}
                       className="w-full h-full shrink-0 snap-center relative group cursor-pointer block">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={src} alt={`slip ${i + 1}`} className="w-full h-full object-cover" />
+                      <Image fill src={src} alt={`slip ${i + 1}`} className="object-cover" sizes="(max-width: 768px) 100vw, 640px" />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 flex items-end px-3 pb-3 transition-colors">
                         <span className="opacity-0 group-hover:opacity-100 text-white text-[9px] font-black bg-black/60 px-2 py-1 rounded-lg">ขยาย</span>
                       </div>

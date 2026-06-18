@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ShoppingCart, Plus, Minus, Image as ImageIcon } from "lucide-react";
 import { useLanguage } from "@/lib/client/language-context";
@@ -71,8 +72,7 @@ function CharmCard({ product, lang }: { product: ShopProduct; lang: "th" | "en" 
       {/* Image */}
       <div className="relative aspect-square overflow-hidden bg-gray-50">
         {product.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.imageUrl} alt={product.name[lang] || product.name.th} className="h-full w-full object-cover" />
+          <Image fill src={product.imageUrl} alt={product.name[lang] || product.name.th} className="object-cover" sizes="(max-width: 640px) 50vw, 25vw" />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             <ImageIcon className="h-10 w-10 text-gray-200" />

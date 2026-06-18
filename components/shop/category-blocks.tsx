@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Image as ImageIcon } from "lucide-react";
 import { useLanguage } from "@/lib/client/language-context";
@@ -37,11 +38,12 @@ export function CategoryBlocks({ blocks, fullPage = false }: { blocks: CategoryB
         >
           <div className={mediaClass}>
             {block.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
+                fill
                 src={block.imageUrl}
                 alt={pick(block.title)}
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                sizes="(max-width: 768px) 100vw, 640px"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center">

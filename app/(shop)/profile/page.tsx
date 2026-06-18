@@ -235,7 +235,7 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
                 {slipPreview ? (
                   <div className="relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={slipPreview} alt="payment slip" className="max-h-56 w-full rounded-lg object-contain" />
+                    <img src={slipPreview} alt="payment slip" loading="lazy" className="max-h-56 w-full rounded-lg object-contain" />
                     <button
                       type="button"
                       onClick={clearNewSlip}
@@ -355,7 +355,7 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
             {slipPreview && (
               <div className="mt-4 rounded-2xl bg-gray-50 p-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={slipPreview} alt="payment slip preview" className="max-h-48 w-full rounded-xl object-contain" />
+                <img src={slipPreview} alt="payment slip preview" loading="lazy" className="max-h-48 w-full rounded-xl object-contain" />
               </div>
             )}
             <div className="mt-5 grid grid-cols-2 gap-2">

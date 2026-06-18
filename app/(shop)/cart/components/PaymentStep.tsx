@@ -120,7 +120,7 @@ export function PaymentStep({
           {slipPreview ? (
             <div className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={slipPreview} alt="payment slip" className="max-h-56 w-full rounded-lg object-contain" />
+              <img src={slipPreview} alt="payment slip" loading="lazy" className="max-h-56 w-full rounded-lg object-contain" />
               <button
                 onClick={onClearSlip}
                 className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-500 shadow"

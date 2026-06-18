@@ -1,26 +1,21 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { Upload, XCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import * as settingsApi from "@/lib/modules/settings";
 import type { HomeContent, HomeBlock } from "@/lib/modules/settings";
-import { CATEGORIES, type HomeBlockId } from "@/lib/config/catalog";
+import { type HomeBlockId } from "@/lib/config/catalog";
+import { csrfHeaders } from "@/components/admin/api-client";
 
-const BLOCK_LABELS: { id: HomeBlockId; label: string; blockLabel: string }[] = (() => {
-  const out: { id: HomeBlockId; label: string; blockLabel: string }[] = [];
-  let catIdx = 0;
-  for (const category of CATEGORIES) {
-    catIdx++;
-    out.push({ id: category.id, label: category.label.th, blockLabel: `Block ${catIdx}` });
-    let groupIdx = 0;
-    for (const group of category.groups ?? []) {
-      groupIdx++;
-      out.push({ id: group.id, label: group.label.th, blockLabel: `Block ${catIdx}.${groupIdx}` });
-    }
-  }
-  return out;
-})();
+const BLOCK_LABELS: { id: HomeBlockId; label: string; blockLabel: string; homepage?: boolean; hidden?: boolean }[] = [
+  { id: "bottle",         label: "ขวดน้ำ",              blockLabel: "Block 1", homepage: true  },
+  { id: "secret-set",     label: "Secret Set",          blockLabel: "Block 3", homepage: true  },
+  { id: "bracelet-charm", label: "สร้อยข้อมือพร้อม Charm", blockLabel: "Block 2", hidden: true    },
+  { id: "bracelet",       label: "Bracelet",            blockLabel: "Block 2.1"                 },
+  { id: "charm",          label: "Charms",              blockLabel: "Block 2.2"                 },
+];
 
 const emptyBlock = (): HomeBlock => ({ imageUrl: "", title: { th: "" }, subtitle: { th: "" } });
 
@@ -65,7 +60,7 @@ export function HomeContentPanel({
     setUploading(id);
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const res = await fetch("/api/upload", { method: "POST", headers: csrfHeaders(), body: fd });
     setUploading(null);
     if (!res.ok) { notify?.("อัปโหลดรูปไม่สำเร็จ"); return; }
     const data = await res.json() as { url: string };
@@ -93,24 +88,31 @@ export function HomeContentPanel({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {BLOCK_LABELS.map(({ id, label, blockLabel }) => {
+      {BLOCK_LABELS.map(({ id, label, blockLabel, homepage, hidden }) => {
         const b = block(id);
 
         return (
-          <div key={id} className="rounded-2xl border border-gray-100 bg-white overflow-hidden flex flex-col">
+          <div key={id} className={`rounded-2xl border bg-white overflow-hidden flex flex-col ${hidden ? "border-gray-100 opacity-60" : "border-gray-100"}`}>
             {/* Card header */}
             <div className="flex items-center gap-2 px-4 pt-4 pb-2">
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{blockLabel}</span>
               <span className="text-[10px] text-gray-300">·</span>
               <span className="text-[10px] font-semibold text-gray-500 truncate">{label}</span>
+              <div className="ml-auto shrink-0">
+                {homepage && (
+                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-black text-emerald-600">หน้าแรก</span>
+                )}
+                {hidden && (
+                  <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[9px] font-black text-gray-400">ซ่อน</span>
+                )}
+              </div>
             </div>
 
             {/* Image */}
             {id !== "charm" && <div className="px-4">
               {b.imageUrl ? (
                 <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={b.imageUrl} alt={label} className="w-full h-full object-cover" />
+                  <Image fill src={b.imageUrl} alt={label} className="object-cover" sizes="(max-width: 640px) 100vw, 480px" />
                   <button
                     type="button"
                     onClick={() => update(id, { imageUrl: "" })}

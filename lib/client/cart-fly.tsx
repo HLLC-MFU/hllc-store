@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useCallback, useRef, useState } from "react";
+import Image from "next/image";
 import { createPortal } from "react-dom";
 
 type FlyDot = {
@@ -79,10 +80,11 @@ function FlyingDot({ dot }: { dot: FlyDot }) {
       }}
     >
       {dot.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={dot.imageUrl}
           alt=""
+          width={SIZE}
+          height={SIZE}
           className="w-full h-full object-cover"
         />
       ) : (

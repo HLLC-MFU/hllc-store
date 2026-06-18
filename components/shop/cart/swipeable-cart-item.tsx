@@ -313,8 +313,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                 <div className="relative border-t border-dashed border-gray-200 px-3 py-2.5 flex items-center gap-2.5" onClick={(e) => e.stopPropagation()}>
                   <div className="h-10 w-10 shrink-0 rounded-xl border border-gray-200 bg-white overflow-hidden flex items-center justify-center">
                     {imgUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={imgUrl} alt={getColorName(charmInfo.colorId, lang, charmOptions)} className="h-full w-full object-cover" />
+                      <Image src={imgUrl} alt={getColorName(charmInfo.colorId, lang, charmOptions)} width={40} height={40} unoptimized className="h-full w-full object-cover" />
                     ) : (
                       <div className="h-5 w-5 rounded-full bg-gray-200" />
                     )}
@@ -393,8 +392,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                 {charmInfo && (
                   <div className="mt-1.5 flex items-center gap-1.5">
                     {charmImages?.[charmInfo.colorId] ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={charmImages[charmInfo.colorId]} alt="" className="h-3 w-3 rounded-full object-cover border border-white shadow-sm shrink-0" />
+                      <Image src={charmImages[charmInfo.colorId]} alt="" width={12} height={12} unoptimized className="h-3 w-3 rounded-full object-cover border border-white shadow-sm shrink-0" />
                     ) : (
                       <div className="h-3 w-3 rounded-full bg-gray-300 border border-white shadow-sm shrink-0" />
                     )}
@@ -479,10 +477,12 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                           {displayName}
                         </span>
                         {option.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
+                          <Image
                             src={option.imageUrl}
                             alt={displayName}
+                            width={64}
+                            height={64}
+                            unoptimized
                             className={`h-16 w-16 rounded-2xl object-cover border-2 transition-all ${isActive ? "border-brand scale-105" : "border-transparent"}`}
                           />
                         ) : (
@@ -555,8 +555,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                 <div className="mb-4 flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5 text-[11px]">
                   <div className="flex items-center gap-1.5">
                     {tempCharmOption?.imageUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={tempCharmOption.imageUrl} alt="" className="h-4 w-4 rounded-full border border-white shadow-sm object-cover" />
+                      <Image src={tempCharmOption.imageUrl} alt="" width={16} height={16} unoptimized className="h-4 w-4 rounded-full border border-white shadow-sm object-cover" />
                     )}
                     <span className="font-semibold text-gray-500">
                       {t("charm.charm_label")} +{CHARM_PRICE}฿
