@@ -1,0 +1,12 @@
+{
+  "files.exclude": {
+    "app": true,
+    "components": true,
+    "lib": true,
+    "next.config.ts": true,
+    "next-env.d.ts": true,
+    "postcss.config.mjs": true,
+    "components.json": true,
+    "public": true
+  }
+}

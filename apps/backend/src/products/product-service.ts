@@ -1,0 +1,336 @@
+import { type Document } from "mongodb";
+import { createProductSchema, imageUrlSchema, parseOrThrow } from "@hllc/shared/validation/schemas";
+import type { CreateProductInput, Product, LocalizedText } from "../types";
+import { getProductCollection } from "./product-module";
+import { assertText, assertNumber, assertObjectId, now, normalizeOptions } from "../validation-utils";
+import { isCategoryId, isGroupId, isCharmType } from "@hllc/shared/config/catalog";
+
+// Taxonomy fields are validated against the fixed catalog; unknown values are
+// dropped so a product never lands in a non-existent category/group.
+function normalizeCategory(value: unknown) {
+  return typeof value === "string" && isCategoryId(value.trim()) ? value.trim() : "";
+}
+
+function normalizeGroup(value: unknown) {
+  return typeof value === "string" && isGroupId(value.trim()) ? value.trim() : "";
+}
+
+// charmType only meaningful when the product sits in the charm group.
+function normalizeCharmType(value: unknown, group: string) {
+  if (group !== "charm") return "";
+  return typeof value === "string" && isCharmType(value.trim()) ? value.trim() : "";
+}
+
+function normalizeImageValue(value: unknown) {
+  if (value === undefined || value === null || value === "") return "";
+  const result = imageUrlSchema.safeParse(value);
+  if (!result.success) {
+    throw new Error(result.error.issues[0]?.message ?? "imageUrl is invalid");
+  }
+  return result.data;
+}
+
+function normalizeOptionImageValue(value: unknown) {
+  if (value === undefined || value === null || value === "") return "";
+  return normalizeImageValue(value);
+}
+
+function createSlug(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+export function toProduct(doc: Document): Product {
+  const imageUrls: string[] = Array.isArray(doc.imageUrls)
+    ? doc.imageUrls.filter((u: unknown) => typeof u === "string" && u)
+    : [];
+
+  let nameObj: LocalizedText = { th: "" };
+  if (doc.name && typeof doc.name === "object") {
+    nameObj = {
+      th: doc.name.th || "",
+      en: doc.name.en || undefined,
+    };
+  } else {
+    nameObj = {
+      th: typeof doc.name === "string" ? doc.name : "",
+      en: typeof doc.nameEn === "string" ? doc.nameEn : undefined,
+    };
+  }
+
+  let descObj: LocalizedText = { th: "" };
+  if (doc.description && typeof doc.description === "object") {
+    descObj = {
+      th: doc.description.th || "",
+      en: doc.description.en || undefined,
+    };
+  } else {
+    descObj = {
+      th: typeof doc.description === "string" ? doc.description : "",
+      en: typeof doc.descriptionEn === "string" ? doc.descriptionEn : undefined,
+    };
+  }
+
+  return {
+    id: doc._id.toString(),
+    name: nameObj,
+    slug: typeof doc.slug === "string" && doc.slug ? doc.slug : createSlug(nameObj.th) || doc._id.toString(),
+    description: descObj,
+    price: Number(doc.price ?? 0),
+    stock: Number(doc.stock ?? 0),
+    shippingFirstItem: Number(doc.shippingFirstItem ?? doc.shipping ?? 0),
+    shippingAdditionalItem: Number(doc.shippingAdditionalItem ?? 0),
+    remoteShippingFirstItem: Number(doc.remoteShippingFirstItem ?? 0),
+    remoteShippingAdditionalItem: Number(doc.remoteShippingAdditionalItem ?? 0),
+    islandShippingFirstItem: Number(doc.islandShippingFirstItem ?? 0),
+    islandShippingAdditionalItem: Number(doc.islandShippingAdditionalItem ?? 0),
+    category: doc.category ?? "",
+    group: doc.group ?? "",
+    charmType: doc.charmType ?? "",
+    allowCustomName: doc.allowCustomName === true,
+    customNameMaxLength: Number(doc.customNameMaxLength) > 0 ? Number(doc.customNameMaxLength) : 12,
+    options: normalizeOptions(doc.options, normalizeOptionImageValue),
+    imageUrl: doc.imageUrl || imageUrls[0] || "",
+    imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+    active: doc.active ?? true,
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+  };
+}
+
+function buildCreateProduct(input: CreateProductInput) {
+  const timestamp = now();
+  const parsed = parseOrThrow(createProductSchema, input);
+  const nameTh = parsed.name.th;
+  const slug = createSlug(parsed.slug || nameTh) || `product-${Date.now()}`;
+
+  return {
+    name: {
+      th: nameTh,
+      en: parsed.name.en ?? "",
+    },
+    slug,
+    description: {
+      th: parsed.description?.th ?? "",
+      en: parsed.description?.en ?? "",
+    },
+    price: parsed.price,
+    stock: parsed.stock,
+    shippingFirstItem: parsed.shippingFirstItem ?? 0,
+    shippingAdditionalItem: parsed.shippingAdditionalItem ?? 0,
+    remoteShippingFirstItem: parsed.remoteShippingFirstItem ?? 0,
+    remoteShippingAdditionalItem: parsed.remoteShippingAdditionalItem ?? 0,
+    islandShippingFirstItem: parsed.islandShippingFirstItem ?? 0,
+    islandShippingAdditionalItem: parsed.islandShippingAdditionalItem ?? 0,
+    category: normalizeCategory(parsed.category),
+    group: normalizeGroup(parsed.group),
+    charmType: normalizeCharmType(parsed.charmType, normalizeGroup(parsed.group)),
+    allowCustomName: parsed.allowCustomName === true,
+    customNameMaxLength: parsed.customNameMaxLength ?? 12,
+    options: normalizeOptions(input.options, normalizeOptionImageValue),
+    imageUrl: normalizeImageValue(input.imageUrl),
+    imageUrls: Array.isArray(input.imageUrls)
+      ? input.imageUrls.map((url) => normalizeImageValue(url)).filter(Boolean)
+      : [],
+    active: input.active ?? true,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+export async function listStoreProducts() {
+  const collection = await getProductCollection();
+  const products = await collection
+    .find({ active: true })
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  return products.map(toProduct);
+}
+
+export async function listAdminProducts() {
+  const collection = await getProductCollection();
+  const products = await collection.find().sort({ createdAt: -1 }).toArray();
+
+  return products.map(toProduct);
+}
+
+export async function createProduct(input: CreateProductInput) {
+  const collection = await getProductCollection();
+  const product = buildCreateProduct(input);
+  const result = await collection.insertOne(product);
+
+  return toProduct({ _id: result.insertedId, ...product });
+}
+
+export async function updateProduct(
+  productId: string,
+  input: Partial<CreateProductInput>,
+) {
+  const collection = await getProductCollection();
+  const updateData: Document = { updatedAt: now() };
+
+  if (input.name !== undefined) {
+    if (input.name.th !== undefined) {
+      updateData["name.th"] = assertText(input.name.th, "name.th");
+      updateData.slug = createSlug(input.slug || input.name.th);
+    }
+    if (input.name.en !== undefined) {
+      updateData["name.en"] = typeof input.name.en === "string" ? input.name.en.trim() : "";
+    }
+  } else if (input.slug !== undefined) {
+    updateData.slug = createSlug(input.slug);
+  }
+
+  if (input.description !== undefined) {
+    if (input.description.th !== undefined) {
+      updateData["description.th"] =
+        typeof input.description.th === "string" ? input.description.th.trim() : "";
+    }
+    if (input.description.en !== undefined) {
+      updateData["description.en"] = typeof input.description.en === "string" ? input.description.en.trim() : "";
+    }
+  }
+
+  if (input.price !== undefined) {
+    updateData.price = assertNumber(input.price, "price");
+  }
+
+  if (input.stock !== undefined) {
+    updateData.stock = assertNumber(input.stock, "stock");
+  }
+
+  if (input.shippingFirstItem !== undefined) {
+    updateData.shippingFirstItem = assertNumber(input.shippingFirstItem, "shippingFirstItem");
+  }
+
+  if (input.shippingAdditionalItem !== undefined) {
+    updateData.shippingAdditionalItem = assertNumber(input.shippingAdditionalItem, "shippingAdditionalItem");
+  }
+
+  if (input.remoteShippingFirstItem !== undefined) {
+    updateData.remoteShippingFirstItem = assertNumber(input.remoteShippingFirstItem, "remoteShippingFirstItem");
+  }
+
+  if (input.remoteShippingAdditionalItem !== undefined) {
+    updateData.remoteShippingAdditionalItem = assertNumber(input.remoteShippingAdditionalItem, "remoteShippingAdditionalItem");
+  }
+
+  if (input.islandShippingFirstItem !== undefined) {
+    updateData.islandShippingFirstItem = assertNumber(input.islandShippingFirstItem, "islandShippingFirstItem");
+  }
+
+  if (input.islandShippingAdditionalItem !== undefined) {
+    updateData.islandShippingAdditionalItem = assertNumber(input.islandShippingAdditionalItem, "islandShippingAdditionalItem");
+  }
+
+  if (input.category !== undefined) {
+    updateData.category = normalizeCategory(input.category);
+  }
+
+  if (input.group !== undefined) {
+    updateData.group = normalizeGroup(input.group);
+  }
+
+  if (input.charmType !== undefined) {
+    // resolve against the group being set in this same update, else the stored group
+    const group = input.group !== undefined ? normalizeGroup(input.group) : "charm";
+    updateData.charmType = normalizeCharmType(input.charmType, group);
+  }
+
+  if (input.allowCustomName !== undefined) {
+    updateData.allowCustomName = input.allowCustomName === true;
+  }
+
+  if (input.customNameMaxLength !== undefined) {
+    updateData.customNameMaxLength = Number(input.customNameMaxLength) > 0 ? Number(input.customNameMaxLength) : 12;
+  }
+
+  if (input.options !== undefined) {
+    updateData.options = normalizeOptions(input.options, normalizeOptionImageValue);
+  }
+
+  if (input.imageUrl !== undefined) {
+    updateData.imageUrl = normalizeImageValue(input.imageUrl);
+  }
+
+  if (input.imageUrls !== undefined) {
+    updateData.imageUrls = Array.isArray(input.imageUrls)
+      ? input.imageUrls.map((url) => normalizeImageValue(url)).filter(Boolean)
+      : [];
+  }
+
+  if (input.active !== undefined) {
+    updateData.active = input.active;
+  }
+
+  const result = await collection.findOneAndUpdate(
+    { _id: assertObjectId(productId, "product id") },
+    { $set: updateData },
+    { returnDocument: "after" },
+  );
+
+  if (!result) {
+    throw new Error("product not found");
+  }
+
+  return toProduct(result);
+}
+
+export async function listAllProductImageUrls(): Promise<string[]> {
+  const collection = await getProductCollection();
+  const products = await collection.find({}, { projection: { imageUrl: 1, imageUrls: 1, options: 1 } }).toArray();
+  const urls: string[] = [];
+  for (const doc of products) {
+    if (doc.imageUrl) urls.push(doc.imageUrl as string);
+    if (Array.isArray(doc.imageUrls)) urls.push(...(doc.imageUrls as string[]).filter(Boolean));
+    if (Array.isArray(doc.options)) {
+      for (const opt of doc.options as Array<{ imageUrl?: string }>) {
+        if (opt.imageUrl) urls.push(opt.imageUrl);
+      }
+    }
+  }
+  return urls;
+}
+
+export async function deleteProduct(productId: string) {
+  const { getMongoClient, getDb } = await import("../mongodb");
+  const client = await getMongoClient();
+  const db = await getDb();
+  const oid = assertObjectId(productId, "product id");
+  const timestamp = new Date().toISOString();
+
+  const session = client.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const result = await db.collection("products").deleteOne({ _id: oid }, { session });
+      if (result.deletedCount === 0) {
+        throw new Error("product not found");
+      }
+
+      await db.collection("orders").updateMany(
+        {
+          "items.productId": oid,
+          status: { $in: ["pending_payment", "payment_review"] },
+        },
+        {
+          $set: {
+            status: "cancelled",
+            cancellationReason: `สินค้า ${productId} ถูกลบออกจากระบบ`,
+            cancelledBy: "system",
+            cancelledAt: timestamp,
+            updatedAt: timestamp,
+          },
+        },
+        { session },
+      );
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  return { success: true };
+}
