@@ -23,4 +23,4 @@ COPY apps/backend ./apps/backend
 COPY package.json pnpm-workspace.yaml ./
 
 EXPOSE 3001
-CMD ["node_modules/.bin/tsx", "apps/backend/src/index.ts"]
+CMD ["apps/backend/node_modules/.bin/tsx", "apps/backend/src/index.ts"]

@@ -21,6 +21,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 RUN pnpm --filter @hllc/shared build
 ENV NODE_ENV=production
+ENV BACKEND_URL=http://backend:3001
 RUN pnpm --filter frontend build
 
 # ── runner ────────────────────────────────────────────────────────────────────
@@ -32,7 +33,7 @@ ENV HOSTNAME=0.0.0.0
 
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/apps/frontend/public ./public
+COPY --from=builder /app/apps/frontend/public ./apps/frontend/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/frontend/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/frontend/.next/static ./apps/frontend/.next/static
 
