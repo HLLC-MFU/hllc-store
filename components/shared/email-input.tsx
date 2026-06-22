@@ -86,7 +86,7 @@ export const EmailInput = forwardRef<HTMLInputElement, EmailInputProps>(
             onBlur={handleBlur}
             aria-invalid={hasError}
             className={cn(
-              "flex w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm outline-none transition-colors placeholder:text-gray-400 focus:border-[#85241F] focus:ring-2 focus:ring-[#85241F]/10",
+              "flex w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm outline-none transition-colors placeholder:text-gray-400 focus:border-brand focus:ring-2 focus:ring-brand/10",
               showIcon && "pl-10",
               hasError
                 ? "border-red-300 focus:border-red-400 focus:ring-red-100"

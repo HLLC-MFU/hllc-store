@@ -32,6 +32,7 @@ export type Product = {
 
 export type ProductOption = {
   label: string;
+  labelEn?: string;
   imageUrl?: string;
   stock?: number;
 };

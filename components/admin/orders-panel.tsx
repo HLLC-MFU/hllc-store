@@ -17,8 +17,26 @@ type OrdersPanelProps = {
   onSaveTracking: (orderId: string, trackingNumber: string) => void;
   onCancelOrder: (orderId: string, reason: string) => void;
   onViewSlip: (images: string[], index: number) => void;
+  initialStatusFilter?: OrderStatus | "all" | "shipped_pickup";
   t: (key: string) => string;
 };
+
+function buildFilterItems(orders: Order[], t: (key: string) => string) {
+  const items: { key: string; label: string; count: number }[] = [
+    { key: "all", label: t("admin.orders.filter_all"), count: orders.length },
+  ];
+  for (const s of ORDER_STATUSES) {
+    if (s === "shipped") {
+      const deliveryCount = orders.filter((o) => o.status === "shipped" && !isPickupOrder(o)).length;
+      const pickupCount = orders.filter((o) => o.status === "shipped" && isPickupOrder(o)).length;
+      items.push({ key: "shipped", label: t("admin.status.shipped"), count: deliveryCount });
+      items.push({ key: "shipped_pickup", label: t("admin.status.shipped_pickup"), count: pickupCount });
+    } else {
+      items.push({ key: s, label: t(`admin.status.${s}`), count: orders.filter((o) => o.status === s).length });
+    }
+  }
+  return items;
+}
 
 export function OrdersPanel({
   orders,
@@ -27,15 +45,36 @@ export function OrdersPanel({
   onSaveTracking,
   onCancelOrder,
   onViewSlip,
+  initialStatusFilter,
   t,
 }: OrdersPanelProps) {
   const [shippingFilter, setShippingFilter] = React.useState<"all" | "delivery" | "pickup">("all");
-  const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all" | "shipped_pickup">(initialStatusFilter ?? "all");
+
+  React.useEffect(() => {
+    if (initialStatusFilter) setStatusFilter(initialStatusFilter);
+  }, [initialStatusFilter]);
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  const filteredOrders = React.useMemo(() => {
+  const shippingFilteredOrders = React.useMemo(() => {
     return orders.filter((o) => {
-      const matchStatus = statusFilter === "all" || o.status === statusFilter;
+      const isPickup = isPickupOrder(o);
+      return (
+        shippingFilter === "all" ||
+        (shippingFilter === "pickup" && isPickup) ||
+        (shippingFilter === "delivery" && !isPickup)
+      );
+    });
+  }, [orders, shippingFilter]);
+
+  const filteredOrders = React.useMemo(() => {
+    return shippingFilteredOrders.filter((o) => {
+      const isPickup = isPickupOrder(o);
+      const matchStatus =
+        statusFilter === "all" ||
+        (statusFilter === "shipped" && o.status === "shipped" && !isPickup) ||
+        (statusFilter === "shipped_pickup" && o.status === "shipped" && isPickup) ||
+        (statusFilter !== "shipped" && statusFilter !== "shipped_pickup" && o.status === statusFilter);
 
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q ||
@@ -43,15 +82,9 @@ export function OrdersPanel({
         o.customer.phone.includes(q) ||
         o.id.toLowerCase().includes(q);
 
-      const isPickup = isPickupOrder(o);
-      const matchShipping =
-        shippingFilter === "all" ||
-        (shippingFilter === "pickup" && isPickup) ||
-        (shippingFilter === "delivery" && !isPickup);
-
-      return matchStatus && matchSearch && matchShipping;
+      return matchStatus && matchSearch;
     });
-  }, [orders, statusFilter, searchQuery, shippingFilter]);
+  }, [shippingFilteredOrders, statusFilter, searchQuery]);
 
   return (
     <div className="flex flex-col lg:flex-row gap-5">
@@ -88,19 +121,17 @@ export function OrdersPanel({
           <CardContent className="p-4 flex flex-col gap-2">
             <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">{t("admin.orders.status_label")}</span>
             <div className="flex flex-col gap-1.5">
-              {(["all", ...ORDER_STATUSES] as const).map((s) => {
-                const count = s === "all" ? orders.length : orders.filter((o) => o.status === s).length;
-                if (count === 0 && s !== "all") return null;
-                const isActive = statusFilter === s;
+              {buildFilterItems(shippingFilteredOrders, t).map(({ key, label, count }) => {
+                const isActive = statusFilter === key;
                 return (
                   <button
-                    key={s}
-                    onClick={() => setStatusFilter(s)}
+                    key={key}
+                    onClick={() => setStatusFilter(key as typeof statusFilter)}
                     className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      isActive ? "bg-[#85241F] text-white" : "bg-slate-50 text-gray-600 hover:bg-slate-100"
+                      isActive ? "bg-brand text-white" : "bg-slate-50 text-gray-600 hover:bg-slate-100"
                     }`}
                   >
-                    <span>{s === "all" ? t("admin.orders.filter_all") : t(`admin.status.${s as OrderStatus}`)}</span>
+                    <span>{label}</span>
                     <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-lg ${isActive ? "bg-white/20 text-white" : "bg-white text-gray-500"}`}>{count}</span>
                   </button>
                 );
@@ -116,31 +147,27 @@ export function OrdersPanel({
 
         {/* Status pills — mobile only */}
         <div className="lg:hidden flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {(["all", ...ORDER_STATUSES] as const).map((s) => {
-            const count = s === "all" ? orders.length : orders.filter((o) => o.status === s).length;
-            if (count === 0 && s !== "all") return null;
-            const isActive = statusFilter === s;
+          {buildFilterItems(shippingFilteredOrders, t).map(({ key, label, count }) => {
+            const isActive = statusFilter === key;
             return (
               <button
-                key={s}
-                onClick={() => setStatusFilter(s)}
+                key={key}
+                onClick={() => setStatusFilter(key as typeof statusFilter)}
                 className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-bold transition-all cursor-pointer border-2 ${
                   isActive
-                    ? "bg-[#85241F] text-white border-[#85241F] shadow-md shadow-[#85241F]/20"
+                    ? "bg-brand text-white border-brand shadow-md shadow-brand/20"
                     : "bg-white text-gray-700 border-gray-200 hover:border-gray-400"
                 }`}
               >
-                {s === "all" ? t("admin.orders.filter_all") : t(`admin.status.${s as OrderStatus}`)}
-                <span className={`text-xs font-black px-1.5 py-0.5 rounded-lg ${
-                  isActive ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
-                }`}>{count}</span>
+                {label}
+                <span className={`text-xs font-black px-1.5 py-0.5 rounded-lg ${isActive ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>{count}</span>
               </button>
             );
           })}
         </div>
 
         {/* Search */}
-        <div className="bg-white border border-gray-200/60 rounded-2xl px-4 py-3 shadow-2xs flex items-center gap-3 focus-within:border-[#85241F] focus-within:ring-2 focus-within:ring-[#85241F]/5 transition-all">
+        <div className="bg-white border border-gray-200/60 rounded-2xl px-4 py-3 shadow-2xs flex items-center gap-3 focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/5 transition-all">
           <Search className="w-4 h-4 text-gray-400 shrink-0" />
           <Input
             value={searchQuery}

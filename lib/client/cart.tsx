@@ -22,6 +22,7 @@ export type CartItem = {
   imageUrl?: string;
   selectedOption?: string;
   customName?: string;
+  allowCustomName?: boolean;
   quantity: number;
 };
 

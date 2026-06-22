@@ -10,25 +10,36 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const [content, allProducts] = await Promise.all([getHomeContent(), getStoreProducts()]);
 
-  const blocks: CategoryBlock[] = CATEGORIES.map((category) => {
-    const block = content.blocks[category.id];
+  const blocks: CategoryBlock[] = [];
 
-    // For leaf categories (no groups), jump directly to the product when there is only one.
-    let href = `/c/${category.id}`;
-    if (!category.groups) {
-      const categoryProducts = allProducts.filter((p) => p.category === category.id && !p.group);
-      if (categoryProducts.length === 1) {
-        href = `/products/${categoryProducts[0].id}`;
-      }
-    }
+  // Block 1: ขวดน้ำ — if only 1 product, skip category page and go direct
+  const bottleCategory = CATEGORIES.find((c) => c.id === "bottle")!;
+  const bottleBlock = content.blocks["bottle"];
+  const bottleProducts = allProducts.filter((p) => p.category === "bottle" && !p.group);
+  blocks.push({
+    href: bottleProducts.length === 1 ? `/products/${bottleProducts[0].id}` : "/c/bottle",
+    imageUrl: bottleBlock?.imageUrl || undefined,
+    title: bottleBlock?.title ?? bottleCategory.label,
+    subtitle: bottleBlock?.subtitle,
+    hasSubBlocks: false,
+  });
 
-    return {
-      href,
-      imageUrl: block?.imageUrl || undefined,
-      title: block?.title ?? category.label,
-      subtitle: block?.subtitle,
-      hasSubBlocks: !!category.groups,
-    };
+  // Block 3: Secret Set — same single-product shortcut logic
+  // Block 2 (bracelet-charm overview) is hidden for now
+  const secretGroup = CATEGORIES.find((c) => c.id === "bracelet-charm")
+    ?.groups?.find((g) => g.id === "secret-set");
+  const secretBlock = content.blocks["secret-set"];
+  const secretProducts = allProducts.filter(
+    (p) => p.category === "bracelet-charm" && p.group === "secret-set",
+  );
+  blocks.push({
+    href: secretProducts.length === 1
+      ? `/products/${secretProducts[0].id}`
+      : "/c/bracelet-charm/secret-set",
+    imageUrl: secretBlock?.imageUrl || undefined,
+    title: secretBlock?.title ?? secretGroup?.label ?? { th: "Secret Set" },
+    subtitle: secretBlock?.subtitle,
+    hasSubBlocks: false,
   });
 
   return <HomeClient blocks={blocks} />;

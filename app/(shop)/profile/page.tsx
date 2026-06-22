@@ -44,6 +44,14 @@ function itemName(name: string | { th: string; en?: string }, lang: "th" | "en")
   return name[lang] || name.th;
 }
 
+function formatCustomName(raw: string): string {
+  if (!raw.startsWith("charm:")) return raw;
+  const parts = raw.slice(6).split(":");
+  const color = parts[0] ?? "";
+  const letters = parts[1] ?? "";
+  return `สายห้อย สี${color}${letters ? ` · ${letters}` : ""}`;
+}
+
 const STATUS_LABEL: Record<string, { th: string; en: string; badge: string; icon: string }> = {
   payment_review:  { th: "รอยืนยันชำระ",  en: "Awaiting confirmation", badge: "text-amber-700 bg-amber-50",    icon: "bg-amber-100 text-amber-600"   },
   paid:            { th: "ชำระแล้ว",        en: "Paid",                  badge: "text-blue-700 bg-blue-50",      icon: "bg-blue-100 text-blue-600"     },
@@ -63,6 +71,8 @@ const RESUBMIT_STATUS = {
 
 function statusMetaForOrder(order: Order) {
   if (order.status === "pending_payment" && order.slip.status === "rejected") return RESUBMIT_STATUS;
+  if (order.status === "shipped" && order.deliveryMode === "pickup")
+    return { ...STATUS_LABEL.shipped, th: "พร้อมรับสินค้า", en: "Ready for Pickup" };
   return STATUS_LABEL[order.status] ?? STATUS_LABEL.pending_payment;
 }
 
@@ -225,7 +235,7 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
                 {slipPreview ? (
                   <div className="relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={slipPreview} alt="payment slip" className="max-h-56 w-full rounded-lg object-contain" />
+                    <img src={slipPreview} alt="payment slip" loading="lazy" className="max-h-56 w-full rounded-lg object-contain" />
                     <button
                       type="button"
                       onClick={clearNewSlip}
@@ -252,7 +262,7 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
                 type="button"
                 disabled={uploadingSlip || !slipImage}
                 onClick={() => setConfirmSlip(true)}
-                className="mt-3 h-10 w-full rounded-xl bg-[#85241F] px-4 text-xs font-black hover:bg-[#B72D2A] disabled:opacity-50"
+                className="mt-3 h-10 w-full rounded-xl bg-brand px-4 text-xs font-black hover:bg-brand-hover disabled:opacity-50"
               >
                 {uploadingSlip
                   ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
@@ -264,18 +274,18 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
 
           {showTracking && (
             <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <Truck className="h-4 w-4 text-emerald-600 shrink-0" />
-                <div>
+                <div className="min-w-0">
                   <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider">
                     {lang === "th" ? "เลขพัสดุ" : "Tracking No."}
                   </p>
-                  <p className="mt-0.5 font-mono text-sm font-black text-gray-900 tracking-wide">{order.trackingNumber}</p>
+                  <p className="mt-0.5 font-mono text-sm font-black text-gray-900 tracking-wide break-all">{order.trackingNumber}</p>
                 </div>
               </div>
               <button
                 onClick={copyTracking}
-                className="flex items-center gap-1.5 rounded-xl bg-white border border-emerald-200 px-3 py-1.5 text-[11px] font-black text-emerald-700 hover:bg-emerald-100 active:scale-95 transition-all cursor-pointer"
+                className="shrink-0 flex items-center gap-1.5 rounded-xl bg-white border border-emerald-200 px-3 py-1.5 text-[11px] font-black text-emerald-700 hover:bg-emerald-100 active:scale-95 transition-all cursor-pointer"
               >
                 {copied
                   ? <><Check className="h-3.5 w-3.5" />{lang === "th" ? "คัดลอกแล้ว" : "Copied"}</>
@@ -294,28 +304,30 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
                 <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-black text-gray-500">{itemCount}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-black text-[#85241F]">{money(order.total)}</span>
+                <span className="text-sm font-black text-brand">{money(order.total)}</span>
                 {itemsOpen ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
               </div>
             </button>
             {itemsOpen && (
               <div className="border-t border-gray-100 px-4 py-3 flex flex-col gap-2">
                 {order.items.map((item) => (
-                  <div key={`${order.id}-${item.productId}-${item.selectedOption ?? ""}`} className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold text-gray-700 truncate">
-                      {itemName(item.name, lang)}<span className="ml-1 text-gray-400 font-medium">×{item.quantity}</span>
-                    </span>
-                    {item.selectedOption ? (
-                      <span className="max-w-24 truncate rounded-md bg-[#85241F]/5 px-2 py-0.5 text-[10px] font-black text-[#85241F]">
-                        {item.selectedOption}
+                  <div key={`${order.id}-${item.productId}-${item.selectedOption ?? ""}`} className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-semibold text-gray-700">
+                        {itemName(item.name, lang)}<span className="ml-1 text-gray-400 font-medium">×{item.quantity}</span>
                       </span>
-                    ) : null}
-                    {item.customName ? (
-                      <span className="max-w-28 truncate rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">
-                        ✎ {item.customName}
-                      </span>
-                    ) : null}
-                    <span className="text-sm font-bold text-gray-600 shrink-0">{money(item.subtotal)}</span>
+                      <span className="text-sm font-bold text-gray-600 shrink-0">{money(item.subtotal)}</span>
+                    </div>
+                    {(item.selectedOption || item.customName) && (
+                      <div className="flex flex-wrap gap-1.5 pl-2 border-l-2 border-brand/20">
+                        {item.selectedOption && (
+                          <span className="rounded-lg bg-brand/5 px-2.5 py-1 text-[10px] font-black text-brand">{item.selectedOption}</span>
+                        )}
+                        {item.customName && (
+                          <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-[10px] font-black text-amber-700">{formatCustomName(item.customName)}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
                 <div className="border-t border-dashed border-gray-100 pt-2 flex items-center justify-between">
@@ -343,7 +355,7 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
             {slipPreview && (
               <div className="mt-4 rounded-2xl bg-gray-50 p-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={slipPreview} alt="payment slip preview" className="max-h-48 w-full rounded-xl object-contain" />
+                <img src={slipPreview} alt="payment slip preview" loading="lazy" className="max-h-48 w-full rounded-xl object-contain" />
               </div>
             )}
             <div className="mt-5 grid grid-cols-2 gap-2">
@@ -416,7 +428,7 @@ function ProfileContent() {
 
   return (
     <>
-    <main className="min-h-screen bg-[#f8fafc] px-4 py-6 pb-24">
+    <main className="min-h-screen bg-background px-4 py-6 pb-24">
       <div className="mx-auto max-w-lg">
 
         {/* Search */}
@@ -434,7 +446,7 @@ function ProfileContent() {
             />
             <Button
               disabled={loading}
-              className="h-11 rounded-2xl bg-[#85241F] font-black hover:bg-[#B72D2A] shrink-0"
+              className="h-11 rounded-2xl bg-brand font-black hover:bg-brand-hover shrink-0"
               type="submit"
             >
               {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
@@ -482,7 +494,7 @@ function ProfileContent() {
 export default function ProfilePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center text-sm font-semibold text-gray-400">
+      <div className="min-h-screen bg-background flex items-center justify-center text-sm font-semibold text-gray-400">
         Loading...
       </div>
     }>
@@ -521,7 +533,7 @@ export default function ProfilePage() {
                   <span className="text-xs font-black text-gray-500">
                     {t("admin.order.item")}
                   </span>
-                  <span className="text-sm font-black text-[#85241F]">
+                  <span className="text-sm font-black text-brand">
                     {money(order.total)}
                   </span>
                 </div>
@@ -533,7 +545,7 @@ export default function ProfilePage() {
                           {typeof item.name === "object" ? (item.name[lang] || item.name.th) : item.name} x {item.quantity}
                         </span>
                         {item.selectedOption ? (
-                          <span className="mt-0.5 block truncate text-[10px] font-black text-[#85241F]">
+                          <span className="mt-0.5 block truncate text-[10px] font-black text-brand">
                             {item.selectedOption}
                           </span>
                         ) : null}

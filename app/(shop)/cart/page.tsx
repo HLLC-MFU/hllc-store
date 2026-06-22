@@ -65,6 +65,7 @@ export default function CartPage() {
 
   const [shippingRates, setShippingRates] = useState<ShippingSettings>(DEFAULT_SHIPPING_RATES);
   const [charmImages, setCharmImages] = useState<Record<string, string>>({});
+  const [charmOptions, setCharmOptions] = useState<Array<{ label: string; labelEn?: string; imageUrl?: string }>>([]);
 
   const autoSelected = useRef(false);
   useEffect(() => {
@@ -79,9 +80,24 @@ export default function CartPage() {
   useEffect(() => {
     if (synced.current) return;
     synced.current = true;
-    fetchStoreProducts().then(syncFromProducts).catch(() => { });
+    fetchStoreProducts().then(products => {
+      syncFromProducts(products);
+      // Build charm image map from product options (label → imageUrl) for option-based charm products
+      const optionImages: Record<string, string> = {};
+      const opts: Array<{ label: string; labelEn?: string; imageUrl?: string }> = [];
+      for (const p of products) {
+        if (p.allowCustomName && p.options) {
+          for (const opt of p.options) {
+            if (opt.label && opt.imageUrl) optionImages[opt.label] = opt.imageUrl;
+            if (opt.label && !opts.find(o => o.label === opt.label)) opts.push({ label: opt.label, labelEn: opt.labelEn, imageUrl: opt.imageUrl });
+          }
+        }
+      }
+      setCharmImages(prev => ({ ...prev, ...optionImages }));
+      if (opts.length) setCharmOptions(opts);
+    }).catch(() => { });
     fetchShippingSettings().then(setShippingRates).catch(() => { });
-    fetchCharmSettings().then(r => setCharmImages(r.images ?? {})).catch(() => { });
+    fetchCharmSettings().then(r => setCharmImages(prev => ({ ...prev, ...(r.images ?? {}) }))).catch(() => { });
   }, [syncFromProducts]);
 
   const toggleSelectAll = useCallback(() => {
@@ -256,8 +272,9 @@ export default function CartPage() {
     const prov = String(formData.get("province") ?? "").trim();
     const postal = String(formData.get("postalCode") ?? "").trim();
     const pickupTime = String(formData.get("pickupTime") ?? "").trim();
+    const pickupPlace = shippingRates.pickupLocation || "ร้าน";
     const fullAddress = deliveryMode === "pickup"
-      ? `รับเองที่ D1${pickupTime ? ` เวลา ${pickupTime}` : ""}`
+      ? `รับเองที่ ${pickupPlace}${pickupTime ? ` เวลา ${pickupTime}` : ""}`
       : [address, sub, district, prov, postal].filter(Boolean).join(" ");
     try {
       const order = await createOrder({
@@ -288,7 +305,7 @@ export default function CartPage() {
   }, [loading, selectedItems, deliveryMode, slipImage, clearCart, lang]);
 
   return (
-    <main className="min-h-screen bg-[#f5f5f5]">
+    <main className="min-h-screen bg-gray-100">
       <div className="mx-auto max-w-5xl">
 
         {step === "success" && createdOrder && (
@@ -304,7 +321,7 @@ export default function CartPage() {
               <p className="text-lg font-black text-gray-900">{lang === "th" ? "รถเข็นว่างเปล่าเลย!" : "Your cart is empty!"}</p>
               <p className="mt-1 text-sm text-gray-400 font-medium">{lang === "th" ? "ไปเลือกสินค้าที่ถูกใจก่อนนะ" : "Go pick something you like"}</p>
             </div>
-            <Link href="/home" className="mt-2 bg-[#85241F] hover:bg-[#B72D2A] text-white font-black text-sm px-6 py-3 rounded-2xl transition-all active:scale-95 shadow-md shadow-[#85241F]/20">
+            <Link href="/home" className="mt-2 bg-brand hover:bg-brand-hover text-white font-black text-sm px-6 py-3 rounded-2xl transition-all active:scale-95 shadow-md shadow-brand/20">
               {lang === "th" ? "ไปเลือกสินค้า" : "Start shopping"}
             </Link>
           </div>
@@ -313,7 +330,7 @@ export default function CartPage() {
         {step === "cart" && !!items.length && (
           <>
             {/* Item list */}
-            <section className="px-4 pt-4 space-y-3">
+            <section className="px-4 pt-4 pb-28 space-y-3">
               <div className="space-y-3">
                 {items.map((item) => (
                   <SwipeableCartItem
@@ -322,6 +339,7 @@ export default function CartPage() {
                     onDecrease={decreaseQty} onIncrease={(i) => updateQty(i.productId, i.quantity + 1, i.selectedOption, i.customName)}
                     onRemove={(i) => removeItem(i.productId, i.selectedOption, i.customName)}
                     charmImages={charmImages}
+                    charmOptions={charmOptions}
                   />
                 ))}
               </div>
@@ -341,7 +359,7 @@ export default function CartPage() {
           <PaymentStep
             lang={lang} t={t}
             selectedPayableTotal={selectedPayableTotal} selectedShippingFee={selectedShippingFee}
-            slipPreview={slipPreview} slipError={slipError}
+            slipPreview={slipPreview} slipError={slipError} orderError={message}
             onSlipFile={handleSlipFile}
             onClearSlip={() => { setSlipPreview(""); setSlipImage(""); setSlipError(""); }}
             onBack={() => setStep("info")} onContinue={confirmPayment}
@@ -363,6 +381,8 @@ export default function CartPage() {
             selectedCount={selectedCount} selectedTotal={selectedTotal}
             selectedShippingFee={selectedShippingFee} selectedPayableTotal={selectedPayableTotal}
             itemsLength={items.length} onBack={() => setStep("cart")} onSubmit={handleCheckout}
+            pickupLocation={shippingRates.pickupLocation}
+            pickupHours={shippingRates.pickupHours}
           />
         )}
       </div>

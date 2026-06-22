@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Noto_Sans_Thai, Nunito } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-//import { Agentation } from "agentation";
+import { Agentation } from "agentation";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const notoSansThai = Noto_Sans_Thai({
+  variable: "--font-noto-sans-thai",
+  subsets: ["thai"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const nunito = Nunito({
+  variable: "--font-nunito",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -27,9 +29,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${notoSansThai.variable} ${nunito.variable} h-full antialiased`}
     >
-      {/* {process.env.NODE_ENV === "development" && <Agentation />} */}
+      {process.env.NODE_ENV === "development" && <Agentation />}
       <body className="min-h-full">
         <Providers>{children}</Providers>
       </body>

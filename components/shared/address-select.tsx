@@ -183,7 +183,7 @@ export function AddressSelect({ lang, value, onChange, error }: Props) {
             </button>
             <p className="flex-1 text-sm font-black text-gray-900">{lang === "th" ? "เลือกที่อยู่" : "Choose address"}</p>
             {filled && (
-              <button type="button" onClick={clearAll} className="text-sm font-bold text-[#85241F] hover:underline">
+              <button type="button" onClick={clearAll} className="text-sm font-bold text-brand hover:underline">
                 {lang === "th" ? "ล้าง" : "Clear"}
               </button>
             )}
@@ -203,9 +203,9 @@ export function AddressSelect({ lang, value, onChange, error }: Props) {
                   <span className="text-base font-bold text-gray-700">{c.label}</span>
                 </button>
               ))}
-              <div className="flex w-full items-center gap-3 rounded-2xl border-2 border-[#85241F]/20 bg-[#85241F]/5 px-4 py-3.5">
-                <span className="h-4 w-4 shrink-0 rounded-full bg-[#85241F] ring-4 ring-[#85241F]/15" />
-                <span className="text-base font-black text-[#85241F]">
+              <div className="flex w-full items-center gap-3 rounded-2xl border-2 border-brand/20 bg-brand/5 px-4 py-3.5">
+                <span className="h-4 w-4 shrink-0 rounded-full bg-brand ring-4 ring-brand/15" />
+                <span className="text-base font-black text-brand">
                   {lang === "th" ? "เลือก " : "Select "}{STEP_LABEL[step][lang]}
                 </span>
               </div>
@@ -253,10 +253,10 @@ export function AddressSelect({ lang, value, onChange, error }: Props) {
                     key={item}
                     type="button"
                     onClick={() => pick(item)}
-                    className={`flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left text-base hover:bg-gray-50 active:bg-gray-100 ${isSelected ? "font-black text-[#85241F]" : "font-semibold text-gray-800"}`}
+                    className={`flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left text-base hover:bg-gray-50 active:bg-gray-100 ${isSelected ? "font-black text-brand" : "font-semibold text-gray-800"}`}
                   >
                     <span>{labelOf(step, item)}</span>
-                    {isSelected && <Check className="h-5 w-5 shrink-0 text-[#85241F]" />}
+                    {isSelected && <Check className="h-5 w-5 shrink-0 text-brand" />}
                   </button>
                 );
               })

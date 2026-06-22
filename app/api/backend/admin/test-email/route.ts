@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   sendEmail,
+  orderConfirmedEmail,
+  slipReceivedEmail,
   slipApprovedEmail,
   slipRejectedEmail,
   trackingNumberEmail,
@@ -18,6 +20,16 @@ const SAMPLE_TRACKING = "TH1234567890";
 
 function buildTestEmail(template: string, to: string, note: string): EmailPayload | null {
   switch (template) {
+    case "order_confirmed":
+      return orderConfirmedEmail(SAMPLE_NAME, to, {
+        items: [
+          { name: "ขวดน้ำ Hllc", qty: 1, option: "ม่วง", customName: "charm:ทอง:ABC" },
+        ],
+        deliveryMode: "delivery",
+        customerPhone: "0812345678",
+      });
+    case "slip_received":
+      return slipReceivedEmail(SAMPLE_NAME, to);
     case "slip_approved":
       return slipApprovedEmail(SAMPLE_NAME, to);
     case "slip_rejected":

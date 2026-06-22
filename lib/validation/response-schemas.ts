@@ -89,6 +89,7 @@ export const orderResponseSchema = orderCommonResponseSchema.extend({
 
 const productOptionResponseSchema = z.object({
   label: z.string(),
+  labelEn: z.string().optional(),
   imageUrl: z.string().optional(),
   stock: z.number().optional(),
 });

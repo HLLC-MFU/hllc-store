@@ -1,9 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { Image as ImageIcon } from "lucide-react";
+import { ArrowRight, Image as ImageIcon } from "lucide-react";
 import { useLanguage } from "@/lib/client/language-context";
 
 export type LocalizedText = { th: string; en?: string };
@@ -17,6 +18,7 @@ export type ShopProduct = {
   stock: number;
   options: ShopProductOption[];
   imageUrl?: string;
+  imageUrls?: string[];
   charmType?: string;
 };
 
@@ -28,6 +30,65 @@ const currencyFormatter = new Intl.NumberFormat("th-TH", {
 
 function money(value: number) {
   return currencyFormatter.format(value);
+}
+
+/** Full-width banner card for a single product. */
+export function SingleProductCard({ product }: { product: ShopProduct }) {
+  const { lang, t } = useLanguage();
+  const p = product;
+  const isOutOfStock = p.options.length > 0
+    ? p.options.every((o) => (o.stock ?? p.stock) < 1)
+    : p.stock < 1;
+
+  return (
+    <Link
+      href={`/products/${p.id}`}
+      className={`group relative block overflow-hidden rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.10)] active:scale-[0.99] transition-all duration-300 ${isOutOfStock ? "opacity-60" : ""}`}
+    >
+      {/* Image */}
+      <div className="relative aspect-[4/3] w-full bg-gray-100 overflow-hidden">
+        {p.imageUrl ? (
+          <Image
+            fill
+            src={p.imageUrl}
+            alt={p.name[lang] || p.name.th}
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            sizes="(max-width: 640px) 100vw, 640px"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <ImageIcon className="w-14 h-14 text-gray-200" />
+          </div>
+        )}
+
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(0,0,0,0.65)_0%,rgba(0,0,0,0.15)_50%,transparent_100%)]" />
+
+        {/* Out of stock badge */}
+        {isOutOfStock && (
+          <span className="absolute top-4 left-4 rounded-xl bg-gray-900/75 px-3 py-1 text-[11px] font-bold text-white">
+            {t("shop.out_of_stock")}
+          </span>
+        )}
+
+        {/* Info overlay */}
+        <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-3 px-5 py-5">
+          <div>
+            <p className="text-lg font-black text-white leading-snug drop-shadow-[0_1px_4px_rgba(0,0,0,0.5)]">
+              {p.name[lang] || p.name.th}
+            </p>
+            <p className="mt-1 text-base font-black text-white/90 drop-shadow-[0_1px_4px_rgba(0,0,0,0.5)]">
+              {money(p.price)}
+            </p>
+          </div>
+          <span className="shrink-0 inline-flex h-9 items-center justify-center gap-1.5 rounded-2xl bg-brand px-4 text-xs font-black text-white shadow-lg shadow-black/20">
+            {t("shop.shop_now")}
+            <ArrowRight className="h-3.5 w-3.5" />
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
 }
 
 /** Shared storefront product grid used by category, group and charm pages. */
@@ -60,13 +121,14 @@ export function CategoryGrid({ products }: { products: ShopProduct[] }) {
         const needsOption = p.options.length > 0;
         const cardContent = (
           <>
-            <div className="relative aspect-square bg-[#f5f5f5] overflow-hidden">
+            <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
               {p.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
+                  fill
                   src={p.imageUrl}
                   alt={p.name[lang] || p.name.th}
-                  className={`h-full w-full object-cover ${isOutOfStock ? "" : "transition-transform duration-300 group-hover:scale-105"}`}
+                  className={`object-cover ${isOutOfStock ? "" : "transition-transform duration-300 group-hover:scale-105"}`}
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
@@ -81,7 +143,7 @@ export function CategoryGrid({ products }: { products: ShopProduct[] }) {
             </div>
             <div className="px-4 py-3.5 flex flex-col gap-0.5">
               <p className="truncate text-sm font-black text-gray-900">{p.name[lang] || p.name.th}</p>
-              <p className="mt-2 text-base font-black text-[#85241F]">{money(p.price)}</p>
+              <p className="mt-2 text-base font-black text-brand">{money(p.price)}</p>
             </div>
           </>
         );
@@ -99,9 +161,9 @@ export function CategoryGrid({ products }: { products: ShopProduct[] }) {
                 <button
                   type="button"
                   onClick={() => goToProduct(p.id)}
-                  className="flex h-10 w-full items-center justify-center rounded-2xl bg-[#85241F] px-3 text-xs font-black text-white transition-transform active:scale-[0.98]"
+                  className="flex h-10 w-full items-center justify-center rounded-2xl bg-brand px-3 text-xs font-black text-white transition-transform active:scale-[0.98]"
                 >
-                  <span className="truncate">{lang === "th" ? "เลือกซื้อ" : "Choose"}</span>
+                  <span className="truncate">{t("shop.choose")}</span>
                 </button>
               </div>
             </div>
@@ -129,24 +191,18 @@ export function CategoryGrid({ products }: { products: ShopProduct[] }) {
             key={p.id}
             className="group relative rounded-3xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.13)] transition-all duration-300 overflow-hidden active:scale-[0.98]"
           >
-            <Link
-              href={`/products/${p.id}`}
-              onClick={(e) => {
-                const card = e.currentTarget;
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                const size = Math.max(rect.width, rect.height);
-                const ripple = document.createElement("span");
-                ripple.className = "ripple";
-                ripple.style.cssText = `width:${size}px;height:${size}px;left:${x - size / 2}px;top:${y - size / 2}px`;
-                card.appendChild(ripple);
-                setTimeout(() => ripple.remove(), 280);
-              }}
-              className="block"
-            >
+            <Link href={`/products/${p.id}`} className="block">
               {cardContent}
             </Link>
+            <div className="px-3 pb-3">
+              <button
+                type="button"
+                onClick={() => goToProduct(p.id)}
+                className="flex h-10 w-full items-center justify-center rounded-2xl bg-brand px-3 text-xs font-black text-white transition-transform active:scale-[0.98]"
+              >
+                <span className="truncate">{t("shop.choose")}</span>
+              </button>
+            </div>
           </div>
         );
       })}

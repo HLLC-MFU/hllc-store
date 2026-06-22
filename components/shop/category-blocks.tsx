@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Image as ImageIcon } from "lucide-react";
 import { useLanguage } from "@/lib/client/language-context";
@@ -24,8 +25,8 @@ export function CategoryBlocks({ blocks, fullPage = false }: { blocks: CategoryB
     ? "group relative flex min-h-0 flex-1 overflow-hidden rounded-[1.75rem] border border-white bg-white shadow-[0_8px_24px_rgba(15,23,42,0.12)] ring-1 ring-gray-900/5 transition-all duration-300 active:scale-[0.99]"
     : "group relative block overflow-hidden rounded-3xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.13)] active:scale-[0.99]";
   const mediaClass = fullPage
-    ? "relative h-full min-h-0 w-full bg-[#f5f5f5]"
-    : "relative aspect-[16/9] w-full bg-[#f5f5f5]";
+    ? "relative aspect-[4/3] md:aspect-auto md:h-full md:min-h-0 w-full bg-gray-100"
+    : "relative aspect-[4/3] w-full bg-gray-100";
 
   return (
     <div className={wrapperClass}>
@@ -37,11 +38,12 @@ export function CategoryBlocks({ blocks, fullPage = false }: { blocks: CategoryB
         >
           <div className={mediaClass}>
             {block.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
+                fill
                 src={block.imageUrl}
                 alt={pick(block.title)}
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                sizes="(max-width: 768px) 100vw, 640px"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center">
@@ -49,21 +51,21 @@ export function CategoryBlocks({ blocks, fullPage = false }: { blocks: CategoryB
               </div>
             )}
 
-            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.02)_42%,rgba(0,0,0,0.50)_100%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(0,0,0,0.45)_0%,rgba(0,0,0,0.05)_45%,rgba(0,0,0,0.55)_100%)]" />
 
             <div className="absolute left-5 top-5 max-w-[70%] text-left">
-              <h2 className="text-2xl font-black leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]">
+              <h2 className="text-2xl font-black leading-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
                 {pick(block.title)}
               </h2>
               {pick(block.subtitle) ? (
-                <p className="mt-1 text-xs font-bold leading-snug text-white/90 drop-shadow-[0_1px_5px_rgba(0,0,0,0.45)]">
+                <p className="mt-1 text-xs font-bold leading-snug text-white/90 drop-shadow-[0_1px_8px_rgba(0,0,0,0.9)]">
                   {pick(block.subtitle)}
                 </p>
               ) : null}
             </div>
 
             <div className="absolute bottom-5 right-5">
-              <span className="inline-flex h-9 items-center justify-center gap-1.5 rounded-2xl bg-[#85241F] px-4 text-xs font-black text-white shadow-lg shadow-black/20">
+              <span className="inline-flex h-9 items-center justify-center gap-1.5 rounded-2xl bg-brand px-4 text-xs font-black text-white shadow-lg shadow-black/20">
                 {block.hasSubBlocks
                   ? (lang === "th" ? "เลือกดู" : "Browse")
                   : (lang === "th" ? "ช้อปเลย" : "Shop now")}

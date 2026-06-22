@@ -295,12 +295,13 @@ export function pickupReadyEmail(
   customerName: string,
   to = "",
   customerPhone?: string,
-  location = "สาขาสยามสแควร์ ชั้น 2",
+  location?: string,
+  pickupHours?: string,
 ): EmailPayload {
   return {
     to,
     subject: "HLLC Store - สินค้าพร้อมให้รับแล้ว",
-    text: `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณพร้อมให้มารับแล้วที่ ${location}`,
+    text: `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณพร้อมให้มารับแล้ว${location ? `ที่ ${location}` : ""}${pickupHours ? ` เวลา ${pickupHours}` : ""}`,
     html: baseEmailHtml({
       badge: "พร้อมให้รับ",
       badgeBg: "#fef3c7",
@@ -311,7 +312,80 @@ export function pickupReadyEmail(
       intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณพร้อมให้เข้ารับแล้ว กรุณาแสดงเบอร์โทรที่ใช้สั่งซื้อกับเจ้าหน้าที่เมื่อมาถึง`,
       detailRows: [
         { label: "สถานะ", value: "พร้อมให้รับ", color: "#92400e" },
-        { label: "จุดรับสินค้า", value: location },
+        ...(location ? [{ label: "จุดรับสินค้า", value: location }] : []),
+        ...(pickupHours ? [{ label: "เวลารับสินค้า", value: pickupHours }] : []),
+      ],
+      customerPhone,
+    }),
+  };
+}
+
+function formatItemValue(i: { name: string; option?: string; customName?: string }): string {
+  let base = i.option ? `${i.name} (${i.option})` : i.name;
+  if (i.customName?.startsWith("charm:")) {
+    const parts = i.customName.slice(6).split(":");
+    const color = parts[0] ?? "";
+    const letters = parts[1] ?? "";
+    base += ` + สายห้อย สี${color}`;
+    if (letters) base += ` · ${letters}`;
+  }
+  return base;
+}
+
+export function orderConfirmedEmail(
+  customerName: string,
+  to = "",
+  opts: {
+    items: { name: string; qty: number; option?: string; customName?: string }[];
+    deliveryMode: "delivery" | "pickup";
+    customerPhone?: string;
+    pickupLocation?: string;
+  },
+): EmailPayload {
+  const deliveryLabel = opts.deliveryMode === "pickup"
+    ? (opts.pickupLocation ? `รับที่ ${opts.pickupLocation}` : "รับที่ร้าน")
+    : "จัดส่งพัสดุ";
+  const itemRows = opts.items.map((i) => ({
+    label: `${i.qty}×`,
+    value: formatItemValue(i),
+  }));
+  return {
+    to,
+    subject: "HLLC Store - รับคำสั่งซื้อเรียบร้อยแล้ว",
+    text: `สวัสดีคุณ ${customerName}, เราได้รับคำสั่งซื้อของคุณเรียบร้อยแล้ว: ${opts.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}`,
+    html: baseEmailHtml({
+      badge: "รับคำสั่งซื้อแล้ว",
+      badgeBg: "#ede9fe",
+      badgeColor: "#5b21b6",
+      alert: "เราได้รับคำสั่งซื้อของคุณเรียบร้อยแล้ว",
+      icon: "check",
+      headline: "ขอบคุณที่สั่งซื้อกับเรา!",
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณถูกบันทึกเรียบร้อยแล้ว`,
+      detailRows: [
+        ...itemRows,
+        { label: "วิธีรับสินค้า", value: deliveryLabel },
+        { label: "สถานะ", value: "รอตรวจสอบการชำระเงิน", color: "#92400e" },
+      ],
+      customerPhone: opts.customerPhone,
+    }),
+  };
+}
+
+export function slipReceivedEmail(customerName: string, to = "", customerPhone?: string): EmailPayload {
+  return {
+    to,
+    subject: "HLLC Store - ได้รับสลิปของคุณแล้ว",
+    text: `สวัสดีคุณ ${customerName}, เราได้รับสลิปการชำระเงินของคุณแล้ว กำลังตรวจสอบและจะแจ้งผลให้ทราบโดยเร็ว`,
+    html: baseEmailHtml({
+      badge: "รอตรวจสลิป",
+      badgeBg: "#fef3c7",
+      badgeColor: "#92400e",
+      alert: "เราได้รับสลิปของคุณแล้ว กำลังตรวจสอบ",
+      icon: "target",
+      headline: "ได้รับสลิปเรียบร้อยแล้ว",
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>เราได้รับสลิปการชำระเงินของคุณแล้ว ทีมงานกำลังตรวจสอบและจะแจ้งผลให้ทราบทางอีเมลนี้โดยเร็วที่สุด`,
+      detailRows: [
+        { label: "สถานะสลิป", value: "รอตรวจสอบ", color: "#92400e" },
       ],
       customerPhone,
     }),

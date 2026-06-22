@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Check, Delete, Image as ImageIcon, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
 import type { CartItem } from "@/lib/client/cart";
 import { useCart } from "@/lib/client/cart";
-import { CHARM_COLORS } from "@/lib/config/catalog";
+import { useLanguage } from "@/lib/client/language-context";
 
 const CHARM_PRICE = 30;
 const FREE_LETTERS = 2;
@@ -13,14 +13,12 @@ const LETTER_PRICE = 10;
 const MAX_LETTERS = 12;
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-const COLOR_LABELS: Record<string, string> = {
-  white: "ขาว", brown: "น้ำตาล", green: "เขียว",
-  pink: "ชมพู", black: "ดำ", blue: "ฟ้า", gold: "ทอง",
-};
-const COLOR_HEX: Record<string, string> = {
-  white: "#F5F2EF", brown: "#8B6347", green: "#6BAE75",
-  pink: "#F4A0BF", black: "#2C2C2C", blue: "#6AB0DC", gold: "#CBA135",
-};
+type CharmOption = { label: string; labelEn?: string; imageUrl?: string };
+
+function getColorName(colorId: string, lang: "th" | "en", charmOptions?: CharmOption[]) {
+  const opt = charmOptions?.find((o) => o.label === colorId);
+  return lang === "en" && opt?.labelEn ? opt.labelEn : opt?.label ?? colorId;
+}
 
 function parseCharm(customName?: string) {
   if (!customName?.startsWith("charm:")) return null;
@@ -47,6 +45,7 @@ export interface SwipeableCartItemProps {
   lang: "th" | "en";
   selected: boolean;
   charmImages?: Record<string, string>;
+  charmOptions?: CharmOption[];
   onSelect: (item: CartItem) => void;
   onDecrease: (item: CartItem) => void;
   onIncrease: (item: CartItem) => void;
@@ -58,12 +57,14 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
   lang,
   selected,
   charmImages,
+  charmOptions,
   onSelect,
   onDecrease,
   onIncrease,
   onRemove,
 }: SwipeableCartItemProps) {
   const { addItem, removeItem, updateQty } = useCart();
+  const { t } = useLanguage();
   const [swipeX, setSwipeXState] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -78,7 +79,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
   const [charmOpen, setCharmOpen] = useState(false);
   const [charmStep, setCharmStep] = useState<"color" | "letters">("color");
   const [tempColor, setTempColor] = useState("");
-  const [tempLetters, setTempLetters] = useState("");
+  const [tempLetters, setTempLetters] = useState<string[]>([]);
 
   function setSwipeX(x: number) {
     swipeXRef.current = x;
@@ -92,6 +93,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
   }
 
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType !== "touch") return;
     const delta = e.clientX - startX.current;
     if (!dragging.current) {
       if (Math.abs(delta) < 6) return;
@@ -121,14 +123,14 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
   function openCharmEdit() {
     const parsed = parseCharm(item.customName);
     setTempColor(parsed?.colorId ?? "");
-    setTempLetters(parsed?.letters ?? "");
+    setTempLetters((parsed?.letters ?? "").split("").filter(Boolean));
     setCharmStep("color");
     setCharmOpen(true);
   }
 
   function confirmCharmEdit() {
-    if (!tempColor) return;
-    const newCustomName = `charm:${tempColor}:${tempLetters}`;
+    if (!tempColor || tempLetters.length < 2) return;
+    const newCustomName = `charm:${tempColor}:${tempLetters.join("")}`;
     const qty = item.quantity;
     removeItem(item.productId, item.selectedOption, item.customName);
     addItem({ ...item, customName: newCustomName });
@@ -136,13 +138,15 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
     setCharmOpen(false);
   }
 
-  const extraLetters = Math.max(0, tempLetters.length - FREE_LETTERS);
-  const tempCharmAddon = CHARM_PRICE + extraLetters * LETTER_PRICE;
+  const tempExtraLetters = Math.max(0, tempLetters.length - FREE_LETTERS);
+  const tempCharmAddon = CHARM_PRICE + tempExtraLetters * LETTER_PRICE;
+  const tempCharmOption = charmOptions?.find((o) => o.label === tempColor);
 
   const charmInfo = parseCharm(item.customName);
   const charmExtra = charmInfo ? Math.max(0, charmInfo.letters.length - FREE_LETTERS) : 0;
   const charmTotal = charmInfo ? CHARM_PRICE + charmExtra * LETTER_PRICE : 0;
-  const MAX = 80;
+  const isBottleNoCharm = item.allowCustomName && !charmInfo;
+  const MAX = isBottleNoCharm ? 148 : 80;
 
   function removeCharmOnly() {
     if (!charmInfo) return;
@@ -152,21 +156,34 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
     if (qty > 1) updateQty(item.productId, qty, item.selectedOption, undefined);
   }
 
-
   return (
     <>
       <div className="relative overflow-hidden rounded-2xl">
         {/* Action buttons revealed on swipe */}
-        <div className={`absolute inset-y-2 right-2 w-16 rounded-2xl bg-[#85241F] flex flex-col items-center justify-center gap-1 ${swipeX === 0 ? "invisible" : ""}`}>
-          <button
-            type="button"
-            onClick={() => { setConfirmDelete(true); setSwipeX(0); }}
-            className="h-full w-full flex flex-col items-center justify-center gap-1 text-white cursor-pointer"
-            aria-label={lang === "th" ? "ลบสินค้าออกจากตะกร้า" : "Remove item from cart"}
-          >
-            <Trash2 className="h-5 w-5" />
-            <span className="text-[10px] font-bold">ลบ</span>
-          </button>
+        <div className={`absolute inset-y-2 right-2 flex gap-1.5 ${swipeX === 0 ? "invisible" : ""}`}>
+          {isBottleNoCharm && (
+            <div className="w-16 rounded-2xl bg-brand flex flex-col items-center justify-center gap-1">
+              <button
+                type="button"
+                onClick={() => { setSwipeX(0); openCharmEdit(); }}
+                className="h-full w-full flex flex-col items-center justify-center gap-1 text-white cursor-pointer"
+              >
+                <Plus className="h-5 w-5" />
+                <span className="text-[10px] font-bold text-center leading-tight px-1">{t("cart.add_keychain")}</span>
+              </button>
+            </div>
+          )}
+          <div className="w-16 rounded-2xl bg-brand flex flex-col items-center justify-center gap-1">
+            <button
+              type="button"
+              onClick={() => { setConfirmDelete(true); setSwipeX(0); }}
+              className="h-full w-full flex flex-col items-center justify-center gap-1 text-white cursor-pointer"
+              aria-label={t("cart.remove_aria")}
+            >
+              <Trash2 className="h-5 w-5" />
+              <span className="text-[10px] font-bold">{t("cart.delete")}</span>
+            </button>
+          </div>
         </div>
 
         {/* Sliding content */}
@@ -180,7 +197,6 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
-          onClick={() => { if (swipeXRef.current <= -MAX + 4) setSwipeX(0); }}
           className="relative z-10 select-none rounded-2xl shadow-sm"
         >
           <div className="rounded-2xl bg-white border border-gray-100 overflow-hidden">
@@ -194,7 +210,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                 aria-checked={selected}
                 role="checkbox"
               >
-                <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-colors ${selected ? "bg-[#85241F] border-[#85241F]" : "border-gray-300 bg-white"}`}>
+                <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-colors ${selected ? "bg-brand border-brand" : "border-gray-300 bg-white"}`}>
                   {selected && <Check className="h-3 w-3 text-white" />}
                 </div>
               </button>
@@ -227,29 +243,29 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                       <p className="mt-0.5 text-[10px] text-gray-400">{item.selectedOption}</p>
                     )}
                     {item.customName && !charmInfo && (
-                      <p className="mt-0.5 text-[10px] font-bold text-[#85241F]">
-                        {lang === "th" ? "ชื่อ" : "Name"}: {item.customName}
+                      <p className="mt-0.5 text-[10px] font-bold text-brand">
+                        {t("cart.custom_name_label")}: {item.customName}
                       </p>
                     )}
                   </div>
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); setSwipeX(-MAX); }}
-                    className="shrink-0 text-[11px] font-bold text-gray-400 hover:text-gray-600 cursor-pointer leading-snug"
+                    onClick={(e) => { e.stopPropagation(); setSwipeX(swipeX < 0 ? 0 : -MAX); }}
+                    className={`shrink-0 text-[11px] font-bold cursor-pointer leading-snug transition-colors ${swipeX < 0 ? "text-brand" : "text-gray-400 hover:text-gray-600"}`}
                   >
-                    แก้ไข
+                    {swipeX < 0 ? t("cart.done") : t("cart.edit")}
                   </button>
                 </div>
 
                 {/* Price + qty bottom row */}
                 <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
                   <div>
-                    <p className="text-base font-black text-[#85241F]">{money((item.price + charmTotal) * item.quantity)}</p>
+                    <p className="text-base font-black text-brand">{money((item.price + charmTotal) * item.quantity)}</p>
                     {(charmInfo || item.quantity > 1) && (
                       <p className="text-[10px] text-gray-400">
                         {charmInfo
                           ? `${money(item.price)} + ${charmTotal}฿${item.quantity > 1 ? ` × ${item.quantity}` : ""}`
-                          : `${money(item.price)}/ชิ้น`}
+                          : `${money(item.price)}/${t("cart.pcs")}`}
                       </p>
                     )}
                   </div>
@@ -258,13 +274,37 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                       <Minus className="h-2.5 w-2.5" />
                     </button>
                     <span className="w-5 text-center text-sm font-black text-gray-900">{item.quantity}</span>
-                    <button type="button" onClick={() => onIncrease(item)} disabled={item.stock !== undefined && item.quantity >= item.stock} className="h-6 w-6 rounded-lg bg-[#85241F] flex items-center justify-center text-white disabled:opacity-30 cursor-pointer">
+                    <button type="button" onClick={() => onIncrease(item)} disabled={item.stock !== undefined && item.quantity >= item.stock} className="h-6 w-6 rounded-lg bg-brand flex items-center justify-center text-white disabled:opacity-30 cursor-pointer">
                       <Plus className="h-2.5 w-2.5" />
                     </button>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Add lanyard strip — shown when bottle has no lanyard yet */}
+            {item.allowCustomName && !charmInfo && (
+              <div className="border-t border-dashed border-gray-200 px-3 py-2.5 flex items-center justify-between gap-2" onClick={e => e.stopPropagation()}>
+                <p className="text-[11px] text-gray-400">{t("cart.no_keychain")}</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={openCharmEdit}
+                    className="flex items-center gap-1.5 rounded-xl border border-brand px-3 py-1.5 text-[11px] font-black text-brand cursor-pointer active:bg-brand active:text-white transition-colors"
+                  >
+                    <Plus className="h-3 w-3" />
+                    {t("cart.add_keychain")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(true)}
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 text-gray-400 cursor-pointer"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Charm strip — full width below product row */}
             {charmInfo && (() => {
@@ -273,16 +313,15 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                 <div className="relative border-t border-dashed border-gray-200 px-3 py-2.5 flex items-center gap-2.5" onClick={(e) => e.stopPropagation()}>
                   <div className="h-10 w-10 shrink-0 rounded-xl border border-gray-200 bg-white overflow-hidden flex items-center justify-center">
                     {imgUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={imgUrl} alt={COLOR_LABELS[charmInfo.colorId] ?? charmInfo.colorId} className="h-full w-full object-cover" />
+                      <Image src={imgUrl} alt={getColorName(charmInfo.colorId, lang, charmOptions)} width={40} height={40} unoptimized className="h-full w-full object-cover" />
                     ) : (
-                      <div className="h-5 w-5 rounded-full" style={{ backgroundColor: COLOR_HEX[charmInfo.colorId] ?? "#ccc" }} />
+                      <div className="h-5 w-5 rounded-full bg-gray-200" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-black text-[#85241F]">+ สายห้อย</p>
+                    <p className="text-[11px] font-black text-brand">{t("cart.keychain_plus")}</p>
                     <p className="text-[10px] text-gray-500 truncate">
-                      {COLOR_LABELS[charmInfo.colorId] ?? charmInfo.colorId}
+                      {getColorName(charmInfo.colorId, lang, charmOptions)}
                       {charmInfo.letters ? ` · ${charmInfo.letters}` : ""}
                     </p>
                   </div>
@@ -305,14 +344,14 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
       {confirmDeleteCharm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-6" onClick={() => setConfirmDeleteCharm(false)}>
           <div className="w-full max-w-sm rounded-3xl bg-white px-5 pt-6 pb-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <p className="text-sm font-black text-gray-900 text-center">ลบสายห้อยออก?</p>
-            <p className="mt-1 text-xs text-gray-400 text-center">ราคาสายห้อยจะถูกนำออกจากยอดรวม</p>
+            <p className="text-sm font-black text-gray-900 text-center">{t("cart.remove_charm_title")}</p>
+            <p className="mt-1 text-xs text-gray-400 text-center">{t("cart.remove_charm_sub")}</p>
             <div className="mt-5 flex gap-2">
               <button type="button" onClick={() => setConfirmDeleteCharm(false)} className="flex-1 rounded-2xl border border-gray-200 py-3 text-sm font-bold text-gray-600 cursor-pointer">
-                ยกเลิก
+                {t("cart.cancel")}
               </button>
-              <button type="button" onClick={() => { removeCharmOnly(); setConfirmDeleteCharm(false); }} className="flex-1 rounded-2xl bg-[#85241F] py-3 text-sm font-black text-white cursor-pointer">
-                ลบออก
+              <button type="button" onClick={() => { removeCharmOnly(); setConfirmDeleteCharm(false); }} className="flex-1 rounded-2xl bg-brand py-3 text-sm font-black text-white cursor-pointer">
+                {t("cart.remove")}
               </button>
             </div>
           </div>
@@ -348,16 +387,17 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                   <p className="mt-0.5 text-[10px] font-bold text-gray-400">{item.selectedOption}</p>
                 )}
                 <p className="mt-1 text-xs font-bold text-gray-500">
-                  {item.quantity} {lang === "th" ? "ชิ้น" : "pcs"} · {money(item.price * item.quantity)}
+                  {item.quantity} {t("cart.pcs")} · {money(item.price * item.quantity)}
                 </p>
                 {charmInfo && (
                   <div className="mt-1.5 flex items-center gap-1.5">
-                    <div
-                      className="h-3 w-3 rounded-full border border-white shadow-sm shrink-0"
-                      style={{ backgroundColor: COLOR_HEX[charmInfo.colorId] ?? "#ccc" }}
-                    />
-                    <p className="text-[10px] font-bold text-[#85241F]">
-                      สายห้อย {COLOR_LABELS[charmInfo.colorId] ?? charmInfo.colorId}
+                    {charmImages?.[charmInfo.colorId] ? (
+                      <Image src={charmImages[charmInfo.colorId]} alt="" width={12} height={12} unoptimized className="h-3 w-3 rounded-full object-cover border border-white shadow-sm shrink-0" />
+                    ) : (
+                      <div className="h-3 w-3 rounded-full bg-gray-300 border border-white shadow-sm shrink-0" />
+                    )}
+                    <p className="text-[10px] font-bold text-brand">
+                      {t("cart.keychain_label")} {getColorName(charmInfo.colorId, lang, charmOptions)}
                       {charmInfo.letters ? ` — ${charmInfo.letters.split("").join(" ")}` : ""}
                     </p>
                   </div>
@@ -370,132 +410,142 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                 onClick={() => setConfirmDelete(false)}
                 className="flex-1 rounded-2xl border border-gray-200 py-3 text-sm font-bold text-gray-600 cursor-pointer"
               >
-                {lang === "th" ? "ยกเลิก" : "Cancel"}
+                {t("cart.cancel")}
               </button>
               <button
                 type="button"
                 onClick={() => { onRemove(item); setConfirmDelete(false); }}
-                className="flex-1 rounded-2xl bg-[#85241F] py-3 text-sm font-black text-white cursor-pointer"
+                className="flex-1 rounded-2xl bg-brand py-3 text-sm font-black text-white cursor-pointer"
               >
-                {lang === "th" ? "ลบออก" : "Remove"}
+                {t("cart.remove")}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Charm edit modal */}
+      {/* Charm edit modal — matches product-detail-view design */}
       {charmOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
-          onClick={() => setCharmOpen(false)}
-        >
-          <div
-            className="w-full max-w-md rounded-3xl bg-white px-5 pt-5 pb-6 shadow-2xl max-h-[85vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray-200" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setCharmOpen(false)} />
+          <div className="relative w-full max-w-md bg-white rounded-4xl shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden max-h-[85vh] overflow-y-auto">
 
-            {charmStep === "color" ? (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-base font-black text-gray-900">เลือกสีสายห้อย</p>
-                    <p className="text-xs text-gray-400 mt-0.5">+{CHARM_PRICE}฿ / อัน</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setCharmOpen(false)}
-                    className="h-8 w-8 flex items-center justify-center rounded-full bg-gray-100 cursor-pointer"
-                  >
-                    <X className="h-4 w-4 text-gray-500" />
-                  </button>
+            {/* Header with stepper */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-4">
+              <div className="flex items-center gap-2">
+                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black transition-colors ${charmStep === "color" ? "bg-brand text-white" : "bg-emerald-500 text-white"}`}>
+                  {charmStep === "color" ? "1" : "✓"}
                 </div>
+                <span className={`text-[11px] font-black ${charmStep === "color" ? "text-gray-900" : "text-emerald-600"}`}>
+                  {t("charm.color_step")}
+                </span>
+                <div className={`h-px w-6 ${charmStep === "color" ? "bg-gray-200" : "bg-emerald-300"}`} />
+                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black transition-colors ${charmStep === "letters" ? "bg-brand text-white" : "bg-gray-100 text-gray-400"}`}>
+                  2
+                </div>
+                <span className={`text-[11px] font-black ${charmStep === "letters" ? "text-gray-900" : "text-gray-400"}`}>
+                  {t("charm.letters_step")}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCharmOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
+            {/* Step 1: Color */}
+            {charmStep === "color" && (
+              <div className="px-5 pb-5">
+                <p className="mb-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                  {t("charm.choose_color_heading", { price: CHARM_PRICE })}
+                </p>
                 <div className="grid grid-cols-4 gap-3">
-                  {CHARM_COLORS.map((color) => {
-                    const isActive = tempColor === color.id;
-                    const imgUrl = charmImages?.[color.id];
+                  {(charmOptions ?? []).map((option) => {
+                    const isActive = tempColor === option.label;
+                    const displayName = lang === "en" && option.labelEn ? option.labelEn : option.label;
                     return (
                       <button
-                        key={color.id}
+                        key={option.label}
                         type="button"
-                        onClick={() => setTempColor(color.id)}
-                        className={`flex flex-col items-center gap-2 rounded-2xl py-3 px-1 transition-all cursor-pointer ${isActive ? "bg-white ring-2 ring-[#85241F]" : "bg-gray-50 hover:bg-gray-100"}`}
+                        onClick={() => setTempColor(option.label)}
+                        className="flex flex-col items-center gap-0.5 p-1 transition-all cursor-pointer"
                       >
-                        <div className="h-12 w-12 rounded-xl overflow-hidden shadow-sm border border-gray-100 flex items-center justify-center bg-white">
-                          {imgUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={imgUrl} alt={color.label} className="h-full w-full object-cover" />
-                          ) : (
-                            <div className="h-8 w-8 rounded-full" style={{ backgroundColor: color.hex }} />
-                          )}
-                        </div>
-                        <span className={`text-[10px] font-bold ${isActive ? "text-[#85241F]" : "text-gray-600"}`}>
-                          {color.label}
+                        <span className={`text-[9px] font-black leading-tight text-center ${isActive ? "text-brand" : "text-gray-400"}`}>
+                          {displayName}
                         </span>
+                        {option.imageUrl ? (
+                          <Image
+                            src={option.imageUrl}
+                            alt={displayName}
+                            width={64}
+                            height={64}
+                            unoptimized
+                            className={`h-16 w-16 rounded-2xl object-cover border-2 transition-all ${isActive ? "border-brand scale-105" : "border-transparent"}`}
+                          />
+                        ) : (
+                          <div className={`h-14 w-14 rounded-2xl border-2 transition-all bg-gray-200 ${isActive ? "border-brand scale-105" : "border-transparent"}`} />
+                        )}
                       </button>
                     );
                   })}
                 </div>
-
                 <button
                   type="button"
-                  disabled={!tempColor}
                   onClick={() => setCharmStep("letters")}
-                  className="mt-5 w-full rounded-2xl bg-[#85241F] py-3 text-sm font-black text-white disabled:opacity-30 cursor-pointer"
+                  disabled={!tempColor}
+                  className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-brand text-sm font-black text-white shadow-lg shadow-brand/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
                 >
-                  ถัดไป →
+                  {t("charm.next_add_letters")}
                 </button>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-base font-black text-gray-900">เลือกตัวอักษร</p>
-                  <button
-                    type="button"
-                    onClick={() => setCharmOpen(false)}
-                    className="h-8 w-8 flex items-center justify-center rounded-full bg-gray-100 cursor-pointer"
-                  >
-                    <X className="h-4 w-4 text-gray-500" />
-                  </button>
-                </div>
+              </div>
+            )}
 
+            {/* Step 2: Letters */}
+            {charmStep === "letters" && (
+              <div className="px-5 pb-5">
                 {/* Free letters info */}
                 <div className="mb-3 flex items-center gap-2">
                   <div className="flex items-center gap-1">
                     {Array.from({ length: FREE_LETTERS }).map((_, i) => (
-                      <span key={i} className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black ${i < tempLetters.length ? "bg-[#85241F] text-white" : "bg-gray-900 text-white opacity-20"}`}>
+                      <span key={i} className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black ${i < tempLetters.length ? "bg-brand text-white" : "bg-gray-900 text-white opacity-20"}`}>
                         {tempLetters[i] ?? "•"}
                       </span>
                     ))}
                   </div>
-                  <span className="text-[11px] font-black text-gray-900">{FREE_LETTERS} ตัวแรกฟรี</span>
-                  <span className="text-[10px] font-semibold text-gray-400">· ตัวต่อไป +{LETTER_PRICE}฿</span>
+                  <span className="text-[11px] font-black text-gray-900">
+                    {t("charm.free_letters", { count: FREE_LETTERS })}
+                  </span>
+                  <span className="text-[10px] font-semibold text-gray-400">
+                    · {t("charm.extra_letter_price", { price: LETTER_PRICE })}
+                  </span>
                 </div>
 
-                {/* Selected letters + delete button */}
-                <div className="mb-3 flex min-h-10 items-center gap-1.5">
+                {/* Selected letters display */}
+                <div className="mb-3 flex min-h-[2.5rem] items-center gap-1.5">
                   <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
                     {tempLetters.length > 0 ? (
-                      tempLetters.split("").map((l, i) => (
+                      tempLetters.map((letter, idx) => (
                         <span
-                          key={i}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-[#85241F] text-sm font-black text-white shadow-sm"
+                          key={idx}
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-sm font-black text-white shadow-sm"
                         >
-                          {l}
+                          {letter}
                         </span>
                       ))
                     ) : (
-                      <span className="text-xs font-semibold text-gray-400">แตะตัวอักษรด้านล่างเพื่อเพิ่ม</span>
+                      <span className="text-xs font-semibold text-gray-400">
+                        {t("charm.tap_letters_below")}
+                      </span>
                     )}
                   </div>
                   <button
                     type="button"
                     onClick={() => setTempLetters((prev) => prev.slice(0, -1))}
                     disabled={tempLetters.length === 0}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-500 disabled:opacity-30 transition-colors cursor-pointer"
-                    aria-label="ลบตัวอักษร"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-500 disabled:opacity-30 transition-colors"
                   >
                     <Delete className="h-3.5 w-3.5" />
                   </button>
@@ -504,49 +554,55 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                 {/* Price breakdown */}
                 <div className="mb-4 flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5 text-[11px]">
                   <div className="flex items-center gap-1.5">
-                    {tempColor && (
-                      <div className="h-4 w-4 rounded-full border border-white shadow-sm" style={{ backgroundColor: COLOR_HEX[tempColor] ?? "#ccc" }} />
+                    {tempCharmOption?.imageUrl && (
+                      <Image src={tempCharmOption.imageUrl} alt="" width={16} height={16} unoptimized className="h-4 w-4 rounded-full border border-white shadow-sm object-cover" />
                     )}
                     <span className="font-semibold text-gray-500">
-                      สายห้อย {COLOR_LABELS[tempColor]} +{CHARM_PRICE}฿
-                      {tempLetters.length > FREE_LETTERS && ` · ตัวอักษร +${tempLetters.length - FREE_LETTERS}×${LETTER_PRICE}฿`}
+                      {t("charm.charm_label")} +{CHARM_PRICE}฿
+                      {tempExtraLetters > 0 && ` · ตัวอักษร +${tempExtraLetters}×${LETTER_PRICE}฿`}
                     </span>
                   </div>
-                  <span className="font-black text-[#85241F]">+{tempCharmAddon}฿</span>
+                  <span className="font-black text-brand">+{tempCharmAddon}฿</span>
                 </div>
 
                 {/* A–Z grid */}
-                <div className="grid grid-cols-7 gap-1.5 mb-4">
+                <div className="grid grid-cols-7 gap-1.5">
                   {ALPHABET.map((letter) => (
                     <button
                       key={letter}
                       type="button"
+                      onClick={() => {
+                        if (tempLetters.length < MAX_LETTERS) {
+                          setTempLetters((prev) => [...prev, letter]);
+                        }
+                      }}
                       disabled={tempLetters.length >= MAX_LETTERS}
-                      onClick={() => setTempLetters((prev) => prev + letter)}
-                      className="flex h-10 w-full items-center justify-center rounded-xl bg-gray-100 text-sm font-black text-gray-700 transition-all hover:bg-[#fce8e7] hover:text-[#85241F] active:scale-90 disabled:opacity-30 cursor-pointer"
+                      className="flex h-10 w-full items-center justify-center rounded-xl bg-gray-100 text-sm font-black text-gray-700 transition-all hover:bg-brand-tint hover:text-brand active:scale-90 disabled:opacity-30"
                     >
                       {letter}
                     </button>
                   ))}
                 </div>
 
-                <div className="flex gap-2">
+                {/* Actions */}
+                <div className="mt-4 flex gap-2">
                   <button
                     type="button"
                     onClick={() => setCharmStep("color")}
-                    className="flex h-12 flex-1 items-center justify-center rounded-2xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 cursor-pointer"
+                    className="flex h-12 flex-1 items-center justify-center rounded-2xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 active:scale-[0.98] transition-all"
                   >
-                    ← เปลี่ยนสี
+                    ← {t("charm.change_color")}
                   </button>
                   <button
                     type="button"
                     onClick={confirmCharmEdit}
-                    className="flex-2 rounded-2xl bg-[#85241F] py-3 text-sm font-black text-white cursor-pointer"
+                    disabled={tempLetters.length < 2}
+                    className="flex h-12 flex-1 items-center justify-center rounded-2xl bg-brand text-sm font-black text-white shadow-lg shadow-brand/20 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none disabled:shadow-none"
                   >
-                    ยืนยัน +{tempCharmAddon}฿
+                    {t("charm.confirm")}
                   </button>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>

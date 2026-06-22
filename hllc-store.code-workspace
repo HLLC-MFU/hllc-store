@@ -1,9 +1,9 @@
 {
   "folders": [
     { "path": ".", "name": "🏠 root" },
-    { "path": "app", "name": "🧭 app (routes & api)" },
-    { "path": "components", "name": "🧩 components" },
-    { "path": "lib", "name": "📚 lib" }
+    { "path": "apps/frontend", "name": "🖥️ frontend" },
+    { "path": "apps/backend", "name": "⚙️ backend" },
+    { "path": "packages/shared", "name": "📦 shared" }
   ],
   "settings": {
     "files.exclude": {
@@ -38,6 +38,9 @@
     "[markdown]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
 
     "eslint.validate": ["javascript", "typescript", "typescriptreact"],
+
+    "typescript.tsserver.experimental.useProjectForSingleFileMode": true,
+    "typescript.preferences.importModuleSpecifier": "relative",
 
     "tailwindCSS.includeLanguages": { "typescriptreact": "javascript" },
     "tailwindCSS.experimental.classRegex": [

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { Image as ImageIcon, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,11 +31,10 @@ export function ProductCard({ product, onUpdate, onDelete, onEdit, t }: {
       >
         <div className="relative aspect-square bg-gray-50 overflow-hidden">
           {product.imageUrls && product.imageUrls[0]
-            // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={product.imageUrls[0]} alt={product.name.th} className="w-full h-full object-cover" />
+            ? <Image fill src={product.imageUrls[0]} alt={product.name.th} className="object-cover" sizes="(max-width: 640px) 50vw, 300px" />
             : <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-8 h-8 text-gray-300" /></div>}
           {product.discount ? (
-            <Badge className="absolute top-2.5 left-2.5 bg-[#85241F] text-white text-[9px] font-black px-2 py-0.5 rounded-lg shadow-sm">
+            <Badge className="absolute top-2.5 left-2.5 bg-brand text-white text-[9px] font-black px-2 py-0.5 rounded-lg shadow-sm">
               -{product.discount}%
             </Badge>
           ) : null}
@@ -60,11 +60,11 @@ export function ProductCard({ product, onUpdate, onDelete, onEdit, t }: {
             <div>
               {discountedPrice ? (
                 <div>
-                  <span className="font-black text-[#85241F] text-xs">{money(discountedPrice)}</span>
+                  <span className="font-black text-brand text-xs">{money(discountedPrice)}</span>
                   <span className="text-[9px] text-gray-400 line-through ml-1.5 font-bold">{money(product.price)}</span>
                 </div>
               ) : (
-                <span className="font-black text-[#85241F] text-xs">{money(product.price)}</span>
+                <span className="font-black text-brand text-xs">{money(product.price)}</span>
               )}
             </div>
             <span className="text-[10px] text-gray-400 font-bold bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-lg">{product.stock} ชิ้น</span>

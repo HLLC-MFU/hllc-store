@@ -42,6 +42,15 @@ export const adminOrderByIdRouter = {
 
     return orderController.updateAdminOrder(request, orderId);
   },
+
+  async POST(request: NextRequest, context: OrderRouteContext) {
+    const { orderId } = await context.params;
+    const url = new URL(request.url);
+    if (url.searchParams.get("action") === "resend-email") {
+      return orderController.resendOrderEmail(request, orderId);
+    }
+    return new Response("Not found", { status: 404 });
+  },
 };
 
 export const adminOrdersPendingRouter = {

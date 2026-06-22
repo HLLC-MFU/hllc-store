@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { Upload, XCircle } from "lucide-react";
 import * as settingsApi from "@/lib/modules/settings";
 import type { CharmSettings } from "@/lib/modules/settings";
 import { CHARM_COLORS } from "@/lib/config/catalog";
+import { csrfHeaders } from "@/components/admin/api-client";
 
 export function CharmSettingsPanel({ notify, saveRef }: { notify?: (msg: string) => void; saveRef?: React.MutableRefObject<(() => Promise<void>) | null> }) {
   const [images, setImages] = React.useState<Record<string, string>>({});
@@ -32,7 +34,7 @@ export function CharmSettingsPanel({ notify, saveRef }: { notify?: (msg: string)
     setUploading(colorId);
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const res = await fetch("/api/upload", { method: "POST", headers: csrfHeaders(), body: fd });
     setUploading(null);
     if (!res.ok) { notify?.("อัปโหลดรูปไม่สำเร็จ"); return; }
     const data = await res.json() as { url: string };
@@ -75,8 +77,7 @@ export function CharmSettingsPanel({ notify, saveRef }: { notify?: (msg: string)
 
               {imgUrl ? (
                 <div className="relative aspect-square">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={imgUrl} alt={color.label} className="h-full w-full rounded-xl border border-gray-200 object-cover" />
+                  <Image fill src={imgUrl} alt={color.label} className="rounded-xl border border-gray-200 object-cover" sizes="120px" />
                   <button
                     type="button"
                     onClick={() => setImages((prev) => ({ ...prev, [color.id]: "" }))}
@@ -86,8 +87,8 @@ export function CharmSettingsPanel({ notify, saveRef }: { notify?: (msg: string)
                   </button>
                 </div>
               ) : (
-                <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-gray-200 hover:border-[#85241F]/40 transition-colors">
-                  <Upload className={`h-4 w-4 ${isUploading ? "text-[#85241F] animate-pulse" : "text-gray-400"}`} />
+                <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-gray-200 hover:border-brand/40 transition-colors">
+                  <Upload className={`h-4 w-4 ${isUploading ? "text-brand animate-pulse" : "text-gray-400"}`} />
                   <span className="text-[9px] font-bold text-gray-400">{isUploading ? "กำลังอัปโหลด..." : "อัปโหลด"}</span>
                   <input type="file" accept="image/*" className="hidden" disabled={!!uploading} onChange={(e) => handleUpload(color.id, e)} />
                 </label>

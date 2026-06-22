@@ -228,6 +228,8 @@ export const shippingSettingsSchema = z.object({
   remoteAdditionalItem: shippingFee,
   islandFirstItem: shippingFee,
   islandAdditionalItem: shippingFee,
+  pickupLocation: z.string().trim().max(120).optional(),
+  pickupHours: z.string().trim().max(80).optional(),
 });
 
 /* ================================================================

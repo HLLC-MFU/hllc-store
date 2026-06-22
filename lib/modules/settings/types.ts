@@ -15,6 +15,8 @@ export const shippingSettingsResponseSchema = z.object({
   remoteAdditionalItem: z.number(),
   islandFirstItem: z.number(),
   islandAdditionalItem: z.number(),
+  pickupLocation: z.string().optional(),
+  pickupHours: z.string().optional(),
 });
 
 export type ShippingSettings = z.infer<typeof shippingSettingsResponseSchema>;

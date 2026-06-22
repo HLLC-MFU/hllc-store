@@ -1,4 +1,5 @@
 import { ok, badRequest } from "@/lib/backend/http";
+import { readLimitedJson } from "@/lib/backend/request-utils";
 import * as settingsService from "./settings-service";
 
 export async function getPaymentSettings() {
@@ -11,7 +12,7 @@ export async function getPaymentSettings() {
 
 export async function updatePaymentSettings(request: Request) {
   try {
-    const body = await request.json();
+    const body = await readLimitedJson(request, 16_000);
     return ok(await settingsService.updatePaymentSettings(body));
   } catch (error) {
     return badRequest(error);
@@ -28,7 +29,7 @@ export async function getShippingSettings() {
 
 export async function updateShippingSettings(request: Request) {
   try {
-    const body = await request.json();
+    const body = await readLimitedJson(request, 32_000);
     return ok(await settingsService.updateShippingSettings(body));
   } catch (error) {
     return badRequest(error);
@@ -45,7 +46,7 @@ export async function getHomeContent() {
 
 export async function updateHomeContent(request: Request) {
   try {
-    const body = await request.json();
+    const body = await readLimitedJson(request, 64_000);
     return ok(await settingsService.updateHomeContent(body));
   } catch (error) {
     return badRequest(error);
@@ -62,7 +63,7 @@ export async function getCharmSettings() {
 
 export async function updateCharmSettings(request: Request) {
   try {
-    const body = await request.json();
+    const body = await readLimitedJson(request, 32_000);
     return ok(await settingsService.updateCharmSettings(body));
   } catch (error) {
     return badRequest(error);

@@ -1,0 +1,29 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    ports:
+      - "3001:3001"
+    env_file:
+      - apps/backend/.env.local
+    restart: unless-stopped
+    volumes:
+      - uploads:/app/apps/backend/uploads
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - apps/frontend/.env.local
+    environment:
+      - BACKEND_URL=http://backend:3001
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  uploads:

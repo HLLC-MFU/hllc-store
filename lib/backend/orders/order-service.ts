@@ -7,7 +7,7 @@ import { calcShippingFee } from "@/lib/config/shipping";
 import { isRemoteArea } from "@/lib/data/remote-areas";
 import { isIslandArea } from "@/lib/data/island-areas";
 import { getShippingSettings } from "@/lib/backend/settings/settings-service";
-import { sendEmail, trackingNumberEmail, pickupReadyEmail, orderCancelledEmail } from "@/lib/backend/email-service";
+import { sendEmail, trackingNumberEmail, pickupReadyEmail, orderCancelledEmail, orderConfirmedEmail, slipReceivedEmail, slipApprovedEmail } from "@/lib/backend/email-service";
 import { getOrdersCollection } from "./order-module";
 import type {
   CreateOrderInput,
@@ -150,8 +150,9 @@ export async function createOrder(input: CreateOrderInput) {
       ? productOptions.find((option) => option.label === selectedOption)
       : undefined;
 
-    if (productOptions.length > 0 && !matchedOption) {
-      throw new Error(`please select a valid option: ${product.name}`);
+    if (selectedOption && productOptions.length > 0 && !matchedOption) {
+      const pName = typeof product.name === "object" ? (product.name as { th?: string }).th ?? "" : String(product.name);
+      throw new Error(`invalid option selected: ${pName}`);
     }
 
     const optionStock = matchedOption?.stock ?? product.stock;
@@ -221,7 +222,25 @@ export async function createOrder(input: CreateOrderInput) {
   const result = await orders.insertOne(order);
   publishOrdersUpdated();
 
-  return toOrder({ _id: result.insertedId, ...order });
+  const created = toOrder({ _id: result.insertedId, ...order });
+
+  if (customer.email) {
+    const { pickupLocation } = await getShippingSettings();
+    notifyEmail(
+      orderConfirmedEmail(customer.name, customer.email, {
+        items: storedItems.map((si) => {
+          const product = products.find((p) => p._id.equals(si.productId));
+          const name = typeof product?.name === "object" ? ((product.name as { th?: string }).th ?? "") : String(product?.name ?? "");
+          return { name, qty: si.quantity, option: si.selectedOption || undefined, customName: si.customName || undefined };
+        }),
+        deliveryMode,
+        customerPhone: customer.phone,
+        pickupLocation: pickupLocation || undefined,
+      }),
+    );
+  }
+
+  return created;
 }
 
 export async function listOrders(filters?: {
@@ -321,7 +340,13 @@ export async function attachPaymentSlip(orderId: string, input: PaymentSlipInput
   }
 
   publishOrdersUpdated();
-  return toOrder(result);
+
+  const updated = toOrder(result);
+  if (updated.customer.email) {
+    notifyEmail(slipReceivedEmail(updated.customer.name, updated.customer.email, updated.customer.phone));
+  }
+
+  return updated;
 }
 
 export async function reviewPaymentSlip(orderId: string, input: ReviewSlipInput) {
@@ -358,23 +383,26 @@ export async function reviewPaymentSlip(orderId: string, input: ReviewSlipInput)
   }
 
   if (input.approved) {
-    await Promise.all(
+    const stockResults = await Promise.allSettled(
       order.items.map((item) => {
         const inc: Document = { stock: -item.quantity };
+        const filter: Document = { _id: assertObjectId(item.productId), stock: { $gte: item.quantity } };
         const options: Document = {};
 
         if (item.selectedOption) {
           inc["options.$[option].stock"] = -item.quantity;
-          options.arrayFilters = [{ "option.label": item.selectedOption, "option.stock": { $exists: true } }];
+          options.arrayFilters = [{ "option.label": item.selectedOption, "option.stock": { $exists: true, $gte: item.quantity } }];
         }
 
-        return db.collection("products").updateOne(
-          { _id: assertObjectId(item.productId) },
-          { $inc: inc, $set: { updatedAt: timestamp } },
-          options,
-        );
+        return db.collection("products").updateOne(filter, { $inc: inc, $set: { updatedAt: timestamp } }, options);
       }),
     );
+
+    for (const r of stockResults) {
+      if (r.status === "rejected") {
+        console.error("[STOCK_UPDATE_ERROR]", r.reason instanceof Error ? r.reason.message : r.reason);
+      }
+    }
   }
 
   publishOrdersUpdated();
@@ -418,8 +446,9 @@ export async function transitionOrderStatus(orderId: string, status: OrderStatus
 
   // Pickup orders have no tracking number — tell the customer it's ready to collect.
   if (status === "shipped" && updated.deliveryMode === "pickup") {
+    const { pickupLocation, pickupHours } = await getShippingSettings();
     notifyEmail(
-      pickupReadyEmail(updated.customer.name, updated.customer.email, updated.customer.phone),
+      pickupReadyEmail(updated.customer.name, updated.customer.email, updated.customer.phone, pickupLocation || undefined, pickupHours || undefined),
     );
   }
 
@@ -489,7 +518,7 @@ export async function cancelOrder(orderId: string, reason: string, cancelledBy: 
 
   // คืน stock เฉพาะ order ที่อนุมัติสลิปแล้ว (stock เคยถูกลดไป)
   if (order.slip.status === "approved") {
-    await Promise.all(
+    const refundResults = await Promise.allSettled(
       order.items.map((item) => {
         const inc: Document = { stock: item.quantity };
         const options: Document = {};
@@ -506,6 +535,12 @@ export async function cancelOrder(orderId: string, reason: string, cancelledBy: 
         );
       }),
     );
+
+    for (const r of refundResults) {
+      if (r.status === "rejected") {
+        console.error("[STOCK_REFUND_ERROR]", r.reason instanceof Error ? r.reason.message : r.reason);
+      }
+    }
   }
 
   const cancelled = toOrder(result);
@@ -520,6 +555,27 @@ export async function cancelOrder(orderId: string, reason: string, cancelledBy: 
 
   publishOrdersUpdated();
   return cancelled;
+}
+
+export async function resendOrderEmail(orderId: string) {
+  const order = await getOrder(orderId);
+  if (!order) throw new Error("order not found");
+  if (!order.customer.email) throw new Error("ลูกค้าไม่มีอีเมล");
+
+  const { pickupLocation, pickupHours } = await getShippingSettings();
+  const isPickup = order.deliveryMode === "pickup";
+
+  if (order.slip.status === "approved" && order.status === "packing") {
+    await sendEmail(slipApprovedEmail(order.customer.name, order.customer.email, order.customer.phone));
+  } else if (order.status === "shipped" && isPickup) {
+    await sendEmail(pickupReadyEmail(order.customer.name, order.customer.email, order.customer.phone, pickupLocation || undefined, pickupHours || undefined));
+  } else if (order.status === "shipped" && order.trackingNumber) {
+    await sendEmail(trackingNumberEmail(order.customer.name, order.trackingNumber, order.customer.email, order.customer.phone));
+  } else if (order.status === "cancelled") {
+    await sendEmail(orderCancelledEmail(order.customer.name, order.cancellationReason ?? "", order.customer.email, order.customer.phone));
+  } else {
+    throw new Error("ไม่มี email ที่เหมาะสมสำหรับสถานะนี้");
+  }
 }
 
 export async function addAdminNote(

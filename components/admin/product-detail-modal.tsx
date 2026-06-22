@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { Image as ImageIcon, Package, Pencil, Trash2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,17 +37,16 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Image */}
-        <div className="relative w-full aspect-video bg-gray-50 shrink-0">
+        <div className="relative w-full aspect-video bg-gray-50 shrink-0 overflow-hidden">
           {product.imageUrls && product.imageUrls[0] ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.imageUrls[0]} alt={product.name.th} className="w-full h-full object-cover" />
+            <Image fill src={product.imageUrls[0]} alt={product.name.th} className="object-cover" sizes="(max-width: 768px) 100vw, 640px" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <ImageIcon className="w-12 h-12 text-gray-200" />
             </div>
           )}
           {product.discount ? (
-            <Badge className="absolute top-3 left-3 bg-[#85241F] text-white text-[10px] font-black px-2 py-0.5 rounded-lg">
+            <Badge className="absolute top-3 left-3 bg-brand text-white text-[10px] font-black px-2 py-0.5 rounded-lg">
               -{product.discount}%
             </Badge>
           ) : null}
@@ -69,11 +69,11 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
             <div className="flex flex-col gap-0.5">
               {discountedPrice ? (
                 <>
-                  <span className="text-2xl font-black text-[#85241F]">{money(discountedPrice)}</span>
+                  <span className="text-2xl font-black text-brand">{money(discountedPrice)}</span>
                   <span className="text-xs text-gray-400 line-through font-bold">{money(product.price)}</span>
                 </>
               ) : (
-                <span className="text-2xl font-black text-[#85241F]">{money(product.price)}</span>
+                <span className="text-2xl font-black text-brand">{money(product.price)}</span>
               )}
             </div>
             <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-xl px-3 py-1.5">
@@ -81,6 +81,16 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
               <span className="text-xs font-black text-gray-700">{product.stock} ชิ้น</span>
             </div>
           </div>
+
+          {/* Shipping */}
+          {(product.shippingFirstItem > 0 || product.shippingAdditionalItem > 0) && (
+            <div className="flex items-center justify-between rounded-xl bg-gray-50 border border-gray-100 px-4 py-3">
+              <span className="text-xs font-bold text-gray-500">ค่าส่ง</span>
+              <span className="text-xs font-black text-gray-700">
+                ชิ้นแรก {product.shippingFirstItem}฿ · เพิ่ม {product.shippingAdditionalItem}฿/ชิ้น
+              </span>
+            </div>
+          )}
 
           {/* Description */}
           {product.description?.th && (
@@ -115,7 +125,7 @@ export function ProductDetailModal({ product, onEdit, onDelete, onClose }: {
             <div className="flex gap-2 pt-1">
               <Button
                 onClick={() => { onEdit(product); onClose(); }}
-                className="flex-1 bg-[#85241F] hover:bg-[#B72D2A] rounded-xl h-10 text-xs font-bold cursor-pointer"
+                className="flex-1 bg-brand hover:bg-brand-hover rounded-xl h-10 text-xs font-bold cursor-pointer"
               >
                 <Pencil className="w-3.5 h-3.5 mr-1.5" /> แก้ไข
               </Button>
