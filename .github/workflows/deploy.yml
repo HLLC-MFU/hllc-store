@@ -15,6 +15,7 @@ env:
   K8S_NAMESPACE: hllc-store
 
 jobs:
+
   build:
     runs-on: ubuntu-latest
     steps:
