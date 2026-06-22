@@ -30,7 +30,7 @@ const messages = {
     passwordMismatch: "รหัสผ่านไม่ตรงกัน",
     subjectRequired: "กรุณากรอกหัวข้อ",
     textOrHtmlRequired: "กรุณากรอกข้อความหรือ HTML",
-    imageInvalid: "รูปภาพต้องเป็น PNG, JPG, WEBP หรือ GIF และขนาดไม่เกิน 3MB",
+    imageInvalid: "รูปภาพต้องเป็น PNG, JPG, WEBP หรือ GIF และขนาดไม่เกิน 5MB",
     invalidId: "รหัสไม่ถูกต้อง",
   },
   en: {
@@ -58,7 +58,7 @@ const messages = {
     passwordMismatch: "Passwords do not match",
     subjectRequired: "Subject is required",
     textOrHtmlRequired: "Either text or html is required",
-    imageInvalid: "Image must be a valid PNG, JPG, WEBP, or GIF under 3MB",
+    imageInvalid: "Image must be a valid PNG, JPG, WEBP, or GIF under 5MB",
     invalidId: "Invalid ID",
   },
 };

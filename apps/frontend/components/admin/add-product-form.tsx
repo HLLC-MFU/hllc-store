@@ -6,7 +6,6 @@ import { AlertCircle, Check, DollarSign, FileText, Image, PackagePlus, Pencil, P
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { PLACEMENTS, placementByValue, placementValue } from "@/lib/config/catalog";
 import { csrfHeaders } from "@/components/admin/api-client";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -94,8 +93,15 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
   const [nameValue, setNameValue] = React.useState(product?.name.th ?? "");
   const [priceValue, setPriceValue] = React.useState(String(product?.price ?? ""));
   const [stockValue, setStockValue] = React.useState(String(product?.stock ?? ""));
-  const [descriptionTh, setDescriptionTh] = React.useState(product?.description?.th ?? "");
-  const [descriptionEn, setDescriptionEn] = React.useState(product?.description?.en ?? "");
+  const [descItemsTh, setDescItemsTh] = React.useState<string[]>(() => {
+    const lines = (product?.description?.th ?? "").split("\n").map(l => l.replace(/^[•\-*]\s*/, "").trim()).filter(Boolean);
+    return lines.length > 0 ? lines : [""];
+  });
+  const [descItemsEn, setDescItemsEn] = React.useState<string[]>(() => {
+    const lines = (product?.description?.en ?? "").split("\n").map(l => l.replace(/^[•\-*]\s*/, "").trim()).filter(Boolean);
+    return lines.length > 0 ? lines : [""];
+  });
+  const [descLang, setDescLang] = React.useState<"th" | "en">("th");
   const [fieldErrors, setFieldErrors] = React.useState<Set<string>>(new Set());
   const TOTAL_STEPS = 3;
 
@@ -126,8 +132,8 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
 
   function validateStep3(): string[] {
     const missing: string[] = [];
-    if (!descriptionTh.trim()) { markError("descriptionTh"); missing.push("รายละเอียด (TH)"); } else clearError("descriptionTh");
-    if (!descriptionEn.trim()) { markError("descriptionEn"); missing.push("Description (EN)"); } else clearError("descriptionEn");
+    if (!descItemsTh.some(l => l.trim())) { markError("descriptionTh"); missing.push("รายละเอียด (TH)"); } else clearError("descriptionTh");
+    if (!descItemsEn.some(l => l.trim())) { markError("descriptionEn"); missing.push("Description (EN)"); } else clearError("descriptionEn");
     return missing;
   }
 
@@ -176,11 +182,13 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
     setUploading(true);
     try {
       const productSlug = product?.slug ?? toSlug(nameValue);
+      const uploadSuffix = Date.now().toString(36);
       const uploads = await Promise.all(
         files.slice(0, MAX_IMAGES).map(async (file, i) => {
           const fd = new FormData();
           fd.append("file", file);
-          if (productSlug) fd.append("slug", i === 0 ? productSlug : `${productSlug}-${i + 1}`);
+          const slugBase = productSlug ? `${productSlug}-${uploadSuffix}` : null;
+          if (slugBase) fd.append("slug", i === 0 ? slugBase : `${slugBase}-${i + 1}`);
           const res = await fetch("/api/upload", { method: "POST", headers: csrfHeaders(), body: fd });
           if (!res.ok) throw new Error("Upload failed");
           const data = await res.json() as { url: string };
@@ -236,8 +244,8 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
         price: Number(fd.get("price")) || product.price,
         stock: Number(fd.get("stock")) ?? product.stock,
         description: {
-          th: String(fd.get("description") ?? product.description?.th ?? "").trim(),
-          en: String(fd.get("descriptionEn") ?? product.description?.en ?? "").trim() || undefined,
+          th: descItemsTh.filter(Boolean).join("\n") || product.description?.th || "",
+          en: descItemsEn.filter(Boolean).join("\n") || undefined,
         },
         category: placementByValue(placement)?.category,
         group: placementByValue(placement)?.group,
@@ -269,8 +277,8 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center sm:p-4 animate-in fade-in duration-200">
+      <div className={`bg-white w-full shadow-2xl animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300 flex flex-col ${step === 3 ? "sm:rounded-3xl sm:max-w-2xl h-[100dvh] sm:h-auto sm:max-h-[90vh]" : "rounded-3xl max-w-md max-h-[90vh]"}`}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
@@ -325,7 +333,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
         })()}
 
         {/* Form */}
-        <div className="overflow-y-auto flex-1 px-5 pb-5">
+        <div className={`px-5 pb-5 flex-1 ${step === 3 ? "flex flex-col overflow-hidden min-h-0" : "overflow-y-auto"}`}>
           <form
             ref={formRef}
             onSubmit={handleSubmit}
@@ -335,6 +343,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                 e.preventDefault();
               }
             }}
+            className={step === 3 ? "flex flex-col flex-1 min-h-0" : ""}
           >
             <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleFiles} className="hidden" disabled={uploading} />
 
@@ -496,7 +505,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
             </div>
 
             {/* ── Step 3: รายละเอียด ── */}
-            <div className={step !== 3 ? "hidden" : "flex flex-col gap-3.5"}>
+            <div className={step !== 3 ? "hidden" : "flex flex-col gap-3 flex-1 min-h-0"}>
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">ขั้นตอน 3 — รายละเอียดสินค้า</p>
 
               {/* Custom name — bottle only */}
@@ -515,24 +524,107 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                 </div>
               )}
 
-              <div className="flex flex-col gap-2.5">
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-[10px] flex items-center gap-1 font-bold text-gray-500">
-                    <span className="bg-gray-100 text-gray-500 px-1 py-0.5 rounded text-[8px] font-black leading-none">TH</span> รายละเอียด
-                  </Label>
-                  <Textarea name="description" rows={4} value={descriptionTh} onChange={(e) => { setDescriptionTh(e.target.value); if (e.target.value.trim()) clearError("descriptionTh"); }} placeholder="รายละเอียดภาษาไทย..." className={`rounded-xl text-xs resize-none ${err("descriptionTh") ? "border-red-400 focus-visible:ring-red-300" : "border-gray-200"}`} />
+              {/* hidden inputs so FormData still works for new-product path */}
+              <input type="hidden" name="description" value={descItemsTh.filter(Boolean).join("\n")} />
+              <input type="hidden" name="descriptionEn" value={descItemsEn.filter(Boolean).join("\n")} />
+
+              {/* TH / EN tab switcher */}
+              <div className="flex rounded-xl bg-gray-100 p-1 gap-1">
+                <button type="button" onClick={() => setDescLang("th")}
+                  className={`flex-1 rounded-lg py-1.5 text-xs font-black transition-all ${descLang === "th" ? "bg-white shadow text-gray-900" : "text-gray-400"}`}>
+                  <span className="mr-1.5 bg-gray-200 text-gray-500 px-1 py-0.5 rounded text-[8px] font-black leading-none">TH</span>
+                  รายละเอียด {err("descriptionTh") && <span className="text-red-400 ml-1">!</span>}
+                </button>
+                <button type="button" onClick={() => setDescLang("en")}
+                  className={`flex-1 rounded-lg py-1.5 text-xs font-black transition-all ${descLang === "en" ? "bg-white shadow text-gray-900" : "text-gray-400"}`}>
+                  <span className="mr-1.5 bg-gray-200 text-gray-500 px-1 py-0.5 rounded text-[8px] font-black leading-none">EN</span>
+                  Description {err("descriptionEn") && <span className="text-red-400 ml-1">!</span>}
+                </button>
+              </div>
+
+              {/* Bullet editor — TH */}
+              <div className={descLang !== "th" ? "hidden" : "flex flex-col gap-1.5 flex-1 min-h-0"}>
+                <div className={`rounded-xl border flex flex-col overflow-y-auto flex-1 ${err("descriptionTh") ? "border-red-400 bg-red-50/40" : "border-gray-200"}`}>
+                  <div className="p-3 flex flex-col gap-2 flex-1">
+                    {descItemsTh.map((item, i) => (
+                      <div key={i} className="flex items-start gap-2 group">
+                        <span className="text-brand shrink-0 text-sm mt-2 leading-none">•</span>
+                        <input
+                          value={item}
+                          autoFocus={i === descItemsTh.length - 1 && item === ""}
+                          onChange={(e) => {
+                            const next = [...descItemsTh]; next[i] = e.target.value;
+                            setDescItemsTh(next);
+                            if (next.some(l => l.trim())) clearError("descriptionTh");
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") { e.preventDefault(); const next = [...descItemsTh]; next.splice(i + 1, 0, ""); setDescItemsTh(next); }
+                            if (e.key === "Backspace" && item === "" && descItemsTh.length > 1) { e.preventDefault(); setDescItemsTh(descItemsTh.filter((_, j) => j !== i)); }
+                          }}
+                          placeholder="พิมพ์รายละเอียด..."
+                          className="flex-1 text-sm py-1.5 bg-transparent outline-none placeholder:text-gray-300 border-b border-transparent focus:border-gray-200 transition-colors"
+                        />
+                        {descItemsTh.length > 1 && (
+                          <button type="button" onClick={() => setDescItemsTh(descItemsTh.filter((_, j) => j !== i))}
+                            className="shrink-0 mt-1.5 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
+                            <XCircle className="w-4 h-4 text-gray-300 hover:text-red-400" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="px-3 pb-3 border-t border-gray-100 pt-2">
+                    <button type="button" onClick={() => setDescItemsTh([...descItemsTh, ""])}
+                      className="flex items-center gap-1.5 text-xs text-brand/70 font-bold hover:text-brand transition-colors">
+                      <Plus className="w-3.5 h-3.5" /> เพิ่มรายการ
+                    </button>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-[10px] flex items-center gap-1 font-bold text-gray-500">
-                    <span className="bg-gray-100 text-gray-500 px-1 py-0.5 rounded text-[8px] font-black leading-none">EN</span> Description
-                  </Label>
-                  <Textarea name="descriptionEn" rows={4} value={descriptionEn} onChange={(e) => { setDescriptionEn(e.target.value); if (e.target.value.trim()) clearError("descriptionEn"); }} placeholder="Description in English..." className={`rounded-xl text-xs resize-none ${err("descriptionEn") ? "border-red-400 focus-visible:ring-red-300" : "border-gray-200"}`} />
+              </div>
+
+              {/* Bullet editor — EN */}
+              <div className={descLang !== "en" ? "hidden" : "flex flex-col gap-1.5 flex-1 min-h-0"}>
+                <div className={`rounded-xl border flex flex-col overflow-y-auto flex-1 ${err("descriptionEn") ? "border-red-400 bg-red-50/40" : "border-gray-200"}`}>
+                  <div className="p-3 flex flex-col gap-2 flex-1">
+                    {descItemsEn.map((item, i) => (
+                      <div key={i} className="flex items-start gap-2 group">
+                        <span className="text-brand shrink-0 text-sm mt-2 leading-none">•</span>
+                        <input
+                          value={item}
+                          autoFocus={i === descItemsEn.length - 1 && item === ""}
+                          onChange={(e) => {
+                            const next = [...descItemsEn]; next[i] = e.target.value;
+                            setDescItemsEn(next);
+                            if (next.some(l => l.trim())) clearError("descriptionEn");
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") { e.preventDefault(); const next = [...descItemsEn]; next.splice(i + 1, 0, ""); setDescItemsEn(next); }
+                            if (e.key === "Backspace" && item === "" && descItemsEn.length > 1) { e.preventDefault(); setDescItemsEn(descItemsEn.filter((_, j) => j !== i)); }
+                          }}
+                          placeholder="Type description..."
+                          className="flex-1 text-sm py-1.5 bg-transparent outline-none placeholder:text-gray-300 border-b border-transparent focus:border-gray-200 transition-colors"
+                        />
+                        {descItemsEn.length > 1 && (
+                          <button type="button" onClick={() => setDescItemsEn(descItemsEn.filter((_, j) => j !== i))}
+                            className="shrink-0 mt-1.5 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
+                            <XCircle className="w-4 h-4 text-gray-300 hover:text-red-400" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="px-3 pb-3 border-t border-gray-100 pt-2">
+                    <button type="button" onClick={() => setDescItemsEn([...descItemsEn, ""])}
+                      className="flex items-center gap-1.5 text-xs text-brand/70 font-bold hover:text-brand transition-colors">
+                      <Plus className="w-3.5 h-3.5" /> Add item
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Navigation */}
-            <div className={`flex gap-2 mt-5`}>
+            <div className={`flex gap-2 ${step === 3 ? "mt-auto pt-4" : "mt-5"}`}>
               {step > 1 && (
                 <Button type="button" variant="outline" onClick={() => setStep((s) => s - 1)} className="flex-1 rounded-xl h-11 text-xs font-bold">
                   ย้อนกลับ

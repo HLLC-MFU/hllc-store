@@ -5,7 +5,9 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./validation/*": "./src/validation/*"
+    "./validation/*": "./src/validation/*",
+    "./config/*": "./src/config/*",
+    "./data/*": "./src/data/*"
   },
   "scripts": {
     "build": "tsc --noEmit"

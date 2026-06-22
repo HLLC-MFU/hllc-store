@@ -194,14 +194,14 @@ export const imageUrlSchema = z
   .refine(
     (val) => {
       if (val.startsWith("data:")) {
-        return /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(val) && val.length <= 3_000_000;
+        return /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(val) && val.length <= 7_000_000;
       }
       if (val.startsWith("/uploads/")) {
-        return /^\/uploads\/[a-f0-9-]+\.(jpg|jpeg|png|webp|gif)$/i.test(val);
+        return /^\/uploads\/[a-z0-9_-]+\.(jpg|jpeg|png|webp|gif)$/i.test(val);
       }
       return true;
     },
-    { message: "Image must be a valid PNG, JPG, WEBP, or GIF under 3MB" }
+    { message: "Image must be a valid PNG, JPG, WEBP, or GIF under 5MB" }
   );
 
 /* ================================================================
