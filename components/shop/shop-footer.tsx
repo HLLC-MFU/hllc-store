@@ -29,10 +29,11 @@ function MailIcon({ className }: { className?: string }) {
 
 const CONTACT = {
   email: "activity@mfu.ac.th",
+  emailUrl: "mailto:activity@mfu.ac.th",
   instagram: "@mfu_activities",
-  instagramUrl: "https://instagram.com/mfu_activities",
+  instagramUrl: "https://www.instagram.com/mfu_activities/",
   facebook: "MFU Activities",
-  facebookUrl: "https://facebook.com/mfuactivities",
+  facebookUrl: "https://www.facebook.com/mfuactivities",
 };
 
 export function ShopFooter() {
@@ -76,7 +77,8 @@ export function ShopFooter() {
 
         </div>
 
-        <p className="text-[11px] font-semibold text-white/30 pt-2 border-t border-white/10 w-full text-center">
+      <div className="bg-amber-950 border-t border-amber-900 px-6 pt-4 pb-24">
+        <p className="text-[10px] font-semibold text-amber-900">
           © {new Date().getFullYear()} HLLC Store.
         </p>
       </div>
