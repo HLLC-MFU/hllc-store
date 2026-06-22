@@ -57,7 +57,7 @@ jobs:
           tags: ${{ steps.tags.outputs.backend }}
 
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, hllc-org-runner]
     needs: build
     steps:
       - name: Checkout
