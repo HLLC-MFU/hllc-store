@@ -25,19 +25,9 @@ export const DEFAULT_SHIPPING_RATES: ShippingRates = {
   pickupHours: "",
 };
 
-// Per-product line. Any rate left 0/undefined falls back to the store default.
 export type ShippingLine = {
   quantity: number;
-  shippingFirstItem?: number;
-  shippingAdditionalItem?: number;
-  remoteShippingFirstItem?: number;
-  remoteShippingAdditionalItem?: number;
-  islandShippingFirstItem?: number;
-  islandShippingAdditionalItem?: number;
 };
-
-const effective = (override: number | undefined, fallback: number) =>
-  typeof override === "number" && override > 0 ? override : fallback;
 
 export function calcShippingFee(
   lines: ShippingLine[],
@@ -47,23 +37,22 @@ export function calcShippingFee(
   if (deliveryMode === "pickup") return 0;
   const { remote, island, rates } = options;
 
+  let first: number;
+  let additional: number;
+  if (island) {
+    first = rates.islandFirstItem;
+    additional = rates.islandAdditionalItem;
+  } else if (remote) {
+    first = rates.remoteFirstItem;
+    additional = rates.remoteAdditionalItem;
+  } else {
+    first = rates.normalFirstItem;
+    additional = rates.normalAdditionalItem;
+  }
+
   const lineRates = lines
     .filter((l) => l.quantity > 0)
-    .map((line) => {
-      let first: number;
-      let additional: number;
-      if (island) {
-        first = effective(line.islandShippingFirstItem, rates.islandFirstItem);
-        additional = effective(line.islandShippingAdditionalItem, rates.islandAdditionalItem);
-      } else if (remote) {
-        first = effective(line.remoteShippingFirstItem, rates.remoteFirstItem);
-        additional = effective(line.remoteShippingAdditionalItem, rates.remoteAdditionalItem);
-      } else {
-        first = effective(line.shippingFirstItem, rates.normalFirstItem);
-        additional = effective(line.shippingAdditionalItem, rates.normalAdditionalItem);
-      }
-      return { first, additional, quantity: line.quantity };
-    });
+    .map((line) => ({ first, additional, quantity: line.quantity }));
 
   if (lineRates.length === 0) return 0;
 

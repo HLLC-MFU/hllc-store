@@ -52,12 +52,18 @@ function formatCustomName(raw: string): string {
   return `สายห้อย สี${color}${letters ? ` · ${letters}` : ""}`;
 }
 
+function charmAddonPrice(customName: string | undefined): number {
+  if (!customName?.startsWith("charm:")) return 0;
+  const letters = customName.split(":")[2] ?? "";
+  return 30 + Math.max(0, letters.length - 2) * 10;
+}
+
 const STATUS_LABEL: Record<string, { th: string; en: string; badge: string; icon: string }> = {
   payment_review:  { th: "รอยืนยันชำระ",  en: "Awaiting confirmation", badge: "text-amber-700 bg-amber-50",    icon: "bg-amber-100 text-amber-600"   },
   paid:            { th: "ชำระแล้ว",        en: "Paid",                  badge: "text-blue-700 bg-blue-50",      icon: "bg-blue-100 text-blue-600"     },
   packing:         { th: "กำลังแพ็ค",       en: "Packing",               badge: "text-blue-700 bg-blue-50",      icon: "bg-blue-100 text-blue-600"     },
   shipped:         { th: "จัดส่งแล้ว",       en: "Shipped",               badge: "text-emerald-700 bg-emerald-50", icon: "bg-emerald-100 text-emerald-600"},
-  completed:       { th: "ส่งถึงมือแล้ว",  en: "Delivered",             badge: "text-emerald-700 bg-emerald-50", icon: "bg-emerald-100 text-emerald-600"},
+  completed:       { th: "รับสินค้าแล้ว",   en: "Delivered",             badge: "text-emerald-700 bg-emerald-50", icon: "bg-emerald-100 text-emerald-600"},
   cancelled:       { th: "ยกเลิกแล้ว",      en: "Cancelled",             badge: "text-red-700 bg-red-50",        icon: "bg-red-100 text-red-500"       },
   pending_payment: { th: "รอชำระเงิน",      en: "Pending payment",       badge: "text-gray-500 bg-gray-100",     icon: "bg-gray-100 text-gray-400"     },
 };
@@ -310,26 +316,46 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
             </button>
             {itemsOpen && (
               <div className="border-t border-gray-100 px-4 py-3 flex flex-col gap-2">
-                {order.items.map((item) => (
-                  <div key={`${order.id}-${item.productId}-${item.selectedOption ?? ""}`} className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm font-semibold text-gray-700">
-                        {itemName(item.name, lang)}<span className="ml-1 text-gray-400 font-medium">×{item.quantity}</span>
-                      </span>
-                      <span className="text-sm font-bold text-gray-600 shrink-0">{money(item.subtotal)}</span>
-                    </div>
-                    {(item.selectedOption || item.customName) && (
-                      <div className="flex flex-wrap gap-1.5 pl-2 border-l-2 border-brand/20">
-                        {item.selectedOption && (
-                          <span className="rounded-lg bg-brand/5 px-2.5 py-1 text-[10px] font-black text-brand">{item.selectedOption}</span>
-                        )}
-                        {item.customName && (
-                          <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-[10px] font-black text-amber-700">{formatCustomName(item.customName)}</span>
-                        )}
+                {order.items.map((item) => {
+                  const charm = charmAddonPrice(item.customName);
+                  const baseSubtotal = item.subtotal - charm * item.quantity;
+                  return (
+                    <div key={`${order.id}-${item.productId}-${item.selectedOption ?? ""}`} className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-semibold text-gray-700">
+                          {itemName(item.name, lang)}<span className="ml-1 text-gray-400 font-medium">×{item.quantity}</span>
+                        </span>
+                        <span className="text-sm font-bold text-gray-600 shrink-0">{money(baseSubtotal)}</span>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      {item.selectedOption && (
+                        <div className="pl-2 border-l-2 border-brand/20">
+                          <span className="rounded-lg bg-brand/5 px-2.5 py-1 text-[10px] font-black text-brand">{item.selectedOption}</span>
+                        </div>
+                      )}
+                      {item.customName?.startsWith("charm:") && (
+                        <div className="flex items-center justify-between gap-3 pl-2 border-l-2 border-amber-200">
+                          <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-[10px] font-black text-amber-700">{formatCustomName(item.customName)}</span>
+                          <span className="text-xs font-bold text-amber-700 shrink-0">+{money(charm * item.quantity)}</span>
+                        </div>
+                      )}
+                      {item.customName && !item.customName.startsWith("charm:") && (
+                        <div className="pl-2 border-l-2 border-brand/20">
+                          <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-[10px] font-black text-amber-700">{item.customName}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {(() => {
+                  const itemsTotal = order.items.reduce((s, i) => s + i.subtotal, 0);
+                  const shippingFee = order.total - itemsTotal;
+                  return shippingFee > 0 ? (
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-xs font-semibold text-gray-400">{lang === "th" ? "ค่าส่ง" : "Shipping"}</span>
+                      <span className="text-sm font-bold text-gray-500 shrink-0">{money(shippingFee)}</span>
+                    </div>
+                  ) : null;
+                })()}
                 <div className="border-t border-dashed border-gray-100 pt-2 flex items-center justify-between">
                   <span className="text-xs font-black text-gray-500">{lang === "th" ? "ยอดรวม" : "Total"}</span>
                   <span className="text-base font-black text-gray-900">{money(order.total)}</span>

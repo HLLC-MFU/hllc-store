@@ -81,17 +81,11 @@ export function toProduct(doc: Document): Product {
     description: descObj,
     price: Number(doc.price ?? 0),
     stock: Number(doc.stock ?? 0),
-    shippingFirstItem: Number(doc.shippingFirstItem ?? doc.shipping ?? 0),
-    shippingAdditionalItem: Number(doc.shippingAdditionalItem ?? 0),
-    remoteShippingFirstItem: Number(doc.remoteShippingFirstItem ?? 0),
-    remoteShippingAdditionalItem: Number(doc.remoteShippingAdditionalItem ?? 0),
-    islandShippingFirstItem: Number(doc.islandShippingFirstItem ?? 0),
-    islandShippingAdditionalItem: Number(doc.islandShippingAdditionalItem ?? 0),
     category: doc.category ?? "",
     group: doc.group ?? "",
     charmType: doc.charmType ?? "",
     allowCustomName: doc.allowCustomName === true,
-    customNameMaxLength: Number(doc.customNameMaxLength) > 0 ? Number(doc.customNameMaxLength) : 12,
+    customNameMaxLength: Number(doc.customNameMaxLength) > 0 ? Number(doc.customNameMaxLength) : 9,
     options: normalizeOptions(doc.options, normalizeOptionImageValue),
     imageUrl: doc.imageUrl || imageUrls[0] || "",
     imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
@@ -120,17 +114,11 @@ function buildCreateProduct(input: CreateProductInput) {
     },
     price: parsed.price,
     stock: parsed.stock,
-    shippingFirstItem: parsed.shippingFirstItem ?? 0,
-    shippingAdditionalItem: parsed.shippingAdditionalItem ?? 0,
-    remoteShippingFirstItem: parsed.remoteShippingFirstItem ?? 0,
-    remoteShippingAdditionalItem: parsed.remoteShippingAdditionalItem ?? 0,
-    islandShippingFirstItem: parsed.islandShippingFirstItem ?? 0,
-    islandShippingAdditionalItem: parsed.islandShippingAdditionalItem ?? 0,
     category: normalizeCategory(parsed.category),
     group: normalizeGroup(parsed.group),
     charmType: normalizeCharmType(parsed.charmType, normalizeGroup(parsed.group)),
     allowCustomName: parsed.allowCustomName === true,
-    customNameMaxLength: parsed.customNameMaxLength ?? 12,
+    customNameMaxLength: parsed.customNameMaxLength ?? 9,
     options: normalizeOptions(input.options, normalizeOptionImageValue),
     imageUrl: normalizeImageValue(input.imageUrl),
     imageUrls: Array.isArray(input.imageUrls)
@@ -203,30 +191,6 @@ export async function updateProduct(
 
   if (input.stock !== undefined) {
     updateData.stock = assertNumber(input.stock, "stock");
-  }
-
-  if (input.shippingFirstItem !== undefined) {
-    updateData.shippingFirstItem = assertNumber(input.shippingFirstItem, "shippingFirstItem");
-  }
-
-  if (input.shippingAdditionalItem !== undefined) {
-    updateData.shippingAdditionalItem = assertNumber(input.shippingAdditionalItem, "shippingAdditionalItem");
-  }
-
-  if (input.remoteShippingFirstItem !== undefined) {
-    updateData.remoteShippingFirstItem = assertNumber(input.remoteShippingFirstItem, "remoteShippingFirstItem");
-  }
-
-  if (input.remoteShippingAdditionalItem !== undefined) {
-    updateData.remoteShippingAdditionalItem = assertNumber(input.remoteShippingAdditionalItem, "remoteShippingAdditionalItem");
-  }
-
-  if (input.islandShippingFirstItem !== undefined) {
-    updateData.islandShippingFirstItem = assertNumber(input.islandShippingFirstItem, "islandShippingFirstItem");
-  }
-
-  if (input.islandShippingAdditionalItem !== undefined) {
-    updateData.islandShippingAdditionalItem = assertNumber(input.islandShippingAdditionalItem, "islandShippingAdditionalItem");
   }
 
   if (input.category !== undefined) {

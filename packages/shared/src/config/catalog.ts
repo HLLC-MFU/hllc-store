@@ -8,15 +8,13 @@
 //   bracelet-charm                 (top category, has groups → shows group blocks)
 //     ├─ secret-set                (group → product grid)
 //     ├─ bracelet                  (group → product grid)
-//     └─ charm                     (group → product grid + clip/dangle filter)
-//          ├─ clip   (ที่ lock)
-//          └─ dangle (ที่ห้อย)
+//     └─ charm                     (group → product grid)
 
 import type { LocalizedText } from "../types";
 
 export type CategoryId = "bottle" | "bracelet-charm";
 export type GroupId = "secret-set" | "bracelet" | "charm";
-export type CharmType = "clip" | "dangle" | "spacer";
+export type CharmType = string;
 
 // Block ids that have an editable banner (image + title + subtitle) in settings.
 export type HomeBlockId = CategoryId | GroupId;
@@ -47,7 +45,7 @@ export const CATEGORIES: CategoryDef[] = [
     groups: [
       { id: "secret-set", label: { th: "Secret Set", en: "Secret Set" }, subtitle: { th: "Mystery bundle — bracelet + charm", en: "Mystery bundle — bracelet + charm" } },
       { id: "bracelet", label: { th: "Bracelet", en: "Bracelet" }, subtitle: { th: "Choose your bracelet color", en: "Choose your bracelet color" } },
-      { id: "charm", label: { th: "Charms", en: "Charms" }, subtitle: { th: "Add charms individually", en: "Add charms individually" }, hasCharmFilter: true },
+      { id: "charm", label: { th: "Charms", en: "Charms" }, subtitle: { th: "Add charms individually", en: "Add charms individually" } },
     ],
   },
 ];
@@ -62,11 +60,7 @@ export const CHARM_COLORS: { id: string; label: { th: string; en: string }; hex:
   { id: "gold",   label: { th: "ทอง",     en: "Gold"   }, hex: "#CBA135" },
 ];
 
-export const CHARM_TYPES: { id: CharmType; label: LocalizedText }[] = [
-  { id: "dangle", label: { th: "ที่ห้อย",  en: "Dangle"  } },
-  { id: "spacer", label: { th: "ที่กั้น",  en: "Spacer"  } },
-  { id: "clip",   label: { th: "ที่ล็อค",  en: "Clip-on" } },
-];
+export const CHARM_TYPES: { id: CharmType; label: LocalizedText }[] = [];
 
 // A "placement" is a single admin-facing choice that resolves to the trio of
 // product fields {category, group, charmType}. The product form renders these
@@ -94,31 +88,15 @@ export const PLACEMENTS: Placement[] = [
     group: "bracelet",
   },
   {
-    value: "charm-clip",
-    label: { th: "Charm — ที่ล็อค", en: "Charm — Clip-on" },
+    value: "charm",
+    label: { th: "Charm", en: "Charm" },
     category: "bracelet-charm",
     group: "charm",
-    charmType: "clip",
-  },
-  {
-    value: "charm-dangle",
-    label: { th: "Charm — ที่ห้อย", en: "Charm — Dangle" },
-    category: "bracelet-charm",
-    group: "charm",
-    charmType: "dangle",
-  },
-  {
-    value: "charm-spacer",
-    label: { th: "Charm — ที่กั้น", en: "Charm — Spacer" },
-    category: "bracelet-charm",
-    group: "charm",
-    charmType: "spacer",
   },
 ];
 
 const CATEGORY_IDS = CATEGORIES.map((c) => c.id);
 const GROUP_IDS: GroupId[] = ["secret-set", "bracelet", "charm"];
-const CHARM_TYPE_IDS: CharmType[] = ["clip", "dangle", "spacer"];
 
 export function isCategoryId(value: unknown): value is CategoryId {
   return typeof value === "string" && (CATEGORY_IDS as string[]).includes(value);
@@ -129,7 +107,7 @@ export function isGroupId(value: unknown): value is GroupId {
 }
 
 export function isCharmType(value: unknown): value is CharmType {
-  return typeof value === "string" && (CHARM_TYPE_IDS as string[]).includes(value);
+  return typeof value === "string" && value.length > 0;
 }
 
 export function getCategory(id: string): CategoryDef | undefined {

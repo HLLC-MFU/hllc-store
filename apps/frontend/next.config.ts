@@ -5,8 +5,9 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
 
 const nextConfig: NextConfig = {
   // Allow LAN access for mobile testing (pnpm dev --hostname 0.0.0.0)
-  allowedDevOrigins: ["172.25.11.100"],
+  allowedDevOrigins: ["172.25.34.223"],
   devIndicators: false,
+  output: "standalone",
   experimental: {},
   async rewrites() {
     return [

@@ -33,12 +33,6 @@ export type ProductDetailProduct = {
   customNameMaxLength?: number;
   imageUrls?: string[];
   charmImages?: Record<string, string>;
-  shippingFirstItem?: number;
-  shippingAdditionalItem?: number;
-  remoteShippingFirstItem?: number;
-  remoteShippingAdditionalItem?: number;
-  islandShippingFirstItem?: number;
-  islandShippingAdditionalItem?: number;
 };
 
 const currencyFormatter = new Intl.NumberFormat("th-TH", {
@@ -56,7 +50,7 @@ type CharmColorId = string;
 const CHARM_PRICE = 30;
 const FREE_LETTERS = 2;
 const LETTER_PRICE = 10;
-const MAX_LETTERS = 12;
+const MAX_LETTERS = 9;
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
 export function ProductDetailView({ product }: { product: ProductDetailProduct }) {
@@ -196,14 +190,8 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         productId: product.id,
         name: product.name,
         description: product.description,
-        price: product.price,
+        price: unitPrice,
         stock: selectedOptionStock,
-        shippingFirstItem: product.shippingFirstItem ?? 0,
-        shippingAdditionalItem: product.shippingAdditionalItem ?? 0,
-        remoteShippingFirstItem: product.remoteShippingFirstItem ?? 0,
-        remoteShippingAdditionalItem: product.remoteShippingAdditionalItem ?? 0,
-        islandShippingFirstItem: product.islandShippingFirstItem ?? 0,
-        islandShippingAdditionalItem: product.islandShippingAdditionalItem ?? 0,
         imageUrl: displayImages[0] ?? "",
         selectedOption: selectedOption?.label ?? "",
         customName: product.allowCustomName ? charmCustomName : undefined,
@@ -424,7 +412,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                   <button
                     type="button"
                     onClick={removeCharm}
-                    className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-gray-500 hover:bg-red-100 hover:text-red-500 transition-colors"
+                    className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 hover:border-red-200 hover:bg-red-100 hover:text-red-500 transition-colors"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -651,7 +639,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                           type="button"
                           onClick={() => setTempLetters((prev) => prev.slice(0, -1))}
                           disabled={tempLetters.length === 0}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-500 disabled:opacity-30 transition-colors"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 hover:border-red-200 hover:bg-red-100 hover:text-red-500 disabled:opacity-30 transition-colors"
                         >
                           <Delete className="h-3.5 w-3.5" />
                         </button>

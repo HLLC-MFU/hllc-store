@@ -11,12 +11,6 @@ export type ProductInput = {
   description: { th: string; en?: string };
   price: number;
   stock: number;
-  shippingFirstItem: number;
-  shippingAdditionalItem: number;
-  remoteShippingFirstItem?: number;
-  remoteShippingAdditionalItem?: number;
-  islandShippingFirstItem?: number;
-  islandShippingAdditionalItem?: number;
   discount?: number;
   category?: string;
   group?: string;

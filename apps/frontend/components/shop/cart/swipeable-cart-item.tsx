@@ -10,7 +10,7 @@ import { useLanguage } from "@/lib/client/language-context";
 const CHARM_PRICE = 30;
 const FREE_LETTERS = 2;
 const LETTER_PRICE = 10;
-const MAX_LETTERS = 12;
+const MAX_LETTERS = 9;
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
 type CharmOption = { label: string; labelEn?: string; imageUrl?: string };
@@ -50,6 +50,7 @@ export interface SwipeableCartItemProps {
   onDecrease: (item: CartItem) => void;
   onIncrease: (item: CartItem) => void;
   onRemove: (item: CartItem) => void;
+  onCharmEdit?: (oldCustomName: string | undefined, newCustomName: string) => void;
 }
 
 export const SwipeableCartItem = memo(function SwipeableCartItem({
@@ -62,6 +63,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
   onDecrease,
   onIncrease,
   onRemove,
+  onCharmEdit,
 }: SwipeableCartItemProps) {
   const { addItem, removeItem, updateQty } = useCart();
   const { t } = useLanguage();
@@ -132,6 +134,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
     if (!tempColor || tempLetters.length < 2) return;
     const newCustomName = `charm:${tempColor}:${tempLetters.join("")}`;
     const qty = item.quantity;
+    onCharmEdit?.(item.customName, newCustomName);
     removeItem(item.productId, item.selectedOption, item.customName);
     addItem({ ...item, customName: newCustomName });
     if (qty > 1) updateQty(item.productId, qty, item.selectedOption, newCustomName);
@@ -538,7 +541,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                     type="button"
                     onClick={() => setTempLetters((prev) => prev.slice(0, -1))}
                     disabled={tempLetters.length === 0}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-500 disabled:opacity-30 transition-colors"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 hover:border-red-200 hover:bg-red-100 hover:text-red-500 disabled:opacity-30 transition-colors"
                   >
                     <Delete className="h-3.5 w-3.5" />
                   </button>

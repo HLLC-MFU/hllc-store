@@ -31,6 +31,11 @@ function buildFilterItems(orders: Order[], t: (key: string) => string) {
       const pickupCount = orders.filter((o) => o.status === "shipped" && isPickupOrder(o)).length;
       items.push({ key: "shipped", label: t("admin.status.shipped"), count: deliveryCount });
       items.push({ key: "shipped_pickup", label: t("admin.status.shipped_pickup"), count: pickupCount });
+    } else if (s === "completed") {
+      const deliveryCount = orders.filter((o) => o.status === "completed" && !isPickupOrder(o)).length;
+      const pickupCount = orders.filter((o) => o.status === "completed" && isPickupOrder(o)).length;
+      items.push({ key: "completed", label: t("admin.status.completed"), count: deliveryCount });
+      items.push({ key: "completed_pickup", label: t("admin.status.completed_pickup"), count: pickupCount });
     } else {
       items.push({ key: s, label: t(`admin.status.${s}`), count: orders.filter((o) => o.status === s).length });
     }
@@ -49,7 +54,8 @@ export function OrdersPanel({
   t,
 }: OrdersPanelProps) {
   const [shippingFilter, setShippingFilter] = React.useState<"all" | "delivery" | "pickup">("all");
-  const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all" | "shipped_pickup">(initialStatusFilter ?? "all");
+  const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all" | "shipped_pickup" | "completed_pickup">(initialStatusFilter ?? "all");
+  const [openModalOrderId, setOpenModalOrderId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (initialStatusFilter) setStatusFilter(initialStatusFilter);
@@ -68,13 +74,15 @@ export function OrdersPanel({
   }, [orders, shippingFilter]);
 
   const filteredOrders = React.useMemo(() => {
-    return shippingFilteredOrders.filter((o) => {
+    const base = shippingFilteredOrders.filter((o) => {
       const isPickup = isPickupOrder(o);
       const matchStatus =
         statusFilter === "all" ||
         (statusFilter === "shipped" && o.status === "shipped" && !isPickup) ||
         (statusFilter === "shipped_pickup" && o.status === "shipped" && isPickup) ||
-        (statusFilter !== "shipped" && statusFilter !== "shipped_pickup" && o.status === statusFilter);
+        (statusFilter === "completed" && o.status === "completed" && !isPickup) ||
+        (statusFilter === "completed_pickup" && o.status === "completed" && isPickup) ||
+        (statusFilter !== "shipped" && statusFilter !== "shipped_pickup" && statusFilter !== "completed" && statusFilter !== "completed_pickup" && o.status === statusFilter);
 
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q ||
@@ -84,7 +92,13 @@ export function OrdersPanel({
 
       return matchStatus && matchSearch;
     });
-  }, [shippingFilteredOrders, statusFilter, searchQuery]);
+    // Keep the open modal order in the list even if it no longer matches the filter
+    if (openModalOrderId && !base.find((o) => o.id === openModalOrderId)) {
+      const pinned = orders.find((o) => o.id === openModalOrderId);
+      if (pinned) return [pinned, ...base];
+    }
+    return base;
+  }, [shippingFilteredOrders, statusFilter, searchQuery, openModalOrderId, orders]);
 
   return (
     <div className="flex flex-col lg:flex-row gap-5">
@@ -195,6 +209,8 @@ export function OrdersPanel({
               t={t}
               onViewSlip={onViewSlip}
               useModal={true}
+              onModalOpen={() => setOpenModalOrderId(order.id)}
+              onModalClose={() => setOpenModalOrderId(null)}
             />
           ))}
           {filteredOrders.length === 0 && (

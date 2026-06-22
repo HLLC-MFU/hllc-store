@@ -37,8 +37,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
     allowCustomName: product.allowCustomName,
     customNameMaxLength: product.customNameMaxLength,
     charmImages: product.allowCustomName ? charmSettings.images : undefined,
-    shippingFirstItem: product.shippingFirstItem,
-    shippingAdditionalItem: product.shippingAdditionalItem,
     imageUrls: product.imageUrls,
   };
 

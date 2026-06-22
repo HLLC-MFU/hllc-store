@@ -13,6 +13,14 @@ const money = (v: number) => fmt.format(v);
 
 const inputCls = "h-14 rounded-none border-0 bg-transparent text-sm font-semibold shadow-none placeholder:text-gray-400 focus-visible:ring-0";
 
+function parseCharm(customName: string) {
+  const parts = customName.split(":");
+  const color = parts[1] ?? "";
+  const letters = parts[2] ?? "";
+  const price = 30 + Math.max(0, letters.length - 2) * 10;
+  return { color, letters, price };
+}
+
 function formatPhoneDisplay(raw: string) {
   const digits = raw.replace(/\D/g, "").slice(0, 10);
   if (digits.length <= 3) return digits;
@@ -51,7 +59,6 @@ type Props = {
   selectedTotal: number;
   selectedShippingFee: number;
   pickupLocation?: string;
-  pickupHours?: string;
   selectedPayableTotal: number;
   selectedItems: CartItem[];
   itemsLength: number;
@@ -66,7 +73,7 @@ export function InfoStep({
   province, setProvince, subDistrict, setSubDistrict, postalCode, setPostalCode,
   fieldErrors, loading,
   selectedCount, selectedTotal, selectedShippingFee, selectedPayableTotal,
-  selectedItems, itemsLength, onBack, onSubmit, pickupLocation, pickupHours,
+  selectedItems, itemsLength, onBack, onSubmit, pickupLocation,
 }: Props) {
   const [showItems, setShowItems] = useState(false);
   return (
@@ -184,18 +191,33 @@ export function InfoStep({
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <Store className="h-4 w-4 text-brand" />
-              <p className="text-sm font-black text-brand">
-                {pickupLocation ? `รับสินค้าเองที่ ${pickupLocation}` : t("checkout.pickup_at_d1")}
-              </p>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-4">
+            {/* Pickup location card */}
+            <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+                <Store className="h-4 w-4" />
+              </span>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                  {lang === "th" ? "สถานที่รับสินค้า" : "Pickup location"}
+                </p>
+                <p className="text-sm font-black text-gray-900">
+                  {pickupLocation ? `รับสินค้าเองที่ ${pickupLocation}` : t("checkout.pickup_at_d1")}
+                </p>
+              </div>
             </div>
-            <p className="text-xs font-semibold text-gray-400">
-              {t("checkout.pickup_time_note")}
-            </p>
-            <TimeSelect name="pickupTime" error={fieldErrors.pickupTime} pickupHours={pickupHours} />
-            {fieldErrors.pickupTime && <p className="mt-1.5 text-xs font-bold text-red-500">{fieldErrors.pickupTime}</p>}
+
+            {/* Time picker */}
+            <div>
+              <p className="text-sm font-black text-gray-900">
+                {lang === "th" ? "เลือกช่วงเวลารับสินค้า" : "Select pickup time"}
+              </p>
+              <p className="mt-0.5 mb-3 text-xs font-semibold text-gray-400">
+                {t("checkout.pickup_time_note")}
+              </p>
+              <TimeSelect name="pickupTime" error={fieldErrors.pickupTime} />
+              {fieldErrors.pickupTime && <p className="mt-2 text-xs font-bold text-red-500">{fieldErrors.pickupTime}</p>}
+            </div>
           </div>
         )}
 
@@ -218,14 +240,28 @@ export function InfoStep({
           {showItems && (
             <div className="border-t border-gray-100 px-4 py-2 flex flex-col gap-1.5 animate-in slide-in-from-top-1 duration-150">
               {selectedItems.map((item, i) => (
-                <div key={i} className="flex items-center justify-between text-xs text-gray-500">
-                  <span className="truncate max-w-[65%]">
-                    {item.name[lang] || item.name.th}
-                    {item.selectedOption && <span className="text-gray-400"> · {item.selectedOption}</span>}
-                    {item.customName && <span className="text-amber-600"> [{item.customName}]</span>}
-                    <span className="text-gray-400 ml-1">×{item.quantity}</span>
+                <div key={i} className="flex items-start justify-between text-xs text-gray-500">
+                  <span className="min-w-0 flex-1 mr-2">
+                    <span className="block truncate">
+                      {item.name[lang] || item.name.th}
+                      {item.selectedOption && <span className="text-gray-400"> · {item.selectedOption}</span>}
+                      <span className="text-gray-400 ml-1">×{item.quantity}</span>
+                    </span>
+                    {item.customName?.startsWith("charm:") && (() => {
+                      const { color, letters } = parseCharm(item.customName);
+                      return (
+                        <span className="block text-[10px] font-bold text-amber-600">
+                          + สายห้อย {color}{letters ? ` · ${letters}` : ""}
+                        </span>
+                      );
+                    })()}
                   </span>
-                  <span className="font-black text-gray-700 shrink-0 ml-2">{money(item.price * item.quantity)}</span>
+                  <span className="shrink-0 text-right">
+                    <span className="block font-black text-gray-700">{money(item.price * item.quantity)}</span>
+                    {item.customName?.startsWith("charm:") && (
+                      <span className="block font-black text-gray-700">฿{parseCharm(item.customName).price}</span>
+                    )}
+                  </span>
                 </div>
               ))}
             </div>

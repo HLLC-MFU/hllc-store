@@ -13,12 +13,6 @@ export type CartItem = {
   description?: LocalizedText;
   price: number;
   stock?: number;
-  shippingFirstItem?: number;
-  shippingAdditionalItem?: number;
-  remoteShippingFirstItem?: number;
-  remoteShippingAdditionalItem?: number;
-  islandShippingFirstItem?: number;
-  islandShippingAdditionalItem?: number;
   imageUrl?: string;
   selectedOption?: string;
   customName?: string;
@@ -32,12 +26,6 @@ export type ProductSync = {
   description?: LocalizedText;
   price: number;
   stock: number;
-  shippingFirstItem?: number;
-  shippingAdditionalItem?: number;
-  remoteShippingFirstItem?: number;
-  remoteShippingAdditionalItem?: number;
-  islandShippingFirstItem?: number;
-  islandShippingAdditionalItem?: number;
   imageUrl?: string;
   options?: { label: string; imageUrl?: string; stock?: number }[];
 };
@@ -136,12 +124,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
           name: product.name,
           description: product.description,
           price: product.price,
-          shippingFirstItem: product.shippingFirstItem,
-          shippingAdditionalItem: product.shippingAdditionalItem,
-          remoteShippingFirstItem: product.remoteShippingFirstItem,
-          remoteShippingAdditionalItem: product.remoteShippingAdditionalItem,
-          islandShippingFirstItem: product.islandShippingFirstItem,
-          islandShippingAdditionalItem: product.islandShippingAdditionalItem,
           stock,
           imageUrl: option?.imageUrl ?? product.imageUrl ?? item.imageUrl,
           quantity: stock > 0 ? Math.min(item.quantity, stock) : item.quantity,

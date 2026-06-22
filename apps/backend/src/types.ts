@@ -21,12 +21,6 @@ export type Product = {
   description?: LocalizedText;
   price: number;
   stock: number;
-  shippingFirstItem: number;
-  shippingAdditionalItem: number;
-  remoteShippingFirstItem: number;
-  remoteShippingAdditionalItem: number;
-  islandShippingFirstItem: number;
-  islandShippingAdditionalItem: number;
   category?: string;
   group?: string;
   charmType?: string;
@@ -141,12 +135,6 @@ export type CreateProductInput = {
   description?: LocalizedText;
   price: number;
   stock: number;
-  shippingFirstItem?: number;
-  shippingAdditionalItem?: number;
-  remoteShippingFirstItem?: number;
-  remoteShippingAdditionalItem?: number;
-  islandShippingFirstItem?: number;
-  islandShippingAdditionalItem?: number;
   category?: string;
   group?: string;
   charmType?: string;

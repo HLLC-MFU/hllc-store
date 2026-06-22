@@ -112,6 +112,18 @@ export default function CartPage() {
     setSelectedIds(prev => { const next = new Set(prev); if (next.has(key)) { next.delete(key); } else { next.add(key); } return next; });
   }, []);
 
+  const handleCharmEdit = useCallback((item: CartItem) => (oldCustomName: string | undefined, newCustomName: string) => {
+    const oldKey = itemKey({ ...item, customName: oldCustomName });
+    const newKey = itemKey({ ...item, customName: newCustomName });
+    setSelectedIds(prev => {
+      if (!prev.has(oldKey)) return prev;
+      const next = new Set(prev);
+      next.delete(oldKey);
+      next.add(newKey);
+      return next;
+    });
+  }, []);
+
   const [step, setStep] = useState<Step>("cart");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -143,15 +155,7 @@ export default function CartPage() {
   }, []);
 
   const selectedShippingLines = useMemo(
-    () => selectedItems.map((i) => ({
-      quantity: i.quantity,
-      shippingFirstItem: i.shippingFirstItem,
-      shippingAdditionalItem: i.shippingAdditionalItem,
-      remoteShippingFirstItem: i.remoteShippingFirstItem,
-      remoteShippingAdditionalItem: i.remoteShippingAdditionalItem,
-      islandShippingFirstItem: i.islandShippingFirstItem,
-      islandShippingAdditionalItem: i.islandShippingAdditionalItem,
-    })),
+    () => selectedItems.map((i) => ({ quantity: i.quantity })),
     [selectedItems],
   );
 
@@ -341,6 +345,7 @@ export default function CartPage() {
                     selected={selectedIds.has(itemKey(item))} onSelect={toggleSelect}
                     onDecrease={decreaseQty} onIncrease={(i) => updateQty(i.productId, i.quantity + 1, i.selectedOption, i.customName)}
                     onRemove={(i) => removeItem(i.productId, i.selectedOption, i.customName)}
+                    onCharmEdit={handleCharmEdit(item)}
                     charmImages={charmImages}
                     charmOptions={charmOptions}
                   />
@@ -353,7 +358,7 @@ export default function CartPage() {
                 selectedCount={selectedCount} selectedTotal={selectedTotal}
                 baseShipping={baseShippingPreview}
                 onPay={goInfo} items={items}
-                disabledReason={hasOutOfStock ? (lang === "th" ? "สต็อกไม่พอ" : "Not enough stock") : undefined}
+                disabledReason={hasOutOfStock ? (lang === "th" ? "สต็อกไม่พอ" : "Not enough stock") : selectedCount === 0 ? (lang === "th" ? "เลือกสินค้าก่อน" : "Select items") : undefined}
               />
             </section>
           </>
@@ -387,7 +392,6 @@ export default function CartPage() {
             selectedItems={selectedItems}
             itemsLength={items.length} onBack={() => setStep("cart")} onSubmit={handleCheckout}
             pickupLocation={shippingRates.pickupLocation}
-            pickupHours={shippingRates.pickupHours}
           />
         )}
       </div>

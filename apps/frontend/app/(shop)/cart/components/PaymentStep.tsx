@@ -54,8 +54,20 @@ export function PaymentStep({
 
   async function copyAccount() {
     if (!settings) return;
+    const text = settings.bankAccountNumber.replace(/-/g, "");
     try {
-      await navigator.clipboard.writeText(settings.bankAccountNumber.replace(/-/g, ""));
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const el = document.createElement("textarea");
+        el.value = text;
+        el.style.cssText = "position:fixed;opacity:0;pointer-events:none";
+        document.body.appendChild(el);
+        el.focus();
+        el.select();
+        document.execCommand("copy");
+        document.body.removeChild(el);
+      }
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch { }
@@ -95,7 +107,7 @@ export function PaymentStep({
                 {lang === "th" ? "บัญชีรับชำระ" : "Payment account"}
               </p>
               <p className="mt-0.5 text-sm font-black text-gray-950">{settings.bankName}</p>
-              <p className="mt-1 truncate text-xs font-bold text-gray-500">{settings.bankAccountName}</p>
+              <p className="mt-1 text-xs font-bold text-gray-500 break-words">{settings.bankAccountName}</p>
               <p className="mt-1 font-mono text-lg font-black tracking-wide text-brand">{settings.bankAccountNumber}</p>
             </div>
             <button

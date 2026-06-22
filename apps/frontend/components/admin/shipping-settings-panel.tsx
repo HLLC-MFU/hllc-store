@@ -190,24 +190,6 @@ export function ShippingSettingsPanel({ settings, loading, onSave }: Props) {
               />
               <p className="mt-1 text-[11px] text-gray-400">ข้อความนี้จะแสดงใน email แจ้งลูกค้าที่รับเอง</p>
             </div>
-            <div>
-              <label className={labelCls}>เวลารับสินค้า</label>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="mb-1 block text-[11px] text-gray-400">เปิด</label>
-                  <TimePickerSelect value={openTime} onChange={(v) => setPickupTime(v, closeTime)} placeholder="--:--" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-[11px] text-gray-400">ปิด</label>
-                  <TimePickerSelect value={closeTime} onChange={(v) => setPickupTime(openTime, v)} placeholder="--:--" />
-                </div>
-              </div>
-              {form.pickupHours && (
-                <p className="mt-1.5 text-[11px] text-gray-500 font-semibold">{form.pickupHours}</p>
-              )}
-              <p className="mt-1 text-[11px] text-gray-400">แสดงใน email พร้อมรับสินค้า</p>
-            </div>
-
             <Button disabled={loading} className="h-11 rounded-xl bg-brand font-black hover:bg-brand-hover" type="submit">
               <Save className="h-4 w-4" /> บันทึกค่าจัดส่ง
             </Button>

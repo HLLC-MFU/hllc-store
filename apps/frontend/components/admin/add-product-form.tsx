@@ -153,12 +153,6 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
     const requiredNumbers = [
       ["price", "ราคา"],
       ["stock", "จำนวนสต็อก"],
-      ["shippingFirstItem", "ค่าส่งชิ้นแรก"],
-      ["shippingAdditionalItem", "ค่าส่งชิ้นถัดไป"],
-      ["remoteShippingFirstItem", "ค่าส่งห่างไกล ชิ้นแรก"],
-      ["remoteShippingAdditionalItem", "ค่าส่งห่างไกล ชิ้นถัดไป"],
-      ["islandShippingFirstItem", "ค่าส่งพื้นที่พิเศษ ชิ้นแรก"],
-      ["islandShippingAdditionalItem", "ค่าส่งพื้นที่พิเศษ ชิ้นถัดไป"],
     ] as const;
 
     if (imagePreviews.length === 0) missing.push("รูปสินค้าอย่างน้อย 1 รูป");
@@ -241,12 +235,6 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
         },
         price: Number(fd.get("price")) || product.price,
         stock: Number(fd.get("stock")) ?? product.stock,
-        shippingFirstItem: Number(fd.get("shippingFirstItem")) || 0,
-        shippingAdditionalItem: Number(fd.get("shippingAdditionalItem")) || 0,
-        remoteShippingFirstItem: Number(fd.get("remoteShippingFirstItem")) || 0,
-        remoteShippingAdditionalItem: Number(fd.get("remoteShippingAdditionalItem")) || 0,
-        islandShippingFirstItem: Number(fd.get("islandShippingFirstItem")) || 0,
-        islandShippingAdditionalItem: Number(fd.get("islandShippingAdditionalItem")) || 0,
         description: {
           th: String(fd.get("description") ?? product.description?.th ?? "").trim(),
           en: String(fd.get("descriptionEn") ?? product.description?.en ?? "").trim() || undefined,
@@ -504,47 +492,6 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                   <Input name="stock" type="number" min="0" required value={stockValue} onChange={(e) => { setStockValue(e.target.value); if (e.target.value.trim()) clearError("stock"); }} placeholder="0" className={`rounded-xl text-xs h-10 ${err("stock") ? "border-red-400 focus-visible:ring-red-300" : "border-gray-200"}`} />
                 </div>
 
-                <div className="col-span-2">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">ค่าส่งปกติ</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">ชิ้นแรก (฿)</Label>
-                      <Input name="shippingFirstItem" type="number" min="0" defaultValue={product?.shippingFirstItem ?? 50} placeholder="50" className="rounded-xl border-gray-200 text-xs h-10" />
-                    </div>
-                    <div>
-                      <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">ชิ้นถัดไป (฿)</Label>
-                      <Input name="shippingAdditionalItem" type="number" min="0" defaultValue={product?.shippingAdditionalItem ?? 10} placeholder="10" className="rounded-xl border-gray-200 text-xs h-10" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-span-2">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">ค่าส่งห่างไกล</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">ชิ้นแรก (฿)</Label>
-                      <Input name="remoteShippingFirstItem" type="number" min="0" defaultValue={product?.remoteShippingFirstItem ?? 80} placeholder="80" className="rounded-xl border-gray-200 text-xs h-10" />
-                    </div>
-                    <div>
-                      <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">ชิ้นถัดไป (฿)</Label>
-                      <Input name="remoteShippingAdditionalItem" type="number" min="0" defaultValue={product?.remoteShippingAdditionalItem ?? 15} placeholder="15" className="rounded-xl border-gray-200 text-xs h-10" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-span-2">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">ค่าส่งพื้นที่พิเศษ</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">ชิ้นแรก (฿)</Label>
-                      <Input name="islandShippingFirstItem" type="number" min="0" defaultValue={product?.islandShippingFirstItem ?? 100} placeholder="100" className="rounded-xl border-gray-200 text-xs h-10" />
-                    </div>
-                    <div>
-                      <Label className="text-[10px] mb-1.5 block font-bold text-gray-500">ชิ้นถัดไป (฿)</Label>
-                      <Input name="islandShippingAdditionalItem" type="number" min="0" defaultValue={product?.islandShippingAdditionalItem ?? 15} placeholder="15" className="rounded-xl border-gray-200 text-xs h-10" />
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 

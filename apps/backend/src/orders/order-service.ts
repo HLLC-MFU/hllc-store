@@ -166,12 +166,6 @@ export async function createOrder(input: CreateOrderInput) {
       selectedOption,
       customName: item.customName,
       _price: product.price,
-      _shippingFirstItem: Number(product.shippingFirstItem ?? 0),
-      _shippingAdditionalItem: Number(product.shippingAdditionalItem ?? 0),
-      _remoteShippingFirstItem: Number(product.remoteShippingFirstItem ?? 0),
-      _remoteShippingAdditionalItem: Number(product.remoteShippingAdditionalItem ?? 0),
-      _islandShippingFirstItem: Number(product.islandShippingFirstItem ?? 0),
-      _islandShippingAdditionalItem: Number(product.islandShippingAdditionalItem ?? 0),
     };
   });
 
@@ -182,15 +176,7 @@ export async function createOrder(input: CreateOrderInput) {
   const island = deliveryMode === "delivery" && isIslandArea(postalCode);
   const remote = deliveryMode === "delivery" && !island && isRemoteArea(postalCode);
   const shippingFee = calcShippingFee(
-    storedItems.map((item) => ({
-      quantity: item.quantity,
-      shippingFirstItem: item._shippingFirstItem,
-      shippingAdditionalItem: item._shippingAdditionalItem,
-      remoteShippingFirstItem: item._remoteShippingFirstItem,
-      remoteShippingAdditionalItem: item._remoteShippingAdditionalItem,
-      islandShippingFirstItem: item._islandShippingFirstItem,
-      islandShippingAdditionalItem: item._islandShippingAdditionalItem,
-    })),
+    storedItems.map((item) => ({ quantity: item.quantity })),
     deliveryMode,
     { island, remote, rates },
   );

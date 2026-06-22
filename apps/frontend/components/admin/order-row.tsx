@@ -34,7 +34,7 @@ import { STATUS_BG, STATUS_COLOR, STATUS_ICON } from "./types";
 import { money, timeAgo, isPickupOrder } from "./api-client";
 import { ShippingLabel } from "@/components/shop/cart/shipping-label";
 
-export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking, onCancel, t, onViewSlip, useModal = false }: {
+export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking, onCancel, t, onViewSlip, useModal = false, onModalOpen, onModalClose }: {
   order: Order;
   onStatusChange: (id: string, s: OrderStatus) => void;
   onApproveSlip: (orderId: string, approved: boolean, note?: string) => void;
@@ -43,8 +43,18 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
   t: (key: string, replacements?: Record<string, string | number>) => string;
   onViewSlip: (images: string[], index: number) => void;
   useModal?: boolean;
+  onModalOpen?: () => void;
+  onModalClose?: () => void;
 }) {
   const [open, setOpen] = React.useState(false);
+
+  const toggleOpen = React.useCallback((next: boolean) => {
+    setOpen(next);
+    if (useModal) {
+      if (next) onModalOpen?.();
+      else onModalClose?.();
+    }
+  }, [useModal, onModalOpen, onModalClose]);
   const [note, setNote] = React.useState("");
   const [tracking, setTracking] = React.useState(order.trackingNumber ?? "");
   const [editingTracking, setEditingTracking] = React.useState(!order.trackingNumber);
@@ -81,7 +91,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
     <>
     <Card className={`rounded-3xl shadow-2xs overflow-hidden transition-all duration-200 border ${STATUS_BG[order.status]} ${open ? "shadow-md" : "hover:shadow-sm"}`}>
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => toggleOpen(!open)}
         className="w-full flex items-center gap-3 p-4 text-left hover:bg-black/2 transition-colors cursor-pointer"
       >
         {/* Icon circle — same as profile page */}
@@ -640,7 +650,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
 
     {/* Modal portal — rendered outside Card */}
     {useModal && open && typeof window !== "undefined" && createPortal(
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 lg:p-8 bg-black/80 animate-in fade-in duration-150" style={{zIndex:50}} onClick={() => setOpen(false)}>
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 lg:p-8 bg-black/80 animate-in fade-in duration-150" style={{zIndex:50}} onClick={() => toggleOpen(false)}>
         <div className={`bg-white rounded-t-3xl sm:rounded-3xl w-full overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200 flex ${hasSlip ? "flex-col lg:flex-row max-w-lg lg:max-w-4xl max-h-[92dvh] sm:max-h-[90vh] lg:max-h-[88vh]" : "flex-col max-w-lg max-h-[92dvh] sm:max-h-[90vh]"}`} onClick={(e) => e.stopPropagation()}>
 
           {/* ── Desktop left column: slip viewer ─────────────────────── */}
@@ -731,7 +741,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}
-              <button type="button" onClick={() => setOpen(false)} className="p-1.5 rounded-xl hover:bg-gray-100 cursor-pointer text-gray-400 shrink-0">
+              <button type="button" onClick={() => toggleOpen(false)} className="p-1.5 rounded-xl hover:bg-gray-100 cursor-pointer text-gray-400 shrink-0">
                 <X className="w-4 h-4" />
               </button>
             </div>
