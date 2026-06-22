@@ -2,19 +2,16 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { Upload, XCircle } from "lucide-react";
+import { Upload, XCircle, Clock, ShoppingBag, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import * as settingsApi from "@/lib/modules/settings";
 import type { HomeContent, HomeBlock } from "@/lib/modules/settings";
 import { type HomeBlockId } from "@/lib/config/catalog";
 import { csrfHeaders } from "@/components/admin/api-client";
 
-const BLOCK_LABELS: { id: HomeBlockId; label: string; blockLabel: string; homepage?: boolean; hidden?: boolean }[] = [
-  { id: "bottle",         label: "ขวดน้ำ",              blockLabel: "Block 1", homepage: true  },
-  { id: "secret-set",     label: "Secret Set",          blockLabel: "Block 3", homepage: true  },
-  { id: "bracelet-charm", label: "สร้อยข้อมือพร้อม Charm", blockLabel: "Block 2", hidden: true    },
-  { id: "bracelet",       label: "Bracelet",            blockLabel: "Block 2.1"                 },
-  { id: "charm",          label: "Charms",              blockLabel: "Block 2.2"                 },
+const BLOCK_LABELS: { id: HomeBlockId; label: string; blockLabel: string; homepage?: boolean }[] = [
+  { id: "bottle",     label: "ขวดน้ำ",   blockLabel: "Block 1", homepage: true },
+  { id: "secret-set", label: "Secret Set", blockLabel: "Block 3", homepage: true },
 ];
 
 const emptyBlock = (): HomeBlock => ({ imageUrl: "", title: { th: "" }, subtitle: { th: "" } });
@@ -88,23 +85,41 @@ export function HomeContentPanel({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {BLOCK_LABELS.map(({ id, label, blockLabel, homepage, hidden }) => {
+      {BLOCK_LABELS.map(({ id, label, blockLabel, homepage }) => {
         const b = block(id);
 
         return (
-          <div key={id} className={`rounded-2xl border bg-white overflow-hidden flex flex-col ${hidden ? "border-gray-100 opacity-60" : "border-gray-100"}`}>
+          <div key={id} className="rounded-2xl border border-gray-100 bg-white overflow-hidden flex flex-col">
             {/* Card header */}
             <div className="flex items-center gap-2 px-4 pt-4 pb-2">
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{blockLabel}</span>
               <span className="text-[10px] text-gray-300">·</span>
               <span className="text-[10px] font-semibold text-gray-500 truncate">{label}</span>
-              <div className="ml-auto shrink-0">
+              <div className="ml-auto flex items-center gap-2 shrink-0">
                 {homepage && (
                   <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-black text-emerald-600">หน้าแรก</span>
                 )}
-                {hidden && (
-                  <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[9px] font-black text-gray-400">ซ่อน</span>
-                )}
+                {(() => {
+                  const status = b.blockStatus ?? "open";
+                  const next = status === "open" ? "comingSoon" : status === "comingSoon" ? "closed" : "open";
+                  const cfg = {
+                    open:       { label: "เปิดขาย",    icon: ShoppingBag, cls: "bg-emerald-50 text-emerald-700" },
+                    comingSoon: { label: "เร็วๆ นี้",   icon: Clock,       cls: "bg-amber-100 text-amber-700"   },
+                    closed:     { label: "ปิดการขาย",  icon: EyeOff,      cls: "bg-red-50 text-red-600"        },
+                  } as const;
+                  const { label, icon: Icon, cls } = cfg[status];
+                  return (
+                    <button
+                      type="button"
+                      title={`คลิกเพื่อเปลี่ยนเป็น: ${cfg[next].label}`}
+                      onClick={() => update(id, { blockStatus: next })}
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-black transition-colors cursor-pointer ${cls}`}
+                    >
+                      <Icon className="w-2.5 h-2.5" />
+                      {label}
+                    </button>
+                  );
+                })()}
               </div>
             </div>
 

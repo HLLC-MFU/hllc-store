@@ -16,12 +16,19 @@ export default async function HomePage() {
   const bottleCategory = CATEGORIES.find((c) => c.id === "bottle")!;
   const bottleBlock = content.blocks["bottle"];
   const bottleProducts = allProducts.filter((p) => p.category === "bottle" && !p.group);
+  const bottleStatus: "comingSoon" | "closed" | undefined =
+    bottleBlock?.blockStatus === "comingSoon" || bottleBlock?.blockStatus === "closed"
+      ? bottleBlock.blockStatus
+      : (bottleProducts.length > 0 && bottleProducts.every((p) => p.comingSoon))
+        ? "comingSoon"
+        : undefined;
   blocks.push({
     href: bottleProducts.length === 1 ? `/products/${bottleProducts[0].id}` : "/c/bottle",
     imageUrl: bottleBlock?.imageUrl || undefined,
     title: bottleBlock?.title ?? bottleCategory.label,
     subtitle: bottleBlock?.subtitle,
     hasSubBlocks: false,
+    blockStatus: bottleStatus,
   });
 
   // Block 3: Secret Set — same single-product shortcut logic
@@ -32,6 +39,12 @@ export default async function HomePage() {
   const secretProducts = allProducts.filter(
     (p) => p.category === "bracelet-charm" && p.group === "secret-set",
   );
+  const secretStatus: "comingSoon" | "closed" | undefined =
+    secretBlock?.blockStatus === "comingSoon" || secretBlock?.blockStatus === "closed"
+      ? secretBlock.blockStatus
+      : (secretProducts.length > 0 && secretProducts.every((p) => p.comingSoon))
+        ? "comingSoon"
+        : undefined;
   blocks.push({
     href: secretProducts.length === 1
       ? `/products/${secretProducts[0].id}`
@@ -40,6 +53,7 @@ export default async function HomePage() {
     title: secretBlock?.title ?? secretGroup?.label ?? { th: "Secret Set" },
     subtitle: secretBlock?.subtitle,
     hasSubBlocks: false,
+    blockStatus: secretStatus,
   });
 
   return <HomeClient blocks={blocks} />;

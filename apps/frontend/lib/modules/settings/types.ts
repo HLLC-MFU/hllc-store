@@ -30,6 +30,7 @@ export const homeBlockResponseSchema = z.object({
   imageUrl: z.string(),
   title: localizedTextResponseSchema,
   subtitle: localizedTextResponseSchema,
+  blockStatus: z.enum(["open", "comingSoon", "closed"]).optional(),
 });
 
 export const homeContentResponseSchema = z.object({

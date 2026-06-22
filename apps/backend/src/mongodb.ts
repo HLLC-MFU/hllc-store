@@ -16,7 +16,7 @@ function getMongoUri() {
 
 export async function getMongoClient() {
   if (!globalThis.mongoClientPromise) {
-    globalThis.mongoClientPromise = new MongoClient(getMongoUri()).connect();
+    globalThis.mongoClientPromise = new MongoClient(getMongoUri(), { retryWrites: false }).connect();
   }
 
   return globalThis.mongoClientPromise;

@@ -36,6 +36,7 @@ export type Product = {
   imageUrl?: string;
   imageUrls?: string[];
   active: boolean;
+  comingSoon?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -155,6 +156,7 @@ export type CreateProductInput = {
   imageUrl?: string;
   imageUrls?: string[];
   active?: boolean;
+  comingSoon?: boolean;
 };
 
 export type ReviewSlipInput = {

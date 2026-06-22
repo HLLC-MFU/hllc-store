@@ -116,6 +116,7 @@ export const productResponseSchema = z.object({
   imageUrl: z.string().optional(),
   imageUrls: z.array(z.string()).optional(),
   active: z.boolean(),
+  comingSoon: z.boolean().optional(),
 });
 
 const adminRoleResponseSchema = z.enum(["superAdmin", "admin"]);

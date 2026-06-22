@@ -295,13 +295,6 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                     <Plus className="h-3 w-3" />
                     {t("cart.add_keychain")}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDelete(true)}
-                    className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 text-gray-400 cursor-pointer"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
                 </div>
               </div>
             )}

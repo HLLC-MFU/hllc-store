@@ -96,6 +96,7 @@ export function toProduct(doc: Document): Product {
     imageUrl: doc.imageUrl || imageUrls[0] || "",
     imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
     active: doc.active ?? true,
+    comingSoon: doc.comingSoon === true,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
@@ -136,6 +137,7 @@ function buildCreateProduct(input: CreateProductInput) {
       ? input.imageUrls.map((url) => normalizeImageValue(url)).filter(Boolean)
       : [],
     active: input.active ?? true,
+    comingSoon: input.comingSoon === true,
     createdAt: timestamp,
     updatedAt: timestamp,
   };
@@ -144,7 +146,7 @@ function buildCreateProduct(input: CreateProductInput) {
 export async function listStoreProducts() {
   const collection = await getProductCollection();
   const products = await collection
-    .find({ active: true })
+    .find({ $or: [{ active: true }, { comingSoon: true }] })
     .sort({ createdAt: -1 })
     .toArray();
 
@@ -267,6 +269,10 @@ export async function updateProduct(
     updateData.active = input.active;
   }
 
+  if (input.comingSoon !== undefined) {
+    updateData.comingSoon = input.comingSoon === true;
+  }
+
   const result = await collection.findOneAndUpdate(
     { _id: assertObjectId(productId, "product id") },
     { $set: updateData },
@@ -297,40 +303,32 @@ export async function listAllProductImageUrls(): Promise<string[]> {
 }
 
 export async function deleteProduct(productId: string) {
-  const { getMongoClient, getDb } = await import("../mongodb");
-  const client = await getMongoClient();
+  const collection = await getProductCollection();
+  const { getDb } = await import("../mongodb");
   const db = await getDb();
   const oid = assertObjectId(productId, "product id");
   const timestamp = new Date().toISOString();
 
-  const session = client.startSession();
-  try {
-    await session.withTransaction(async () => {
-      const result = await db.collection("products").deleteOne({ _id: oid }, { session });
-      if (result.deletedCount === 0) {
-        throw new Error("product not found");
-      }
-
-      await db.collection("orders").updateMany(
-        {
-          "items.productId": oid,
-          status: { $in: ["pending_payment", "payment_review"] },
-        },
-        {
-          $set: {
-            status: "cancelled",
-            cancellationReason: `สินค้า ${productId} ถูกลบออกจากระบบ`,
-            cancelledBy: "system",
-            cancelledAt: timestamp,
-            updatedAt: timestamp,
-          },
-        },
-        { session },
-      );
-    });
-  } finally {
-    await session.endSession();
+  const result = await collection.deleteOne({ _id: oid });
+  if (result.deletedCount === 0) {
+    throw new Error("product not found");
   }
+
+  await db.collection("orders").updateMany(
+    {
+      "items.productId": oid,
+      status: { $in: ["pending_payment", "payment_review"] },
+    },
+    {
+      $set: {
+        status: "cancelled",
+        cancellationReason: `สินค้า ${productId} ถูกลบออกจากระบบ`,
+        cancelledBy: "system",
+        cancelledAt: timestamp,
+        updatedAt: timestamp,
+      },
+    },
+  );
 
   return { success: true };
 }

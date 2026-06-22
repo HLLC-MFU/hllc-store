@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { Image as ImageIcon, Pencil, Trash2 } from "lucide-react";
+import { Image as ImageIcon, Pencil, Trash2, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Product } from "./types";
@@ -17,7 +17,7 @@ export function ProductCard({ product, onUpdate, onDelete, onEdit, t }: {
   t: (key: string, replacements?: Record<string, string | number>) => string;
 }) {
   const [showDetail, setShowDetail] = React.useState(false);
-  void onUpdate; void t;
+  void t;
 
   const discountedPrice = product.discount
     ? Math.round(product.price * (1 - product.discount / 100))
@@ -33,7 +33,11 @@ export function ProductCard({ product, onUpdate, onDelete, onEdit, t }: {
           {product.imageUrls && product.imageUrls[0]
             ? <Image fill src={product.imageUrls[0]} alt={product.name.th} className="object-cover" sizes="(max-width: 640px) 50vw, 300px" />
             : <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-8 h-8 text-gray-300" /></div>}
-          {product.discount ? (
+          {product.comingSoon ? (
+            <Badge className="absolute top-2.5 left-2.5 bg-amber-400 text-white text-[9px] font-black px-2 py-0.5 rounded-lg shadow-sm">
+              เร็วๆ นี้
+            </Badge>
+          ) : product.discount ? (
             <Badge className="absolute top-2.5 left-2.5 bg-brand text-white text-[9px] font-black px-2 py-0.5 rounded-lg shadow-sm">
               -{product.discount}%
             </Badge>
@@ -43,6 +47,18 @@ export function ProductCard({ product, onUpdate, onDelete, onEdit, t }: {
             className="absolute top-2.5 right-2.5 flex gap-1.5 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200"
             onClick={(e) => e.stopPropagation()}
           >
+            <Button
+              variant="ghost" size="icon"
+              onClick={() => onUpdate({ ...product, comingSoon: !product.comingSoon })}
+              title={product.comingSoon ? "ยกเลิก Coming Soon" : "ตั้งเป็น Coming Soon"}
+              className={`w-7.5 h-7.5 backdrop-blur-xs rounded-full shadow flex items-center justify-center border cursor-pointer transition-colors shadow-slate-200/50 ${
+                product.comingSoon
+                  ? "bg-amber-400 border-amber-300 hover:bg-amber-500"
+                  : "bg-white/95 border-gray-100 hover:bg-amber-50"
+              }`}
+            >
+              <Clock className={`w-3.5 h-3.5 ${product.comingSoon ? "text-white" : "text-amber-500"}`} />
+            </Button>
             <Button variant="ghost" size="icon" onClick={() => onEdit(product)}
               className="w-7.5 h-7.5 bg-white/95 backdrop-blur-xs rounded-full shadow flex items-center justify-center hover:bg-gray-100 border border-gray-100 cursor-pointer transition-colors shadow-slate-200/50">
               <Pencil className="w-3.5 h-3.5 text-gray-600" />

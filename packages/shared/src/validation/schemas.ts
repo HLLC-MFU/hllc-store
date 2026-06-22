@@ -242,6 +242,7 @@ export const homeBlockSchema = z.object({
   imageUrl: imageUrlSchema.optional(),
   title: looseLocalizedText.partial().optional(),
   subtitle: looseLocalizedText.partial().optional(),
+  blockStatus: z.enum(["open", "comingSoon", "closed"]).optional(),
 });
 
 // Keyed by HomeBlockId from lib/config/catalog.ts; all blocks optional so the

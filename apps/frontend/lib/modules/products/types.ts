@@ -27,4 +27,5 @@ export type ProductInput = {
   imageUrls?: string[];
   options?: unknown[];
   active: boolean;
+  comingSoon?: boolean;
 };

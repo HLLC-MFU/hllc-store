@@ -13,11 +13,12 @@ type Props = {
   baseShipping: number;
   onPay: () => void;
   items: CartItem[];
+  disabledReason?: string;
 };
 
 export function CartSummaryPanel({
   lang, allSelected, onToggleSelectAll,
-  selectedCount, selectedTotal, baseShipping, onPay, items,
+  selectedCount, selectedTotal, baseShipping, onPay, items, disabledReason,
 }: Props) {
   if (!items.length) return null;
 
@@ -25,8 +26,9 @@ export function CartSummaryPanel({
     <CheckoutFooter
       lang={lang}
       total={selectedTotal}
-      buttonLabel={lang === "th" ? "ดำเนินการต่อ" : "Continue"}
-      count={selectedCount}
+      buttonLabel={disabledReason ?? (lang === "th" ? "ดำเนินการต่อ" : "Continue")}
+      count={disabledReason ? undefined : selectedCount}
+      disabled={!!disabledReason}
       onButtonClick={onPay}
       leftSlot={
         <button

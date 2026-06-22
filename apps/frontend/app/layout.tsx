@@ -31,7 +31,7 @@ export default function RootLayout({
       lang="en"
       className={`${notoSansThai.variable} ${nunito.variable} h-full antialiased`}
     >
-      {process.env.NODE_ENV === "development" && <Agentation />}
+      {/* {process.env.NODE_ENV === "development" && <Agentation />} */}
       <body className="min-h-full">
         <Providers>{children}</Providers>
       </body>

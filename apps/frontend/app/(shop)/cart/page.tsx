@@ -49,7 +49,7 @@ export default function CartPage() {
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const allSelected = useMemo(() => items.length > 0 && items.every(i => selectedIds.has(itemKey(i))), [items, selectedIds]);
-  const { selectedItems, selectedTotal, selectedCount } = useMemo(() => {
+  const { selectedItems, selectedTotal, selectedCount, hasOutOfStock } = useMemo(() => {
     const selected = items.filter(i => selectedIds.has(itemKey(i)));
     const total = selected.reduce((sum, i) => {
       let charm = 0;
@@ -60,7 +60,10 @@ export default function CartPage() {
       return sum + (i.price + charm) * i.quantity;
     }, 0);
     const count = selected.reduce((sum, i) => sum + i.quantity, 0);
-    return { selectedItems: selected, selectedTotal: total, selectedCount: count };
+    const hasOutOfStock = selected.some(
+      (i) => i.stock !== undefined && i.quantity > i.stock,
+    );
+    return { selectedItems: selected, selectedTotal: total, selectedCount: count, hasOutOfStock };
   }, [items, selectedIds]);
 
   const [shippingRates, setShippingRates] = useState<ShippingSettings>(DEFAULT_SHIPPING_RATES);
@@ -350,6 +353,7 @@ export default function CartPage() {
                 selectedCount={selectedCount} selectedTotal={selectedTotal}
                 baseShipping={baseShippingPreview}
                 onPay={goInfo} items={items}
+                disabledReason={hasOutOfStock ? (lang === "th" ? "สต็อกไม่พอ" : "Not enough stock") : undefined}
               />
             </section>
           </>

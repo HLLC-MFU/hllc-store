@@ -78,6 +78,7 @@ export type HomeBlock = {
   imageUrl: string;
   title: LocalizedText;
   subtitle: LocalizedText;
+  blockStatus?: "open" | "comingSoon" | "closed";
 };
 
 export type HomeContent = {
@@ -117,11 +118,13 @@ export async function getHomeContent(): Promise<HomeContent> {
   const blocks = {} as Record<HomeBlockId, HomeBlock>;
   for (const id of HOME_BLOCK_IDS) {
     const fallback = defaults.blocks[id];
-    const raw = (stored[id] ?? {}) as { imageUrl?: unknown; title?: unknown; subtitle?: unknown };
+    const raw = (stored[id] ?? {}) as { imageUrl?: unknown; title?: unknown; subtitle?: unknown; blockStatus?: unknown };
+    const rawStatus = raw.blockStatus;
     blocks[id] = {
       imageUrl: typeof raw.imageUrl === "string" ? raw.imageUrl : "",
       title: asLocalized(raw.title, fallback.title),
       subtitle: asLocalized(raw.subtitle, fallback.subtitle),
+      blockStatus: (rawStatus === "comingSoon" || rawStatus === "closed") ? rawStatus : "open",
     };
   }
   return { blocks };
@@ -139,6 +142,7 @@ export async function updateHomeContent(input: unknown): Promise<HomeContent> {
       imageUrl: block.imageUrl ?? merged[key].imageUrl,
       title: { th: block.title?.th ?? merged[key].title.th, en: block.title?.en ?? merged[key].title.en },
       subtitle: { th: block.subtitle?.th ?? merged[key].subtitle.th, en: block.subtitle?.en ?? merged[key].subtitle.en },
+      blockStatus: block.blockStatus ?? merged[key].blockStatus ?? "open",
     };
   }
 

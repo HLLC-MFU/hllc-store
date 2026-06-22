@@ -28,6 +28,7 @@ export type Product = {
   imageUrl?: string;
   imageUrls?: string[];
   active: boolean;
+  comingSoon?: boolean;
 };
 
 export type ProductOption = {
