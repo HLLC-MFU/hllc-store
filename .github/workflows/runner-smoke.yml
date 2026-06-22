@@ -5,7 +5,7 @@ on:
 
 jobs:
   smoke:
-    runs-on: [self-hosted, hllc-org-runner]
+    runs-on: ubuntu-latest
     steps:
       - name: Show runner identity
         shell: bash
