@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hllc-store-config
+data:
+  ADMIN_USERNAME: __ADMIN_USERNAME__
+  BACKEND_URL: http://backend:3001
+  FRONTEND_URL: https://hllc.mfu.ac.th
+  MONGODB_DB: __MONGODB_DB__
+  NEXT_PUBLIC_SITE_URL: https://hllc.mfu.ac.th/store
+  SITE_URL: https://hllc.mfu.ac.th/store
+  TRUSTED_PROXY_HOPS: "1"

@@ -1,0 +1,160 @@
+name: Deploy HLLC Store
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_FRONTEND: ghcr.io/${{ github.repository_owner }}/hllc-store-frontend:${{ github.sha }}
+  IMAGE_BACKEND: ghcr.io/${{ github.repository_owner }}/hllc-store-backend:${{ github.sha }}
+  K8S_NAMESPACE: hllc-store
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/frontend/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_FRONTEND }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_BACKEND }}
+
+  deploy:
+    runs-on: self-hosted
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.30.0
+
+      - name: Configure kubeconfig
+        shell: bash
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${KUBECONFIG_B64:-}" ]]; then
+            echo "::error::Missing GitHub Secret KUBECONFIG_B64"
+            exit 1
+          fi
+          mkdir -p "$HOME/.kube"
+          printf '%s' "$KUBECONFIG_B64" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Ensure namespace exists
+        run: kubectl apply -f k8s/namespace.yaml
+
+      - name: Create runtime secret
+        shell: bash
+        env:
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          MONGODB_DB: ${{ secrets.MONGODB_DB }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          ADMIN_SESSION_SECRET: ${{ secrets.ADMIN_SESSION_SECRET }}
+          ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_SECURE: ${{ secrets.SMTP_SECURE }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GMAIL_OAUTH_CLIENT_ID: ${{ secrets.GMAIL_OAUTH_CLIENT_ID }}
+          GMAIL_OAUTH_CLIENT_SECRET: ${{ secrets.GMAIL_OAUTH_CLIENT_SECRET }}
+          GMAIL_OAUTH_REFRESH_TOKEN: ${{ secrets.GMAIL_OAUTH_REFRESH_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          for required in ADMIN_USERNAME MONGODB_DB MONGODB_URI ADMIN_SESSION_SECRET ADMIN_PASSWORD_HASH; do
+            if [[ -z "${!required:-}" ]]; then
+              echo "::error::Missing GitHub Secret ${required}"
+              exit 1
+            fi
+          done
+
+          kubectl -n "${K8S_NAMESPACE}" delete secret hllc-store-secret --ignore-not-found
+
+          secret_args=(
+            --from-literal=MONGODB_URI="$MONGODB_URI"
+            --from-literal=ADMIN_SESSION_SECRET="$ADMIN_SESSION_SECRET"
+            --from-literal=ADMIN_PASSWORD_HASH="$ADMIN_PASSWORD_HASH"
+          )
+
+          [[ -n "${SMTP_HOST:-}" ]] && secret_args+=(--from-literal=SMTP_HOST="$SMTP_HOST")
+          [[ -n "${SMTP_PORT:-}" ]] && secret_args+=(--from-literal=SMTP_PORT="$SMTP_PORT")
+          [[ -n "${SMTP_SECURE:-}" ]] && secret_args+=(--from-literal=SMTP_SECURE="$SMTP_SECURE")
+          [[ -n "${SMTP_USER:-}" ]] && secret_args+=(--from-literal=SMTP_USER="$SMTP_USER")
+          [[ -n "${SMTP_PASSWORD:-}" ]] && secret_args+=(--from-literal=SMTP_PASSWORD="$SMTP_PASSWORD")
+          [[ -n "${SMTP_FROM:-}" ]] && secret_args+=(--from-literal=SMTP_FROM="$SMTP_FROM")
+          [[ -n "${GMAIL_USER:-}" ]] && secret_args+=(--from-literal=GMAIL_USER="$GMAIL_USER")
+          [[ -n "${GMAIL_APP_PASSWORD:-}" ]] && secret_args+=(--from-literal=GMAIL_APP_PASSWORD="$GMAIL_APP_PASSWORD")
+          [[ -n "${GMAIL_OAUTH_CLIENT_ID:-}" ]] && secret_args+=(--from-literal=GMAIL_OAUTH_CLIENT_ID="$GMAIL_OAUTH_CLIENT_ID")
+          [[ -n "${GMAIL_OAUTH_CLIENT_SECRET:-}" ]] && secret_args+=(--from-literal=GMAIL_OAUTH_CLIENT_SECRET="$GMAIL_OAUTH_CLIENT_SECRET")
+          [[ -n "${GMAIL_OAUTH_REFRESH_TOKEN:-}" ]] && secret_args+=(--from-literal=GMAIL_OAUTH_REFRESH_TOKEN="$GMAIL_OAUTH_REFRESH_TOKEN")
+
+          kubectl -n "${K8S_NAMESPACE}" create secret generic hllc-store-secret \
+            "${secret_args[@]}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Render config map values
+        shell: bash
+        env:
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          MONGODB_DB: ${{ secrets.MONGODB_DB }}
+        run: |
+          set -euo pipefail
+
+          for required in ADMIN_USERNAME MONGODB_DB; do
+            if [[ -z "${!required:-}" ]]; then
+              echo "::error::Missing GitHub Secret ${required}"
+              exit 1
+            fi
+          done
+
+          sed -i "s#__ADMIN_USERNAME__#${ADMIN_USERNAME}#g" k8s/configmap.yaml
+          sed -i "s#__MONGODB_DB__#${MONGODB_DB}#g" k8s/configmap.yaml
+
+      - name: Point manifests at the pushed images
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed -i "s#image: hllc-store-frontend:latest#image: ${IMAGE_FRONTEND}#g" k8s/frontend.yaml
+          sed -i "s#image: hllc-store-backend:latest#image: ${IMAGE_BACKEND}#g" k8s/backend.yaml
+
+      - name: Apply manifests
+        run: kubectl apply -k k8s

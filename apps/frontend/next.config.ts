@@ -1,22 +1,14 @@
 import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV !== "production";
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
 
 const nextConfig: NextConfig = {
   // Allow LAN access for mobile testing (pnpm dev --hostname 0.0.0.0)
   allowedDevOrigins: ["172.25.34.223"],
   devIndicators: false,
+  basePath: "/store",
   output: "standalone",
   experimental: {},
-  async rewrites() {
-    return [
-      { source: "/api/backend/:path*", destination: `${BACKEND_URL}/api/backend/:path*` },
-      { source: "/api/upload", destination: `${BACKEND_URL}/api/upload` },
-      { source: "/api/send-email", destination: `${BACKEND_URL}/api/send-email` },
-      { source: "/uploads/:path*", destination: `${BACKEND_URL}/uploads/:path*` },
-    ];
-  },
   async headers() {
     const securityHeaders = [
       { key: "X-Frame-Options", value: "DENY" },
