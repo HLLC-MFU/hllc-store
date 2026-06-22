@@ -5,8 +5,7 @@ on:
 
 jobs:
   smoke:
-    runs-on:
-      group: Default
+    runs-on: [self-hosted, hllc-org-runner]
     steps:
       - name: Show runner identity
         shell: bash
