@@ -57,7 +57,8 @@ jobs:
           tags: ${{ steps.tags.outputs.backend }}
 
   deploy:
-    runs-on: self-hosted
+    runs-on:
+      group: Default
     needs: build
     steps:
       - name: Checkout
