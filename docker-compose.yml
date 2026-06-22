@@ -6,7 +6,7 @@ services:
     ports:
       - "3001:3001"
     env_file:
-      - apps/backend/.env
+      - apps/backend/.env.local
     restart: unless-stopped
     volumes:
       - uploads:/app/apps/backend/uploads
@@ -18,7 +18,7 @@ services:
     ports:
       - "3000:3000"
     env_file:
-      - apps/frontend/.env
+      - apps/frontend/.env.local
     environment:
       - BACKEND_URL=http://backend:3001
     depends_on:
