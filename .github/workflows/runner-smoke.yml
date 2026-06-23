@@ -5,8 +5,8 @@ on:
 
 jobs:
   smoke:
-    runs-on: [self-hosted, hllc-org-runner]
-    
+    runs-on: hllc-org-runner
+    container: ubuntu:24.04
     steps:
       - name: Show runner identity
         shell: bash
