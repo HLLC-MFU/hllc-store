@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
 
 jobs:
-
   smoke:
     runs-on: [self-hosted, hllc-org-runner]
     steps:
