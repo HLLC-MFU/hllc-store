@@ -12,6 +12,8 @@ spec:
       labels:
         app: frontend
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: sdad-hllc
       containers:
         - name: frontend
           image: hllc-store-frontend:latest
