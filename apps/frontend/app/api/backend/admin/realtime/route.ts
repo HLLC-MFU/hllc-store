@@ -8,9 +8,9 @@ export async function GET(req: NextRequest) {
   const upstream = await fetch(`${BACKEND_URL}/api/backend/admin/realtime`, {
     headers: {
       accept: "text/event-stream",
+      cache: "no-store",
       cookie: req.headers.get("cookie") ?? "",
     },
-    signal: req.signal,
   }).catch(() => null);
 
   if (!upstream?.ok || !upstream.body) {

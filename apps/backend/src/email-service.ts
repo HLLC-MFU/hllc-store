@@ -121,7 +121,7 @@ function siteUrl() {
 
 // ── Shared base template ─────────────────────────────────────────────────────
 function trackingUrl(customerPhone?: string) {
-  return `${siteUrl().replace(/\/$/, "")}/profile${customerPhone ? `?customerPhone=${encodeURIComponent(customerPhone)}` : ""}`;
+  return `${siteUrl().replace(/\/$/, "")}/track-order${customerPhone ? `?customerPhone=${encodeURIComponent(customerPhone)}` : ""}`;
 }
 
 const CTA_LABEL = "ดูคำสั่งซื้อ / ติดตามสถานะ";

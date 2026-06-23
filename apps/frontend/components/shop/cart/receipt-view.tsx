@@ -161,7 +161,7 @@ export function ReceiptView({ lang, createdOrder, receiptItems }: ReceiptViewPro
           asChild
           className="mt-6 h-13 w-full rounded-2xl bg-emerald-600 text-sm font-black hover:bg-emerald-700"
         >
-          <Link href="/profile">
+          <Link href="/track-order">
             {lang === "th" ? "ดูสถานะคำสั่งซื้อ" : "Track my order"}
           </Link>
         </Button>

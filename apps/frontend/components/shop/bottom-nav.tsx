@@ -10,7 +10,7 @@ import { LanguageChip } from "@/components/shared/language-chip";
 const tabs = [
   { href: "/home", icon: Home, labelKey: "nav.home" },
   { href: "/cart", icon: ShoppingCart, labelKey: "nav.cart" },
-  { href: "/profile", icon: User, labelKey: "nav.profile" },
+  { href: "/track-order", icon: User, labelKey: "nav.profile" },
 ];
 
 export function BottomNav() {
