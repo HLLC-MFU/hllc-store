@@ -80,12 +80,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
         sameCartLine(i, item.productId, item.selectedOption, item.customName),
       );
       const maxQty = item.stock ?? Number.MAX_SAFE_INTEGER;
+      // count ALL lines with same productId (regardless of customName/option) toward stock
+      const totalQtyInCart = prev
+        .filter((i) => i.productId === item.productId)
+        .reduce((s, i) => s + i.quantity, 0);
       if (found)
         return prev.map((i) =>
           sameCartLine(i, item.productId, item.selectedOption, item.customName)
             ? { ...i, ...item, quantity: Math.min(i.quantity + 1, maxQty) }
             : i
         );
+      if (totalQtyInCart >= maxQty) return prev;
       return [...prev, { ...item, quantity: 1 }];
     });
   }
