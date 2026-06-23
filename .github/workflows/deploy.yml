@@ -17,7 +17,7 @@ env:
 jobs:
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, hllc-org-runner]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,7 +58,7 @@ jobs:
           tags: ${{ steps.tags.outputs.backend }}
 
   deploy:
-    runs-on: hllc-org-runner
+    runs-on: [self-hosted, hllc-org-runner]
     needs: build
     steps:
       - name: Checkout
