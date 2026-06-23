@@ -154,10 +154,11 @@ jobs:
         env:
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
           MONGODB_DB: ${{ secrets.MONGODB_DB }}
+          SITE_URL: ${{ secrets.SITE_URL }}
         run: |
           set -euo pipefail
 
-          for required in ADMIN_USERNAME MONGODB_DB; do
+          for required in ADMIN_USERNAME MONGODB_DB SITE_URL; do
             if [[ -z "${!required:-}" ]]; then
               echo "::error::Missing GitHub Secret ${required}"
               exit 1
@@ -166,6 +167,7 @@ jobs:
 
           sed -i "s#__ADMIN_USERNAME__#${ADMIN_USERNAME}#g" k8s/configmap.yaml
           sed -i "s#__MONGODB_DB__#${MONGODB_DB}#g" k8s/configmap.yaml
+          sed -i "s#__SITE_URL__#${SITE_URL}#g" k8s/configmap.yaml
 
       - name: Point manifests at the pushed images
         shell: bash

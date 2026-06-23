@@ -20,7 +20,7 @@ export type NavItem = {
 export const SHOP_NAV: NavItem[] = [
   { href: "/home",    label: "nav.home",        icon: Home },
   { href: "/cart",    label: "nav.cart",         icon: ShoppingCart },
-  { href: "/profile", label: "nav.track_order", icon: Package },
+  { href: "/track-order", label: "nav.track_order", icon: Package },
 ];
 
 export { ClipboardList, LayoutDashboard, Mail, Package, User };
@@ -102,7 +102,7 @@ export function AppHeader({ navItems = SHOP_NAV, showCart = true, showBack = tru
   const pathname = usePathname();
   const router = useRouter();
 
-  const isSubPage = showBack && pathname !== "/home" && pathname !== "/cart" && pathname !== "/profile";
+  const isSubPage = showBack && pathname !== "/home" && pathname !== "/cart" && pathname !== "/track-order";
 
   return (
     <>

@@ -30,6 +30,7 @@ Create these GitHub Secrets before running the workflow:
 - `MONGODB_URI`: external MongoDB connection string
 - `ADMIN_SESSION_SECRET`: session signing secret
 - `ADMIN_PASSWORD_HASH`: scrypt hash for the admin password
+- `SITE_URL`: public store URL, for example `https://hllc.mfu.ac.th/store`
 
 Optional secrets for email delivery, if you use that path:
 

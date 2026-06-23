@@ -7,6 +7,6 @@ data:
   BACKEND_URL: http://backend:3001
   FRONTEND_URL: https://hllc.mfu.ac.th
   MONGODB_DB: __MONGODB_DB__
-  NEXT_PUBLIC_SITE_URL: https://hllc.mfu.ac.th/store
-  SITE_URL: https://hllc.mfu.ac.th/store
+  NEXT_PUBLIC_SITE_URL: __SITE_URL__
+  SITE_URL: __SITE_URL__
   TRUSTED_PROXY_HOPS: "1"

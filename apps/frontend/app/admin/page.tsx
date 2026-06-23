@@ -25,7 +25,6 @@ import { placementByValue } from "@/lib/config/catalog";
 import { HomeContentPanel } from "@/components/admin/home-content-panel";
 import { PaymentAccountPanel } from "@/components/admin/payment-account-panel";
 import { ShippingSettingsPanel } from "@/components/admin/shipping-settings-panel";
-import { TestEmailPanel } from "@/components/admin/test-email-panel";
 import AddProductForm from "@/components/admin/add-product-form";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AppHeader, type NavItem } from "@/components/shared/app-header";
@@ -167,16 +166,38 @@ export default function AdminPage() {
       void Promise.resolve().then(loadSuperAdminData);
     }
 
-    const events = new EventSource("/api/backend/admin/realtime");
-    events.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data) as { type?: string };
-        if (data.type === "orders-updated") void loadData();
-        if (data.type === "super-admin-data" && currentUser?.role === "superAdmin") void loadSuperAdminData();
-      } catch { void loadData(); }
-    };
+    let es: EventSource | null = null;
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
+    let dead = false;
 
-    return () => events.close();
+    function connect() {
+      if (dead) return;
+      es = new EventSource("/api/backend/admin/realtime");
+      es.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data) as { type?: string };
+          if (data.type === "orders-updated") void loadData();
+          if (data.type === "super-admin-data" && currentUser?.role === "superAdmin") void loadSuperAdminData();
+        } catch { void loadData(); }
+      };
+      es.onerror = () => {
+        es?.close();
+        es = null;
+        if (!dead) retryTimeout = setTimeout(connect, 3000);
+      };
+    }
+
+    connect();
+
+    // Fallback polling every 30s in case SSE drops silently
+    const pollInterval = setInterval(() => { void loadData(); }, 30_000);
+
+    return () => {
+      dead = true;
+      if (retryTimeout) clearTimeout(retryTimeout);
+      clearInterval(pollInterval);
+      es?.close();
+    };
   }, [currentUser, isLoggedIn, loadData, loadSuperAdminData]);
 
   const pendingSlips = orders.filter((o) => o.status === "payment_review" && o.slip.status === "pending");
@@ -495,7 +516,6 @@ export default function AdminPage() {
                       loading={loading}
                       onSave={saveShippingSettings}
                     />
-                    <TestEmailPanel onNotify={notify} />
                   </div>
                 </TabsContent>
                 <TabsContent value="adminManagement" className="mt-4 animate-in fade-in duration-200">
