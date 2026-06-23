@@ -7,6 +7,7 @@ import * as settingsApi from "@/lib/modules/settings";
 import type { CharmSettings } from "@/lib/modules/settings";
 import { CHARM_COLORS } from "@/lib/config/catalog";
 import { csrfHeaders } from "@/components/admin/api-client";
+import { appPath } from "@/lib/client/app-path";
 
 export function CharmSettingsPanel({ notify, saveRef }: { notify?: (msg: string) => void; saveRef?: React.MutableRefObject<(() => Promise<void>) | null> }) {
   const [images, setImages] = React.useState<Record<string, string>>({});
@@ -34,11 +35,11 @@ export function CharmSettingsPanel({ notify, saveRef }: { notify?: (msg: string)
     setUploading(colorId);
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch("/api/upload", { method: "POST", headers: csrfHeaders(), body: fd });
+    const res = await fetch(appPath("/api/upload"), { method: "POST", headers: csrfHeaders(), body: fd });
     setUploading(null);
     if (!res.ok) { notify?.("อัปโหลดรูปไม่สำเร็จ"); return; }
     const data = await res.json() as { url: string };
-    setImages((prev) => ({ ...prev, [colorId]: data.url }));
+    setImages((prev) => ({ ...prev, [colorId]: appPath(data.url) }));
   }
 
   async function save() {

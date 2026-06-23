@@ -6,13 +6,14 @@ import {
 } from "@/lib/modules/settings";
 import { z } from "zod";
 import { productResponseSchema } from "@hllc/shared/validation/response-schemas";
+import { normalizeUploads } from "@/lib/client/normalize-uploads";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
 
 async function fetchBackend<T>(path: string, schema: z.ZodType<T>): Promise<T> {
   const response = await fetch(`${BACKEND_URL}${path}`, { cache: "no-store" });
   const payload = (await response.json()) as { data?: unknown };
-  return schema.parse(payload.data);
+  return schema.parse(normalizeUploads(payload.data));
 }
 
 export async function getHomeContent(): Promise<HomeContent> {

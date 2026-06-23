@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Lock, User, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/client/language-context";
+import { appPath } from "@/lib/client/app-path";
 import { safeParseWithLang, loginSchema } from "@hllc/shared/validation/schemas-i18n";
 import type { Lang } from "@hllc/shared/validation/schemas-i18n";
 
@@ -46,7 +47,7 @@ export function AdminLogin({ onLogin, loading = false }: AdminLoginProps) {
 <div className="w-full max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-300">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <Image src="/images/HLLCLOGO.png" alt="HLLC" width={240} height={64} className="h-16 w-auto object-contain mb-4" priority />
+          <Image src={appPath("/images/HLLCLOGO.png")} alt="HLLC" width={240} height={64} className="h-16 w-auto object-contain mb-4" priority />
           <h1 className="text-xl font-black text-gray-900">{t("admin.login.title")}</h1>
           <p className="mt-1 text-xs font-semibold text-gray-400">{t("admin.login.subtitle")}</p>
         </div>

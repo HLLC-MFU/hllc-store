@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/components/admin/api-client";
+import { appPath } from "@/lib/client/app-path";
 
 type Props = {
   defaultTo?: string;
@@ -35,7 +36,7 @@ export function TestEmailPanel({ defaultTo = "", onNotify }: Props) {
   async function send() {
     if (!to.trim()) { onNotify?.("กรุณากรอกอีเมลผู้รับ"); return; }
     setSending(true);
-    const res = await api<{ message?: string }>("/api/backend/admin/test-email", {
+    const res = await api<{ message?: string }>(appPath("/api/backend/admin/test-email"), {
       method: "POST",
       body: JSON.stringify({ to: to.trim(), template, note: note.trim() }),
     });

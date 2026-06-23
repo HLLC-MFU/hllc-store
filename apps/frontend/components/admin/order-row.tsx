@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/lib/client/language-context";
+import { appPath } from "@/lib/client/app-path";
 import type { Order, OrderStatus } from "./types";
 import { STATUS_BG, STATUS_COLOR, STATUS_ICON } from "./types";
 import { money, timeAgo, isPickupOrder } from "./api-client";
@@ -584,7 +585,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                   onClick={async () => {
                     setResendingEmail(true);
                     try {
-                      await fetch(`/api/backend/admin/orders/${order.id}?action=resend-email`, { method: "POST", headers: { "x-admin-token": document.cookie.match(/admin_token=([^;]+)/)?.[1] ?? "", "x-csrf-token": document.cookie.match(/admin_csrf=([^;]+)/)?.[1] ?? "" } });
+                      await fetch(appPath(`/api/backend/admin/orders/${order.id}?action=resend-email`), { method: "POST", headers: { "x-admin-token": document.cookie.match(/admin_token=([^;]+)/)?.[1] ?? "", "x-csrf-token": document.cookie.match(/admin_csrf=([^;]+)/)?.[1] ?? "" } });
                       setResendDone(true);
                       setTimeout(() => setResendDone(false), 4000);
                     } finally {

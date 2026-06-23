@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { apiValidated } from "@/components/admin/api-client";
+import { appPath } from "@/lib/client/app-path";
+import { normalizeUploads } from "@/lib/client/normalize-uploads";
 import { validateResponse } from "@hllc/shared/validation/response-schemas";
 import {
   orderResponseSchema,
@@ -17,25 +19,25 @@ async function readJson(response: Response): Promise<{ data?: unknown; error?: s
 /* ---- Storefront (anonymous, raw fetch + validation) ---- */
 
 export async function fetchOrdersByPhone(phone: string): Promise<PublicOrder[]> {
-  const response = await fetch(`/api/backend/orders?customerPhone=${encodeURIComponent(phone)}`, { cache: "no-store" });
+  const response = await fetch(appPath(`/api/backend/orders?customerPhone=${encodeURIComponent(phone)}`), { cache: "no-store" });
   const payload = await readJson(response);
   if (!response.ok) throw new Error(payload.error ?? "Unable to load orders");
-  return validateResponse(z.array(publicOrderResponseSchema), payload.data ?? []);
+  return validateResponse(z.array(publicOrderResponseSchema), normalizeUploads(payload.data ?? []));
 }
 
 export async function createOrder(input: CreateOrderInput): Promise<Order> {
-  const response = await fetch("/api/backend/orders", {
+  const response = await fetch(appPath("/api/backend/orders"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
   const payload = await readJson(response);
   if (!response.ok) throw new Error(payload.error ?? "Unable to create order");
-  return validateResponse(orderResponseSchema, payload.data);
+  return validateResponse(orderResponseSchema, normalizeUploads(payload.data));
 }
 
 export async function attachPaymentSlip(orderId: string, imageUrl: string): Promise<void> {
-  const response = await fetch(`/api/backend/orders/${orderId}`, {
+  const response = await fetch(appPath(`/api/backend/orders/${orderId}`), {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ imageUrl }),
@@ -45,7 +47,7 @@ export async function attachPaymentSlip(orderId: string, imageUrl: string): Prom
 }
 
 export async function cancelPublicOrder(orderId: string, reason: string): Promise<void> {
-  await fetch(`/api/backend/orders/${orderId}`, {
+  await fetch(appPath(`/api/backend/orders/${orderId}`), {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ cancel: true, reason }),

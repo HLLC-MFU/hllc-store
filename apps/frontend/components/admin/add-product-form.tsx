@@ -10,6 +10,7 @@ import { PLACEMENTS, placementByValue, placementValue } from "@/lib/config/catal
 import { csrfHeaders } from "@/components/admin/api-client";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Product } from "./types";
+import { appPath } from "@/lib/client/app-path";
 
 function toSlug(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -76,10 +77,10 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
       fd.append("file", file);
       const productSlug = product?.slug ?? toSlug(nameValue);
       if (productSlug) fd.append("slug", `${productSlug}-option-${colorId}`);
-      const res = await fetch("/api/upload", { method: "POST", headers: csrfHeaders(), body: fd });
+      const res = await fetch(appPath("/api/upload"), { method: "POST", headers: csrfHeaders(), body: fd });
       if (!res.ok) throw new Error();
       const data = await res.json() as { url: string };
-      updateBottleColor(colorId, { imageUrl: data.url });
+      updateBottleColor(colorId, { imageUrl: appPath(data.url) });
     } catch {
       notify("อัปโหลดรูปไม่สำเร็จ");
     } finally {
@@ -189,10 +190,10 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
           fd.append("file", file);
           const slugBase = productSlug ? `${productSlug}-${uploadSuffix}` : null;
           if (slugBase) fd.append("slug", i === 0 ? slugBase : `${slugBase}-${i + 1}`);
-          const res = await fetch("/api/upload", { method: "POST", headers: csrfHeaders(), body: fd });
+          const res = await fetch(appPath("/api/upload"), { method: "POST", headers: csrfHeaders(), body: fd });
           if (!res.ok) throw new Error("Upload failed");
           const data = await res.json() as { url: string };
-          return data.url;
+          return appPath(data.url);
         }),
       );
       setImagePreviews((prev) => {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Lock, User, KeyRound, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { appPath } from "@/lib/client/app-path";
 import { safeParseWithLang, registerSchema } from "@hllc/shared/validation/schemas-i18n";
 
 export default function AdminRegisterPage() {
@@ -32,7 +33,7 @@ export default function AdminRegisterPage() {
       return;
     }
 
-    const response = await fetch("/api/backend/admin/register", {
+    const response = await fetch(appPath("/api/backend/admin/register"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -59,7 +60,7 @@ export default function AdminRegisterPage() {
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <Image src="/images/HLLCLOGO.png" alt="HLLC" width={240} height={64} className="h-16 w-auto object-contain mb-4" priority />
+          <Image src={appPath("/images/HLLCLOGO.png")} alt="HLLC" width={240} height={64} className="h-16 w-auto object-contain mb-4" priority />
           <h1 className="text-xl font-black text-gray-900">ตั้งรหัสผ่าน</h1>
           <p className="mt-1 text-xs font-semibold text-gray-400 text-center">
             ใช้ username ที่ superAdmin สร้างไว้ แล้วตั้งรหัสผ่านของคุณเอง

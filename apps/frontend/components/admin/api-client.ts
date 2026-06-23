@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import type { Order } from "./types";
 import { validateResponse } from "@hllc/shared/validation/response-schemas";
+import { appPath } from "@/lib/client/app-path";
 
 const currencyFormatter = new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 });
 
@@ -49,7 +50,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<{ data?:
       }
     }
 
-    const response = await fetch(path, {
+    const response = await fetch(appPath(path), {
       cache: "no-store",
       ...init,
       headers,

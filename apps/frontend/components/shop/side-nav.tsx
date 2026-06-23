@@ -7,6 +7,7 @@ import { Home, Package, ShoppingCart } from "lucide-react";
 import { useCart } from "@/lib/client/cart";
 import { useLanguage } from "@/lib/client/language-context";
 import { LanguageChip } from "@/components/shared/language-chip";
+import { appPath } from "@/lib/client/app-path";
 
 export function SideNav() {
   const pathname = usePathname();
@@ -25,7 +26,7 @@ export function SideNav() {
       {/* Brand */}
       <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100">
         <Link href="/home" className="hover:opacity-80 transition-opacity">
-          <Image src="/images/HLLCLOGO.png" alt="HLLC" width={160} height={40} className="h-10 w-auto object-contain" priority />
+          <Image src={appPath("/images/HLLCLOGO.png")} alt="HLLC" width={160} height={40} className="h-10 w-auto object-contain" priority />
         </Link>
         <LanguageChip />
       </div>

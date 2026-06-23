@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ClipboardList, Images, LayoutDashboard, LogOut, Package, Settings, Users } from "lucide-react";
 import { useLanguage } from "@/lib/client/language-context";
+import { appPath } from "@/lib/client/app-path";
 
 type Props = {
   activeTab: string;
@@ -80,7 +81,7 @@ export function AdminSidebar({ onLogout,
       {/* Brand */}
       <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100">
         <Link href="/admin" className="hover:opacity-80 transition-opacity">
-          <Image src="/images/HLLCLOGO.png" alt="HLLC" width={160} height={40} className="h-10 w-auto object-contain" priority />
+          <Image src={appPath("/images/HLLCLOGO.png")} alt="HLLC" width={160} height={40} className="h-10 w-auto object-contain" priority />
         </Link>
       </div>
 

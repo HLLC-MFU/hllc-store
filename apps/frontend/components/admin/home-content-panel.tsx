@@ -8,6 +8,7 @@ import * as settingsApi from "@/lib/modules/settings";
 import type { HomeContent, HomeBlock } from "@/lib/modules/settings";
 import { type HomeBlockId } from "@/lib/config/catalog";
 import { csrfHeaders } from "@/components/admin/api-client";
+import { appPath } from "@/lib/client/app-path";
 
 const BLOCK_LABELS: { id: HomeBlockId; label: string; blockLabel: string; homepage?: boolean }[] = [
   { id: "bottle",     label: "ขวดน้ำ",   blockLabel: "Block 1", homepage: true },
@@ -57,11 +58,11 @@ export function HomeContentPanel({
     setUploading(id);
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch("/api/upload", { method: "POST", headers: csrfHeaders(), body: fd });
+    const res = await fetch(appPath("/api/upload"), { method: "POST", headers: csrfHeaders(), body: fd });
     setUploading(null);
     if (!res.ok) { notify?.("อัปโหลดรูปไม่สำเร็จ"); return; }
     const data = await res.json() as { url: string };
-    update(id, { imageUrl: data.url });
+    update(id, { imageUrl: appPath(data.url) });
   }
 
   async function save() {

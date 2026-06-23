@@ -8,6 +8,7 @@ import { type LucideIcon, ChevronLeft, ClipboardList, Home, LayoutDashboard, Mai
 import { useCart } from "@/lib/client/cart";
 import { useCartFly } from "@/lib/client/cart-fly";
 import { useLanguage } from "@/lib/client/language-context";
+import { appPath } from "@/lib/client/app-path";
 
 export type NavItem = {
   href?: string;
@@ -131,7 +132,7 @@ export function AppHeader({ navItems = SHOP_NAV, showCart = true, showBack = tru
 
         {/* Center — logo */}
         <Link href={logoHref} onClick={onLogoClick} className="absolute left-1/2 -translate-x-1/2">
-          <Image src="/images/HLLCLOGO.png" alt="HLLC" width={160} height={32} className="h-8 w-auto object-contain" priority />
+          <Image src={appPath("/images/HLLCLOGO.png")} alt="HLLC" width={160} height={32} className="h-8 w-auto object-contain" priority />
         </Link>
 
         {/* Right — lang + cart */}

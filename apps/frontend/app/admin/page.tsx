@@ -34,6 +34,7 @@ import { OrdersPanel } from "@/components/admin/orders-panel";
 import { ProductsPanel } from "@/components/admin/products-panel";
 import { ConfirmationModal } from "@/components/admin/confirmation-modal";
 import { SuperAdminPanel } from "@/components/admin/super-admin-panel";
+import { appPath } from "@/lib/client/app-path";
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = React.useState("dashboard");
@@ -172,7 +173,7 @@ export default function AdminPage() {
 
     function connect() {
       if (dead) return;
-      es = new EventSource("/api/backend/admin/realtime");
+      es = new EventSource(appPath("/api/backend/admin/realtime"));
       es.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data) as { type?: string };
