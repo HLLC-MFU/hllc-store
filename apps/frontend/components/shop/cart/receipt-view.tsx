@@ -29,9 +29,19 @@ interface ReceiptViewProps {
   receiptItems: CartItem[];
 }
 
+function charmAddonPrice(customName: string | undefined): number {
+  if (!customName?.startsWith("charm:")) return 0;
+  const letters = customName.split(":")[2] ?? "";
+  return 30 + Math.max(0, letters.length - 2) * 10;
+}
+
 export function ReceiptView({ lang, createdOrder, receiptItems }: ReceiptViewProps) {
   const shippingFee = createdOrder.shippingFee ?? 0;
-  const subtotal = createdOrder.subtotal ?? Math.max(0, createdOrder.total - shippingFee);
+  const subtotal = receiptItems.reduce((sum, item) => {
+    const addon = charmAddonPrice(item.customName);
+    return sum + (item.price + addon) * item.quantity;
+  }, 0) || (createdOrder.subtotal ?? Math.max(0, createdOrder.total - shippingFee));
+  const grandTotal = subtotal + shippingFee;
 
   return (
     <div className="flex min-h-[80vh] flex-col items-center justify-center px-4 pt-4 pb-10 text-center">
@@ -76,21 +86,34 @@ export function ReceiptView({ lang, createdOrder, receiptItems }: ReceiptViewPro
             <div className="space-y-1.5">
               {receiptItems.map((item, idx) => (
                 <div key={idx} className="space-y-0.5">
-                  <div className="flex justify-between items-start gap-4">
-                    <span className="break-words line-clamp-2">
-                      {item.name[lang] || item.name.th}
-                    </span>
-                    <span className="shrink-0 font-bold">
-                      {money(item.price * item.quantity)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-[10px] text-neutral-500 pl-2">
-                    <span>
-                      {item.quantity} x {money(item.price)}
-                      {item.selectedOption ? ` (${item.selectedOption})` : ""}
-                      {item.customName ? ` [${item.customName}]` : ""}
-                    </span>
-                  </div>
+                  {(() => {
+                    const addon = charmAddonPrice(item.customName);
+                    const unitPrice = item.price + addon;
+                    const charm = item.customName?.startsWith("charm:") ? item.customName : null;
+                    return (
+                      <>
+                        <div className="flex justify-between items-start gap-4">
+                          <span className="break-words line-clamp-2">
+                            {item.name[lang] || item.name.th}
+                          </span>
+                          <span className="shrink-0 font-bold">
+                            {money(item.price * item.quantity)}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-neutral-500 pl-2">
+                          {item.quantity} x {money(item.price)}
+                          {item.selectedOption ? ` (${item.selectedOption})` : ""}
+                          {charm ? ` [${charm}]` : ""}
+                        </div>
+                        {addon > 0 && (
+                          <div className="flex justify-between text-[10px] text-neutral-500 pl-2">
+                            <span>+ {lang === "th" ? "สายห้อย" : "Keychain"}</span>
+                            <span>+{money(addon * item.quantity)}</span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
@@ -116,7 +139,7 @@ export function ReceiptView({ lang, createdOrder, receiptItems }: ReceiptViewPro
             </div>
             <div className="flex justify-between font-bold text-sm text-neutral-900 pt-1.5 border-t border-dashed border-neutral-300">
               <span>{lang === "th" ? "ยอดชำระสุทธิ" : "Total"}</span>
-              <span>{money(createdOrder.total)}</span>
+              <span>{money(grandTotal)}</span>
             </div>
           </div>
 
