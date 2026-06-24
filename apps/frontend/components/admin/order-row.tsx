@@ -83,7 +83,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
   const statusLabel = (status?: OrderStatus) => {
     if (!status) return "";
     if (status === "shipped" && isPickup) return t("admin.status.shipped_pickup");
-    if (status === "completed" && isPickup) return t("admin.status.completed_pickup");
+    if (status === "completed") return t("admin.status.completed_pickup");
     return t(`admin.status.${status}`);
   };
   const statusButtonLabel = statusLabel;

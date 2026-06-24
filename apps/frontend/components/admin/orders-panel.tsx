@@ -17,7 +17,7 @@ type OrdersPanelProps = {
   onSaveTracking: (orderId: string, trackingNumber: string) => void;
   onCancelOrder: (orderId: string, reason: string) => void;
   onViewSlip: (images: string[], index: number) => void;
-  initialStatusFilter?: OrderStatus | "all" | "shipped_pickup";
+  initialStatusFilter?: OrderStatus | "all";
   t: (key: string) => string;
 };
 
@@ -32,10 +32,7 @@ function buildFilterItems(orders: Order[], t: (key: string) => string) {
       items.push({ key: "shipped", label: t("admin.status.shipped"), count: deliveryCount });
       items.push({ key: "shipped_pickup", label: t("admin.status.shipped_pickup"), count: pickupCount });
     } else if (s === "completed") {
-      const deliveryCount = orders.filter((o) => o.status === "completed" && !isPickupOrder(o)).length;
-      const pickupCount = orders.filter((o) => o.status === "completed" && isPickupOrder(o)).length;
-      items.push({ key: "completed", label: t("admin.status.completed"), count: deliveryCount });
-      items.push({ key: "completed_pickup", label: t("admin.status.completed_pickup"), count: pickupCount });
+      items.push({ key: "completed", label: t("admin.status.completed_pickup"), count: orders.filter((o) => o.status === "completed").length });
     } else {
       items.push({ key: s, label: t(`admin.status.${s}`), count: orders.filter((o) => o.status === s).length });
     }
@@ -54,7 +51,7 @@ export function OrdersPanel({
   t,
 }: OrdersPanelProps) {
   const [shippingFilter, setShippingFilter] = React.useState<"all" | "delivery" | "pickup">("all");
-  const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all" | "shipped_pickup" | "completed_pickup">(initialStatusFilter ?? "all");
+  const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all" | "shipped_pickup">(initialStatusFilter ?? "all");
   const [openModalOrderId, setOpenModalOrderId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -80,9 +77,8 @@ export function OrdersPanel({
         statusFilter === "all" ||
         (statusFilter === "shipped" && o.status === "shipped" && !isPickup) ||
         (statusFilter === "shipped_pickup" && o.status === "shipped" && isPickup) ||
-        (statusFilter === "completed" && o.status === "completed" && !isPickup) ||
-        (statusFilter === "completed_pickup" && o.status === "completed" && isPickup) ||
-        (statusFilter !== "shipped" && statusFilter !== "shipped_pickup" && statusFilter !== "completed" && statusFilter !== "completed_pickup" && o.status === statusFilter);
+        (statusFilter === "completed" && o.status === "completed") ||
+        (statusFilter !== "shipped" && statusFilter !== "shipped_pickup" && statusFilter !== "completed" && o.status === statusFilter);
 
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q ||

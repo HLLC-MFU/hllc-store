@@ -92,7 +92,7 @@ export function CheckoutFooter({
           form={buttonType === "submit" ? formId : undefined}
           onClick={onButtonClick}
           disabled={disabled || loading}
-          className="h-13 w-[35%] shrink-0 rounded-2xl bg-brand px-5 text-base font-black hover:bg-brand-hover shadow-lg shadow-brand/20"
+          className="h-13 flex-1 max-w-[50%] rounded-2xl bg-brand px-4 text-sm font-black hover:bg-brand-hover shadow-lg shadow-brand/20 whitespace-nowrap overflow-hidden"
         >
           {loading ? "..." : buttonLabel}{count != null ? ` (${count})` : ""}
         </Button>

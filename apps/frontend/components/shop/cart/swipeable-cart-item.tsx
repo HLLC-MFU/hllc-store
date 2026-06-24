@@ -65,7 +65,8 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
   onRemove,
   onCharmEdit,
 }: SwipeableCartItemProps) {
-  const { addItem, removeItem, updateQty } = useCart();
+  const { addItem, removeItem, updateQty, items: allItems } = useCart();
+  const totalProductQty = allItems.filter((i) => i.productId === item.productId).reduce((sum, i) => sum + i.quantity, 0);
   const { t } = useLanguage();
   const [swipeX, setSwipeXState] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -276,8 +277,8 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                     <button type="button" onClick={handleDecrease} className="h-6 w-6 rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 cursor-pointer">
                       <Minus className="h-2.5 w-2.5" />
                     </button>
-                    <span className="w-5 text-center text-sm font-black text-gray-900">{item.quantity}</span>
-                    <button type="button" onClick={() => onIncrease(item)} disabled={item.stock !== undefined && item.quantity >= item.stock} className="h-6 w-6 rounded-lg bg-brand flex items-center justify-center text-white disabled:opacity-30 cursor-pointer">
+                    <span className="min-w-8 text-center text-sm font-black text-gray-900">{item.quantity}</span>
+                    <button type="button" onClick={() => onIncrease(item)} disabled={item.stock !== undefined && totalProductQty >= item.stock} className="h-6 w-6 rounded-lg bg-brand flex items-center justify-center text-white disabled:opacity-30 cursor-pointer">
                       <Plus className="h-2.5 w-2.5" />
                     </button>
                   </div>

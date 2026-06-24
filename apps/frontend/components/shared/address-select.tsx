@@ -66,7 +66,7 @@ export function AddressSelect({ lang, value, onChange, error }: Props) {
   const isBangkok = value.province === "กรุงเทพมหานคร";
 
   // Decorated Thai names (จังหวัด.. / อำเภอ.. / ตำบล..); English uses the plain name.
-  const decoProvince = (th: string) => (lang === "th" ? `จังหวัด${th}` : data.find((p) => p.th === th)?.en ?? th);
+  const decoProvince = (th: string) => (lang === "th" ? th : data.find((p) => p.th === th)?.en ?? th);
   const decoDistrict = (th: string) =>
     lang === "th" ? (th.startsWith("เขต") ? th : `อำเภอ${th}`) : province?.districts.find((d) => d.th === th)?.en ?? th;
   const decoSub = (th: string) =>
