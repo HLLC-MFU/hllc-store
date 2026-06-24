@@ -427,78 +427,73 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setCharmOpen(false)} />
           <div className="relative w-full max-w-md bg-white rounded-4xl shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden max-h-[85vh] overflow-y-auto">
 
-            {/* Header with stepper */}
-            <div className="flex items-center justify-between px-5 pt-5 pb-4">
-              <div className="flex items-center gap-2">
-                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black transition-colors ${charmStep === "color" ? "bg-brand text-white" : "bg-emerald-500 text-white"}`}>
-                  {charmStep === "color" ? "1" : "✓"}
-                </div>
-                <span className={`text-[11px] font-black ${charmStep === "color" ? "text-gray-900" : "text-emerald-600"}`}>
-                  {t("charm.color_step")}
-                </span>
-                <div className={`h-px w-6 ${charmStep === "color" ? "bg-gray-200" : "bg-emerald-300"}`} />
-                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black transition-colors ${charmStep === "letters" ? "bg-brand text-white" : "bg-gray-100 text-gray-400"}`}>
-                  2
-                </div>
-                <span className={`text-[11px] font-black ${charmStep === "letters" ? "text-gray-900" : "text-gray-400"}`}>
-                  {t("charm.letters_step")}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCharmOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Step 1: Color */}
-            {charmStep === "color" && (
-              <div className="px-5 pb-5">
-                <p className="mb-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                  {t("charm.choose_color_heading", { price: CHARM_PRICE })}
-                </p>
-                <div className="grid grid-cols-4 gap-3">
-                  {(charmOptions ?? []).map((option) => {
-                    const isActive = tempColor === option.label;
-                    const displayName = lang === "en" && option.labelEn ? option.labelEn : option.label;
-                    return (
-                      <button
-                        key={option.label}
-                        type="button"
-                        onClick={() => setTempColor(option.label)}
-                        className="flex flex-col items-center gap-0.5 p-1 transition-all cursor-pointer"
-                      >
-                        <span className={`text-[9px] font-black leading-tight text-center ${isActive ? "text-brand" : "text-gray-400"}`}>
-                          {displayName}
-                        </span>
-                        {option.imageUrl ? (
-                          <Image
-                            src={option.imageUrl}
-                            alt={displayName}
-                            width={64}
-                            height={64}
-                            unoptimized
-                            className={`h-16 w-16 rounded-2xl object-cover border-2 transition-all ${isActive ? "border-brand scale-105" : "border-transparent"}`}
-                          />
-                        ) : (
-                          <div className={`h-14 w-14 rounded-2xl border-2 transition-all bg-gray-200 ${isActive ? "border-brand scale-105" : "border-transparent"}`} />
+            {/* Step 1: Color — image+price header + pill grid */}
+            {charmStep === "color" && (() => {
+              const previewOption = (charmOptions ?? []).find(o => o.label === tempColor) ?? charmOptions?.[0];
+              const previewImg = previewOption?.imageUrl;
+              return (
+                <>
+                  <div className="relative border-b border-gray-100">
+                    <div className="flex gap-4 px-4 py-4">
+                      <div className="relative w-28 h-28 shrink-0 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100">
+                        {previewImg && (
+                          <Image src={previewImg} alt={previewOption ? (lang === "en" && previewOption.labelEn ? previewOption.labelEn : previewOption.label) : ""} fill className="object-contain" sizes="112px" unoptimized />
                         )}
-                      </button>
-                    );
-                  })}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setCharmStep("letters")}
-                  disabled={!tempColor}
-                  className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-brand text-sm font-black text-white shadow-lg shadow-brand/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
-                >
-                  {t("charm.next_add_letters")}
-                </button>
-              </div>
-            )}
+                      </div>
+                      <div className="flex flex-col justify-center gap-2 flex-1 min-w-0 pr-8">
+                        <span className="text-2xl font-black text-brand">+{CHARM_PRICE}฿</span>
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
+                            <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-white text-[8px] font-black">✓</span>
+                            {lang === "th" ? `ตัวอักษรฟรี ${FREE_LETTERS} ตัว` : `${FREE_LETTERS} free letters`}
+                          </div>
+                          <div className="text-[11px] text-gray-400 font-medium">
+                            {lang === "th" ? `ตัวอักษรเพิ่มเติม +${LETTER_PRICE}฿ ตัว` : `+${LETTER_PRICE}฿ per extra letter`}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => setCharmOpen(false)} className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="px-5 py-4">
+                    <p className="mb-3 text-sm font-black text-gray-900">
+                      {lang === "th" ? "สีสายห้อย" : "Charm Color"} <span className="text-xs font-semibold text-gray-400 ml-1">(+{CHARM_PRICE}฿)</span>
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {(charmOptions ?? []).map((option) => {
+                        const isActive = tempColor === option.label;
+                        const displayName = lang === "en" && option.labelEn ? option.labelEn : option.label;
+                        return (
+                          <button
+                            key={option.label}
+                            type="button"
+                            onClick={() => setTempColor(option.label)}
+                            className={`flex items-center gap-1.5 h-9 rounded-2xl border-2 pl-1.5 pr-3 text-sm font-black transition-all cursor-pointer ${isActive ? "border-brand bg-brand/5 text-brand" : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"}`}
+                          >
+                            {option.imageUrl ? (
+                              <Image src={option.imageUrl} alt={displayName} width={24} height={24} unoptimized className="h-6 w-6 rounded-full object-cover shrink-0" />
+                            ) : (
+                              <div className="h-6 w-6 rounded-full bg-gray-200 shrink-0" />
+                            )}
+                            {displayName}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCharmStep("letters")}
+                      disabled={!tempColor}
+                      className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-brand text-sm font-black text-white shadow-lg shadow-brand/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
+                    >
+                      {t("charm.next_add_letters")}
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
 
             {/* Step 2: Letters */}
             {charmStep === "letters" && (
