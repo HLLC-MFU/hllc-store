@@ -20,8 +20,8 @@ export const metadata: Metadata = {
   title: "HLLC Store",
   description: "ECOM store and admin backend",
   icons: {
-    icon: "/images/HLLCLOGO.png",
-    apple: "/images/HLLCLOGO.png",
+    icon: "/store/images/HLLCLOGO.png",
+    apple: "/store/images/HLLCLOGO.png",
   },
 };
 
