@@ -19,6 +19,10 @@ const nunito = Nunito({
 export const metadata: Metadata = {
   title: "HLLC Store",
   description: "ECOM store and admin backend",
+  icons: {
+    icon: "/images/HLLCLOGO.png",
+    apple: "/images/HLLCLOGO.png",
+  },
 };
 
 export default function RootLayout({
