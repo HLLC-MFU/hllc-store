@@ -15,6 +15,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useLanguage } from "@/lib/client/language-context";
 import type { Order, OrderStatus, Product } from "@/components/admin/types";
 import * as ordersApi from "@/lib/modules/orders";
+import type { OrdersSummary } from "@/lib/modules/orders";
 import { isPickupOrder } from "@/components/admin/api-client";
 import * as productsApi from "@/lib/modules/products";
 import * as adminUsersApi from "@/lib/modules/admin-users";
@@ -36,9 +37,17 @@ import { ConfirmationModal } from "@/components/admin/confirmation-modal";
 import { SuperAdminPanel } from "@/components/admin/super-admin-panel";
 import { appPath } from "@/lib/client/app-path";
 
+const ORDERS_PER_PAGE = 6;
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = React.useState("dashboard");
   const [orders, setOrders] = React.useState<Order[]>([]);
+  const [ordersTotal, setOrdersTotal] = React.useState(0);
+  const [ordersPage, setOrdersPage] = React.useState(1);
+  const [ordersStatusFilter, setOrdersStatusFilter] = React.useState<string>("all");
+  const [ordersSearch, setOrdersSearch] = React.useState("");
+  const [ordersSortOrder, setOrdersSortOrder] = React.useState<"asc" | "desc">("desc");
+  const [summary, setSummary] = React.useState<OrdersSummary | null>(null);
   const [products, setProducts] = React.useState<Product[]>([]);
   const [showAddProduct, setShowAddProduct] = React.useState(false);
   const [editProduct, setEditProduct] = React.useState<Product | null>(null);
@@ -46,12 +55,11 @@ export default function AdminPage() {
   const [confirm, setConfirm] = React.useState<{ orderId: string; approved: boolean; note?: string } | null>(null);
   const [statusConfirm, setStatusConfirm] = React.useState<{ orderId: string; status: OrderStatus; isPickup?: boolean } | null>(null);
   const [lightbox, setLightbox] = React.useState<{ images: string[]; index: number } | null>(null);
-  const [ordersFilter, setOrdersFilter] = React.useState<string>("all");
   const [adminUsers, setAdminUsers] = React.useState<AdminUser[]>([]);
   const [auditLogs, setAuditLogs] = React.useState<AuditLog[]>([]);
   const [paymentSettings, setPaymentSettings] = React.useState<PaymentSettings | null>(null);
   const [shippingSettings, setShippingSettings] = React.useState<ShippingSettings | null>(null);
-  const { lang, t, setLang } = useLanguage();
+  const { t, setLang } = useLanguage();
   React.useEffect(() => { setLang("th"); }, [setLang]);
 
   const [loading, setLoading] = React.useState(false);
@@ -128,19 +136,46 @@ export default function AdminPage() {
     void loadSuperAdminData();
   }, [t, loadSuperAdminData]);
 
-  const loadData = React.useCallback(async () => {
-    setLoading(true);
-    const [ordersRes, productsRes] = await Promise.all([
-      ordersApi.fetchAdminOrders(),
-      productsApi.fetchAdminProducts(),
+  const loadOrders = React.useCallback(async (
+    page: number,
+    statusFilter: string,
+    search: string,
+    sortOrder: "asc" | "desc",
+  ) => {
+    const backendStatus = statusFilter === "shipped_pickup" ? "shipped" : statusFilter;
+    const [ordersRes, summaryRes] = await Promise.all([
+      ordersApi.fetchAdminOrders({
+        page,
+        limit: ORDERS_PER_PAGE,
+        status: backendStatus !== "all" ? backendStatus : undefined,
+        search: search.trim() || undefined,
+        sort: sortOrder,
+      }),
+      ordersApi.fetchAdminOrdersSummary(),
     ]);
-
     if (ordersRes.data) {
-      setOrders(ordersRes.data.filter((order) => !order.id.startsWith("demo-")));
+      setOrders(ordersRes.data.orders.filter((o) => !o.id.startsWith("demo-")));
+      setOrdersTotal(ordersRes.data.total);
     } else {
       setOrders([]);
+      setOrdersTotal(0);
       if (ordersRes.error) notify(ordersRes.error);
     }
+    if (summaryRes.data) setSummary(summaryRes.data);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const ordersParamsRef = React.useRef({ ordersPage, ordersStatusFilter, ordersSearch, ordersSortOrder });
+  React.useEffect(() => {
+    ordersParamsRef.current = { ordersPage, ordersStatusFilter, ordersSearch, ordersSortOrder };
+  }, [ordersPage, ordersStatusFilter, ordersSearch, ordersSortOrder]);
+
+  const loadData = React.useCallback(async () => {
+    setLoading(true);
+    const { ordersPage: p, ordersStatusFilter: f, ordersSearch: s, ordersSortOrder: so } = ordersParamsRef.current;
+    const [, productsRes] = await Promise.all([
+      loadOrders(p, f, s, so),
+      productsApi.fetchAdminProducts(),
+    ]);
     if (productsRes.data) {
       setProducts(productsRes.data);
     } else if (productsRes.error) {
@@ -150,15 +185,20 @@ export default function AdminPage() {
       await loadSuperAdminData();
     }
     setLoading(false);
-  }, [currentUser, loadSuperAdminData]);
+  }, [currentUser, loadSuperAdminData, loadOrders]);
 
   React.useEffect(() => {
     if (!isLoggedIn) return;
-    const run = async () => {
-      await loadData();
-    };
-    void run();
+    void loadData();
   }, [isLoggedIn, loadData]);
+
+  // Reload orders when page / filter / search / sort changes (skip on mount — loadData covers it)
+  const isMounted = React.useRef(false);
+  React.useEffect(() => {
+    if (!isLoggedIn) return;
+    if (!isMounted.current) { isMounted.current = true; return; }
+    void loadOrders(ordersPage, ordersStatusFilter, ordersSearch, ordersSortOrder);
+  }, [isLoggedIn, ordersPage, ordersStatusFilter, ordersSearch, ordersSortOrder, loadOrders]);
 
   React.useEffect(() => {
     if (!isLoggedIn) return;
@@ -177,9 +217,15 @@ export default function AdminPage() {
       es.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data) as { type?: string };
-          if (data.type === "orders-updated") void loadData();
+          if (data.type === "orders-updated") {
+            const { ordersPage: p, ordersStatusFilter: f, ordersSearch: s, ordersSortOrder: so } = ordersParamsRef.current;
+            void loadOrders(p, f, s, so);
+          }
           if (data.type === "super-admin-data" && currentUser?.role === "superAdmin") void loadSuperAdminData();
-        } catch { void loadData(); }
+        } catch {
+          const { ordersPage: p, ordersStatusFilter: f, ordersSearch: s, ordersSortOrder: so } = ordersParamsRef.current;
+          void loadOrders(p, f, s, so);
+        }
       };
       es.onerror = () => {
         es?.close();
@@ -191,7 +237,10 @@ export default function AdminPage() {
     connect();
 
     // Fallback polling every 30s in case SSE drops silently
-    const pollInterval = setInterval(() => { void loadData(); }, 30_000);
+    const pollInterval = setInterval(() => {
+      const { ordersPage: p, ordersStatusFilter: f, ordersSearch: s, ordersSortOrder: so } = ordersParamsRef.current;
+      void loadOrders(p, f, s, so);
+    }, 30_000);
 
     return () => {
       dead = true;
@@ -201,7 +250,7 @@ export default function AdminPage() {
     };
   }, [currentUser, isLoggedIn, loadData, loadSuperAdminData]);
 
-  const pendingSlips = orders.filter((o) => o.status === "payment_review" && o.slip.status === "pending");
+  const pendingCount = summary?.pendingReview ?? 0;
 
   async function handleLogin(form: HTMLFormElement) {
     setLoginLoading(true);
@@ -431,8 +480,8 @@ export default function AdminPage() {
       <AdminSidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        pendingCount={pendingSlips.length}
-        orderCount={orders.length}
+        pendingCount={pendingCount}
+        orderCount={summary?.totalOrders ?? orders.length}
         productCount={products.length}
         isSuperAdmin={currentUser?.role === "superAdmin"}
         onLogout={handleLogout}
@@ -447,7 +496,7 @@ export default function AdminPage() {
           onLogoClick={() => setActiveTab("dashboard")}
           navItems={[
             { label: t("admin.tab.dashboard"), icon: LayoutDashboard, onClick: () => setActiveTab("dashboard") },
-            { label: t("admin.tab.orders"),    icon: ClipboardList,   onClick: () => setActiveTab("orders"),   badge: pendingSlips.length },
+            { label: t("admin.tab.orders"),    icon: ClipboardList,   onClick: () => setActiveTab("orders"),   badge: pendingCount },
             { label: t("admin.tab.products"),  icon: Package,         onClick: () => setActiveTab("products") },
             { label: t("admin.tab.storefront"), icon: ImageIcon,      onClick: () => setActiveTab("storefront") },
             ...(currentUser?.role === "superAdmin"
@@ -467,10 +516,13 @@ export default function AdminPage() {
 
             <TabsContent value="dashboard" className="mt-5 animate-in fade-in duration-200">
               <AdminStats
-                orders={orders}
-                pendingSlips={pendingSlips}
+                summary={summary}
                 setActiveTab={setActiveTab}
-                onNavigateOrders={(filter) => { setOrdersFilter(filter); setActiveTab("orders"); }}
+                onNavigateOrders={(filter) => {
+                  setOrdersStatusFilter(filter);
+                  setOrdersPage(1);
+                  setActiveTab("orders");
+                }}
                 t={t}
               />
             </TabsContent>
@@ -478,13 +530,23 @@ export default function AdminPage() {
             <TabsContent value="orders" className="mt-5 animate-in fade-in duration-200">
               <OrdersPanel
                 orders={orders}
+                total={ordersTotal}
+                page={ordersPage}
+                totalPages={Math.max(1, Math.ceil(ordersTotal / ORDERS_PER_PAGE))}
+                onPageChange={(p) => setOrdersPage(p)}
+                statusFilter={ordersStatusFilter}
+                onStatusFilterChange={(f) => { setOrdersStatusFilter(f); setOrdersPage(1); }}
+                search={ordersSearch}
+                onSearchChange={(s) => { setOrdersSearch(s); setOrdersPage(1); }}
+                sortOrder={ordersSortOrder}
+                onSortOrderChange={(s) => { setOrdersSortOrder(s); setOrdersPage(1); }}
+                summary={summary}
                 onStatusChange={triggerStatusConfirm}
                 onApproveSlip={approveSlip}
                 onSaveTracking={saveTracking}
                 onCancelOrder={cancelOrder}
                 t={t}
                 onViewSlip={(images, index) => setLightbox({ images, index })}
-                initialStatusFilter={ordersFilter as OrderStatus | "all"}
               />
             </TabsContent>
 

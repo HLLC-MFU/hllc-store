@@ -233,7 +233,11 @@ export async function listOrders(filters?: {
   customerPhone?: string;
   status?: OrderStatus;
   excludeStatuses?: OrderStatus[];
-}) {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortOrder?: "asc" | "desc";
+}): Promise<{ orders: Order[]; total: number }> {
   const orders = await getOrdersCollection();
   const query: Document = {};
 
@@ -247,15 +251,74 @@ export async function listOrders(filters?: {
     query.status = { $nin: filters.excludeStatuses };
   }
 
-  const results = await orders
-    .aggregate([
-      { $match: query },
-      { $sort: { createdAt: -1 } },
-      ...ORDERS_LOOKUP_PIPELINE,
-    ])
-    .toArray();
+  if (filters?.search?.trim()) {
+    const s = filters.search.trim();
+    const orClauses: Document[] = [
+      { "customer.name": { $regex: s, $options: "i" } },
+      { "customer.phone": { $regex: s } },
+    ];
+    try { orClauses.push({ _id: assertObjectId(s) }); } catch { /* not a valid ObjectId */ }
+    query.$or = orClauses;
+  }
 
-  return results.map(toOrder);
+  const sortDir = filters?.sortOrder === "asc" ? 1 : -1;
+  const limit = Math.min(filters?.limit ?? 50, 200);
+  const page = Math.max(filters?.page ?? 1, 1);
+  const skip = (page - 1) * limit;
+
+  const [results, total] = await Promise.all([
+    orders
+      .aggregate([
+        { $match: query },
+        { $sort: { createdAt: sortDir } },
+        { $skip: skip },
+        { $limit: limit },
+        ...ORDERS_LOOKUP_PIPELINE,
+      ])
+      .toArray(),
+    orders.countDocuments(query),
+  ]);
+
+  return { orders: results.map(toOrder), total };
+}
+
+export async function getOrdersSummary() {
+  const col = await getOrdersCollection();
+  const [statusGroups, revenueResult, pendingCount] = await Promise.all([
+    col
+      .aggregate([
+        { $group: { _id: { status: "$status", deliveryMode: "$deliveryMode" }, count: { $sum: 1 } } },
+      ])
+      .toArray(),
+    col
+      .aggregate([
+        { $match: { status: { $in: ["packing", "shipped", "completed"] } } },
+        { $group: { _id: null, revenue: { $sum: "$total" } } },
+      ])
+      .toArray(),
+    col.countDocuments({ $or: [{ status: "payment_review" }, { "slip.status": "pending" }] }),
+  ]);
+
+  const byStatus: Record<string, number> = {};
+  let shippedDelivery = 0;
+  let shippedPickup = 0;
+  for (const g of statusGroups) {
+    const { status, deliveryMode } = g._id as { status: string; deliveryMode: string };
+    byStatus[status] = (byStatus[status] ?? 0) + (g.count as number);
+    if (status === "shipped") {
+      if (deliveryMode === "pickup") shippedPickup += g.count as number;
+      else shippedDelivery += g.count as number;
+    }
+  }
+
+  return {
+    totalOrders: Object.values(byStatus).reduce((s, c) => s + c, 0),
+    byStatus,
+    shippedDelivery,
+    shippedPickup,
+    pendingReview: pendingCount,
+    totalRevenue: (revenueResult[0] as { revenue?: number } | undefined)?.revenue ?? 0,
+  };
 }
 
 export async function countPendingOrders() {

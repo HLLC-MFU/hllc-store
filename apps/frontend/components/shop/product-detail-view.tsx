@@ -155,11 +155,10 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
       .filter(
         (i) =>
           i.productId === product.id &&
-          (i.selectedOption ?? "") === (selectedOption?.label ?? "") &&
-          (i.customName ?? "") === (product.allowCustomName ? (charmCustomName ?? "") : ""),
+          (i.selectedOption ?? "") === (selectedOption?.label ?? ""),
       )
       .reduce((sum, i) => sum + i.quantity, 0),
-    [items, product.id, selectedOption, product.allowCustomName, charmCustomName],
+    [items, product.id, selectedOption],
   );
 
   function handleAddToCart(sourceEl?: HTMLElement | null, skipCharmPrompt = false): boolean {

@@ -9,7 +9,7 @@ import { safeParseWithLang, checkoutFormSchema, normalizePhone, normalizeEmail }
 import type { Lang } from "@hllc/shared/validation/schemas-i18n";
 import { attachPaymentSlip, cancelPublicOrder, createOrder } from "@/lib/modules/orders";
 import { fetchStoreProducts } from "@/lib/modules/products/api";
-import { fetchShippingSettings, fetchCharmSettings, type ShippingSettings } from "@/lib/modules/settings";
+import { fetchShippingSettings, fetchCharmSettings, fetchHomeContent, type ShippingSettings } from "@/lib/modules/settings";
 import { calcShippingFee, DEFAULT_SHIPPING_RATES } from "@/lib/config/shipping";
 import { isRemoteArea } from "@hllc/shared/data/remote-areas";
 import { isIslandArea } from "@hllc/shared/data/island-areas";
@@ -48,8 +48,10 @@ export default function CartPage() {
   const { lang, t } = useLanguage();
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const allSelected = useMemo(() => items.length > 0 && items.every(i => selectedIds.has(itemKey(i))), [items, selectedIds]);
-  const { selectedItems, selectedTotal, selectedCount, hasOutOfStock } = useMemo(() => {
+  const [blockedProductIds, setBlockedProductIds] = useState<Set<string>>(new Set());
+  const selectableItems = useMemo(() => items.filter(i => !blockedProductIds.has(i.productId)), [items, blockedProductIds]);
+  const allSelected = useMemo(() => selectableItems.length > 0 && selectableItems.every(i => selectedIds.has(itemKey(i))), [selectableItems, selectedIds]);
+  const { selectedItems, selectedTotal, selectedCount, hasOutOfStock, hasBlocked } = useMemo(() => {
     const selected = items.filter(i => selectedIds.has(itemKey(i)));
     const total = selected.reduce((sum, i) => {
       let charm = 0;
@@ -63,8 +65,9 @@ export default function CartPage() {
     const hasOutOfStock = selected.some(
       (i) => i.stock !== undefined && i.quantity > i.stock,
     );
-    return { selectedItems: selected, selectedTotal: total, selectedCount: count, hasOutOfStock };
-  }, [items, selectedIds]);
+    const hasBlocked = selected.some((i) => blockedProductIds.has(i.productId));
+    return { selectedItems: selected, selectedTotal: total, selectedCount: count, hasOutOfStock, hasBlocked };
+  }, [items, selectedIds, blockedProductIds]);
 
   const [shippingRates, setShippingRates] = useState<ShippingSettings>(DEFAULT_SHIPPING_RATES);
   const [charmImages, setCharmImages] = useState<Record<string, string>>({});
@@ -74,8 +77,24 @@ export default function CartPage() {
   useEffect(() => {
     if (autoSelected.current || items.length === 0) return;
     autoSelected.current = true;
-    setSelectedIds(new Set(items.map(itemKey)));
-  }, [items]);
+    setSelectedIds(new Set(items.filter(i => !blockedProductIds.has(i.productId)).map(itemKey)));
+  }, [items, blockedProductIds]);
+
+  // Deselect blocked items whenever the blocked set updates
+  useEffect(() => {
+    if (blockedProductIds.size === 0) return;
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      let changed = false;
+      for (const item of items) {
+        if (blockedProductIds.has(item.productId)) {
+          const key = itemKey(item);
+          if (next.has(key)) { next.delete(key); changed = true; }
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [blockedProductIds, items]);
 
   // Refresh cart lines against the latest product data once on open, so admin
   // price/shipping/stock edits apply without removing and re-adding the item.
@@ -83,7 +102,7 @@ export default function CartPage() {
   useEffect(() => {
     if (synced.current) return;
     synced.current = true;
-    fetchStoreProducts().then(products => {
+    Promise.all([fetchStoreProducts(), fetchHomeContent().catch(() => null)]).then(([products, homeContent]) => {
       syncFromProducts(products);
       // Build charm image map from product options (label → imageUrl) for option-based charm products
       const optionImages: Record<string, string> = {};
@@ -98,14 +117,26 @@ export default function CartPage() {
       }
       setCharmImages(prev => ({ ...prev, ...optionImages }));
       if (opts.length) setCharmOptions(opts);
+      // Build blocked product IDs from block status or product.comingSoon
+      const blocked = new Set<string>();
+      for (const p of products) {
+        if (p.comingSoon) { blocked.add(p.id); continue; }
+        if (!homeContent) continue;
+        let blockId: string | null = null;
+        if (p.category === "bottle") blockId = "bottle";
+        else if (p.category === "bracelet-charm" && p.group === "secret-set") blockId = "secret-set";
+        const status = blockId ? homeContent.blocks[blockId]?.blockStatus : undefined;
+        if (status === "comingSoon" || status === "closed") blocked.add(p.id);
+      }
+      setBlockedProductIds(blocked);
     }).catch(() => { });
     fetchShippingSettings().then(setShippingRates).catch(() => { });
     fetchCharmSettings().then(r => setCharmImages(prev => ({ ...prev, ...(r.images ?? {}) }))).catch(() => { });
   }, [syncFromProducts]);
 
   const toggleSelectAll = useCallback(() => {
-    setSelectedIds(allSelected ? new Set() : new Set(items.map(itemKey)));
-  }, [allSelected, items]);
+    setSelectedIds(allSelected ? new Set() : new Set(items.filter(i => !blockedProductIds.has(i.productId)).map(itemKey)));
+  }, [allSelected, items, blockedProductIds]);
 
   const toggleSelect = useCallback((item: CartItem) => {
     const key = itemKey(item);
@@ -348,6 +379,7 @@ export default function CartPage() {
                     onCharmEdit={handleCharmEdit(item)}
                     charmImages={charmImages}
                     charmOptions={charmOptions}
+                    isBlocked={blockedProductIds.has(item.productId)}
                   />
                 ))}
               </div>
@@ -358,7 +390,7 @@ export default function CartPage() {
                 selectedCount={selectedCount} selectedTotal={selectedTotal}
                 baseShipping={baseShippingPreview}
                 onPay={goInfo} items={items}
-                disabledReason={hasOutOfStock ? (lang === "th" ? "สต็อกไม่พอ" : "Not enough stock") : selectedCount === 0 ? (lang === "th" ? "เลือกสินค้าก่อน" : "Select items") : undefined}
+                disabledReason={hasBlocked ? (lang === "th" ? "ไม่เปิดขาย" : "Unavailable") : hasOutOfStock ? (lang === "th" ? "สต็อกไม่พอ" : "Stock exceeded") : selectedCount === 0 ? (lang === "th" ? "เลือกสินค้าก่อน" : "Select items") : undefined}
               />
             </section>
           </>

@@ -56,8 +56,45 @@ export async function cancelPublicOrder(orderId: string, reason: string): Promis
 
 /* ---- Admin (CSRF-aware, validated through apiValidated) ---- */
 
-export function fetchAdminOrders() {
-  return apiValidated(z.array(orderResponseSchema), "/api/backend/admin/orders");
+const ordersPageSchema = z.object({
+  orders: z.array(orderResponseSchema),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+});
+
+export type OrdersPage = z.infer<typeof ordersPageSchema>;
+
+const ordersSummarySchema = z.object({
+  totalOrders: z.number(),
+  byStatus: z.record(z.string(), z.number()),
+  shippedDelivery: z.number(),
+  shippedPickup: z.number(),
+  pendingReview: z.number(),
+  totalRevenue: z.number(),
+});
+
+export type OrdersSummary = z.infer<typeof ordersSummarySchema>;
+
+export function fetchAdminOrders(params?: {
+  page?: number;
+  limit?: number;
+  status?: string;
+  search?: string;
+  sort?: "asc" | "desc";
+}) {
+  const qs = new URLSearchParams();
+  if (params?.page && params.page > 1) qs.set("page", String(params.page));
+  if (params?.limit) qs.set("limit", String(params.limit));
+  if (params?.status && params.status !== "all") qs.set("status", params.status);
+  if (params?.search) qs.set("search", params.search);
+  if (params?.sort && params.sort !== "desc") qs.set("sort", params.sort);
+  const query = qs.toString() ? `?${qs}` : "";
+  return apiValidated(ordersPageSchema, `/api/backend/admin/orders${query}`);
+}
+
+export function fetchAdminOrdersSummary() {
+  return apiValidated(ordersSummarySchema, "/api/backend/admin/orders/summary");
 }
 
 export function reviewPaymentSlip(orderId: string, approved: boolean, reviewedBy: string, note?: string) {
