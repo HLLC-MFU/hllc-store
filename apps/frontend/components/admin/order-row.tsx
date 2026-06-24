@@ -87,7 +87,8 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
   const slipImages = [order.slip.imageUrl, ...previousSlips.map((s) => s.imageUrl)].filter(Boolean) as string[];
 
   const canCancel = order.status !== "cancelled" && order.status !== "completed";
-  const hasSlip = order.status === "payment_review" && !!order.slip.imageUrl && order.slip.status !== "none";
+  const hasSlip = !!order.slip.imageUrl && order.slip.status !== "none" &&
+    (order.status === "payment_review" || order.status === "pending_payment");
 
   const isPickup = order.deliveryMode === "pickup";
   const timelineSteps: OrderStatus[] = isPickup
@@ -190,7 +191,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
           )}
 
           {/* Slip image — carousel */}
-          {order.status === "payment_review" && order.slip.imageUrl && order.slip.status !== "none" && (
+          {hasSlip && (
             <Card className="rounded-2xl shadow-3xs overflow-hidden">
               <CardContent className="p-3 pb-2">
                 <div className="flex items-center justify-between">
@@ -291,12 +292,23 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
           {/* Shipping Label or Customer Info — hidden during slip review */}
           {order.status !== "payment_review" && (
             !isPickupOrder(order) ? (
-              <ShippingLabel
-                name={order.customer.name}
-                address={order.customer.address}
-                phone={order.customer.phone}
-                lang={lang}
-              />
+              <div className="flex flex-col gap-2">
+                <ShippingLabel
+                  name={order.customer.name}
+                  address={order.customer.address}
+                  phone={order.customer.phone}
+                  lang={lang}
+                />
+                {order.customer.email && (
+                  <div className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 flex items-center gap-3">
+                    <Mail className="w-4 h-4 shrink-0 text-sky-400" />
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[9px] font-black text-sky-400 uppercase tracking-wider">อีเมลลูกค้า</span>
+                      <span className="text-sm font-bold text-sky-700 break-all">{order.customer.email}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <Card className="rounded-2xl shadow-3xs">
                 <CardContent className="p-4 flex flex-col gap-1.5">
@@ -307,9 +319,12 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                     <span className="font-mono">{order.customer.phone}</span>
                   </div>
                   {order.customer.email ? (
-                    <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
-                      <Mail className="w-3.5 h-3.5 shrink-0 text-gray-400" />
-                      <span className="break-all">{order.customer.email}</span>
+                    <div className="rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 flex items-center gap-2.5 mt-0.5">
+                      <Mail className="w-3.5 h-3.5 shrink-0 text-sky-400" />
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[9px] font-black text-sky-400 uppercase tracking-wider">อีเมลลูกค้า</span>
+                        <span className="text-xs font-bold text-sky-700 break-all">{order.customer.email}</span>
+                      </div>
                     </div>
                   ) : null}
                   <div className="flex items-start gap-2 text-sm text-gray-600 font-medium">
@@ -345,7 +360,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                         ) : null}
                         {charm && (
                           <span className="self-start rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">
-                            ✎ สายห้อย สี{charm.colorId}{charm.letters ? ` · ${charm.letters}` : ""}
+                            ✎ พวงกุญแจ สี{charm.colorId}{charm.letters ? ` · ${charm.letters}` : ""}
                           </span>
                         )}
                         {!charm && item.customName ? (
@@ -360,7 +375,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                         {charm && (
                           <div className="flex flex-col items-end gap-0.5 mt-0.5">
                             <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">{money(basePrice * item.quantity)} สินค้า</span>
-                            <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">+{money(CHARM_PRICE * item.quantity)} สายห้อย</span>
+                            <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">+{money(CHARM_PRICE * item.quantity)} พวงกุญแจ</span>
                             {extraLetters > 0 && (
                               <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">+{money(extraLetters * LETTER_PRICE * item.quantity)} ตัวอักษร</span>
                             )}
@@ -397,7 +412,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
 
 
           {/* 3 — Stepper (hidden when cancelled) */}
-          {order.status !== "cancelled" && <Card className="rounded-2xl shadow-3xs">
+          {order.status !== "cancelled" && order.status !== "pending_payment" && <Card className="rounded-2xl shadow-3xs">
             <CardContent className="p-4">
               <div className="flex items-center justify-between relative">
                 <div className="absolute top-3.5 left-6 right-6 h-0.5 bg-gray-100 z-0" />
@@ -790,7 +805,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
           </div>
 
           {/* Stepper in header */}
-          {order.status !== "cancelled" && (
+          {order.status !== "cancelled" && order.status !== "pending_payment" && (
             <div className="px-5 pb-4 border-b border-gray-100 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)] shrink-0">
               <div className="flex items-center justify-between relative">
                 <div className="absolute top-3.5 left-4 right-4 h-0.5 bg-gray-100 z-0" />
@@ -916,8 +931,12 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                       <Phone className="w-3.5 h-3.5 text-gray-400" /><span>{order.customer.phone}</span>
                     </div>
                     {order.customer.email && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
-                        <Mail className="w-3.5 h-3.5 text-gray-400" /><span>{order.customer.email}</span>
+                      <div className="rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 flex items-center gap-2.5 my-0.5">
+                        <Mail className="w-3.5 h-3.5 shrink-0 text-sky-400" />
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[9px] font-black text-sky-400 uppercase tracking-wider">อีเมลลูกค้า</span>
+                          <span className="text-xs font-bold text-sky-700 break-all">{order.customer.email}</span>
+                        </div>
                       </div>
                     )}
                     <div className="flex items-start gap-2 text-sm text-gray-600 font-medium">
@@ -926,7 +945,18 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                   </CardContent>
                 </Card>
               ) : (
-                <ShippingLabel name={order.customer.name} address={order.customer.address} phone={order.customer.phone} lang={lang} />
+                <div className="flex flex-col gap-2">
+                  <ShippingLabel name={order.customer.name} address={order.customer.address} phone={order.customer.phone} lang={lang} />
+                  {order.customer.email && (
+                    <div className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 flex items-center gap-3">
+                      <Mail className="w-4 h-4 shrink-0 text-sky-400" />
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[9px] font-black text-sky-400 uppercase tracking-wider">อีเมลลูกค้า</span>
+                        <span className="text-sm font-bold text-sky-700 break-all">{order.customer.email}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )
             )}
 
@@ -965,7 +995,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                         )}
                         {charm ? (
                           <span className="self-start rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">
-                            ✎ สายห้อย สี{charm.colorId}{charm.letters ? ` · ${charm.letters}` : ""}
+                            ✎ พวงกุญแจ สี{charm.colorId}{charm.letters ? ` · ${charm.letters}` : ""}
                           </span>
                         ) : item.customName ? (
                           <span className="self-start max-w-40 truncate rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">
@@ -978,7 +1008,7 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                         {charm && (
                           <div className="flex flex-col items-end gap-0.5 mt-0.5">
                             <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">{money(basePrice * item.quantity)} สินค้า</span>
-                            <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">+{money(CHARM_PRICE * item.quantity)} สายห้อย</span>
+                            <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">+{money(CHARM_PRICE * item.quantity)} พวงกุญแจ</span>
                             {extraLetters > 0 && (
                               <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">+{money(extraLetters * LETTER_PRICE * item.quantity)} ตัวอักษร</span>
                             )}

@@ -7,7 +7,7 @@ import { calcShippingFee } from "@hllc/shared/config/shipping";
 import { isRemoteArea } from "@hllc/shared/data/remote-areas";
 import { isIslandArea } from "@hllc/shared/data/island-areas";
 import { getShippingSettings } from "../settings/settings-service";
-import { sendEmail, trackingNumberEmail, pickupReadyEmail, orderCancelledEmail, orderConfirmedEmail, slipReceivedEmail, slipApprovedEmail } from "../email-service";
+import { sendEmail, trackingNumberEmail, pickupReadyEmail, orderCancelledEmail, orderCompletedEmail, orderConfirmedEmail, slipReceivedEmail, slipApprovedEmail, slipRejectedEmail } from "../email-service";
 import { getOrdersCollection } from "./order-module";
 import type {
   CreateOrderInput,
@@ -247,6 +247,7 @@ export async function listOrders(filters?: {
   limit?: number;
   search?: string;
   sortOrder?: "asc" | "desc";
+  deliveryMode?: "delivery" | "pickup";
 }): Promise<{ orders: Order[]; total: number }> {
   const orders = await getOrdersCollection();
   const query: Document = {};
@@ -261,11 +262,17 @@ export async function listOrders(filters?: {
     query.status = { $nin: filters.excludeStatuses };
   }
 
+  if (filters?.deliveryMode) {
+    query.deliveryMode = filters.deliveryMode;
+  }
+
   if (filters?.search?.trim()) {
     const s = filters.search.trim();
     const orClauses: Document[] = [
       { "customer.name": { $regex: s, $options: "i" } },
       { "customer.phone": { $regex: s } },
+      { "customer.email": { $regex: s, $options: "i" } },
+      { "customer.address": { $regex: s, $options: "i" } },
     ];
     try { orClauses.push({ _id: assertObjectId(s) }); } catch { /* not a valid ObjectId */ }
     query.$or = orClauses;
@@ -292,21 +299,23 @@ export async function listOrders(filters?: {
   return { orders: results.map(toOrder), total };
 }
 
-export async function getOrdersSummary() {
+export async function getOrdersSummary(deliveryMode?: "delivery" | "pickup") {
   const col = await getOrdersCollection();
+  const baseMatch: Document = deliveryMode ? { deliveryMode } : {};
   const [statusGroups, revenueResult, pendingCount] = await Promise.all([
     col
       .aggregate([
+        ...(deliveryMode ? [{ $match: baseMatch }] : []),
         { $group: { _id: { status: "$status", deliveryMode: "$deliveryMode" }, count: { $sum: 1 } } },
       ])
       .toArray(),
     col
       .aggregate([
-        { $match: { status: { $in: ["packing", "shipped", "completed"] } } },
+        { $match: { ...baseMatch, status: { $in: ["packing", "shipped", "completed"] } } },
         { $group: { _id: null, revenue: { $sum: "$total" } } },
       ])
       .toArray(),
-    col.countDocuments({ $or: [{ status: "payment_review" }, { "slip.status": "pending" }] }),
+    col.countDocuments({ ...baseMatch, $or: [{ status: "payment_review" }, { "slip.status": "pending" }] }),
   ]);
 
   const byStatus: Record<string, number> = {};
@@ -465,6 +474,11 @@ export async function reviewPaymentSlip(orderId: string, input: ReviewSlipInput)
   }
 
   publishOrdersUpdated();
+
+  if (!input.approved && order.customer.email) {
+    notifyEmail(slipRejectedEmail(order.customer.name, input.note, order.customer.email, order.customer.phone));
+  }
+
   return toOrder(result);
 }
 
@@ -509,6 +523,10 @@ export async function transitionOrderStatus(orderId: string, status: OrderStatus
     notifyEmail(
       pickupReadyEmail(updated.customer.name, updated.customer.email, updated.customer.phone, pickupLocation || undefined, pickupHours || undefined),
     );
+  }
+
+  if (status === "completed" && updated.customer.email) {
+    notifyEmail(orderCompletedEmail(updated.customer.name, updated.customer.email, updated.customer.phone));
   }
 
   publishOrdersUpdated();

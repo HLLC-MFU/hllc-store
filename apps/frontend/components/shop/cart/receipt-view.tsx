@@ -29,17 +29,28 @@ interface ReceiptViewProps {
   receiptItems: CartItem[];
 }
 
+const CHARM_PRICE = 30;
+const FREE_LETTERS = 2;
+const LETTER_PRICE = 10;
+
 function parseReceiptCharm(customName: string | undefined) {
   if (!customName?.startsWith("charm:")) return null;
   const [, color = "", letters = ""] = customName.split(":");
   return { color, letters };
 }
 
+function charmAddon(letters: string) {
+  return CHARM_PRICE + Math.max(0, letters.length - FREE_LETTERS) * LETTER_PRICE;
+}
+
 export function ReceiptView({ lang, createdOrder, receiptItems }: ReceiptViewProps) {
   const shippingFee = createdOrder.shippingFee ?? 0;
-  // item.price already includes charm — don't add addon separately
-  const subtotal = receiptItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-    || (createdOrder.subtotal ?? Math.max(0, createdOrder.total - shippingFee));
+  // item.price = product base price only; charm addon must be added separately
+  const subtotal = receiptItems.reduce((sum, item) => {
+    const charm = parseReceiptCharm(item.customName);
+    const addon = charm ? charmAddon(charm.letters) : 0;
+    return sum + (item.price + addon) * item.quantity;
+  }, 0) || (createdOrder.subtotal ?? Math.max(0, createdOrder.total - shippingFee));
   const grandTotal = subtotal + shippingFee;
 
   return (
@@ -85,22 +96,33 @@ export function ReceiptView({ lang, createdOrder, receiptItems }: ReceiptViewPro
             <div className="space-y-1.5">
               {receiptItems.map((item, idx) => {
                 const charm = parseReceiptCharm(item.customName);
+                const extraLetters = charm ? Math.max(0, charm.letters.length - FREE_LETTERS) : 0;
                 return (
                   <div key={idx} className="space-y-0.5">
+                    {/* Product line */}
                     <div className="flex justify-between items-start gap-4">
-                      <span className="break-words line-clamp-2">
+                      <span className="break-words">
                         {item.name[lang] || item.name.th}
-                        {charm ? ` + ${lang === "th" ? "สายห้อย" : "Keychain"}` : ""}
+                        {item.selectedOption ? ` (${item.selectedOption})` : ""}
+                        {item.quantity > 1 ? ` ×${item.quantity}` : ""}
                       </span>
-                      <span className="shrink-0 font-bold">
-                        {money(item.price * item.quantity)}
-                      </span>
+                      <span className="shrink-0 font-bold">{money(item.price * item.quantity)}</span>
                     </div>
-                    <div className="text-[10px] text-neutral-500 pl-2">
-                      {item.quantity} × {money(item.price)}
-                      {item.selectedOption ? ` (${item.selectedOption})` : ""}
-                      {charm?.letters ? ` · ${charm.letters}` : ""}
-                    </div>
+                    {/* Charm lines — each component shown separately */}
+                    {charm && (
+                      <>
+                        <div className="flex justify-between items-start gap-4 pl-2 text-neutral-500">
+                          <span>+ {lang === "th" ? "พวงกุญแจ" : "Keychain"}{charm.color ? ` สี${charm.color}` : ""}{charm.letters ? ` · ${charm.letters}` : ""}</span>
+                          <span className="shrink-0">+{money(CHARM_PRICE)}</span>
+                        </div>
+                        {extraLetters > 0 && (
+                          <div className="flex justify-between items-start gap-4 pl-2 text-neutral-500">
+                            <span>+ {lang === "th" ? `ตัวอักษรเพิ่ม ×${extraLetters}` : `Extra letters ×${extraLetters}`}</span>
+                            <span className="shrink-0">+{money(extraLetters * LETTER_PRICE)}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 );
               })}

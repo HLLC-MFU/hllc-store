@@ -470,7 +470,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                   </div>
                   <div className="px-5 py-4">
                     <p className="mb-3 text-sm font-black text-gray-900">
-                      {lang === "th" ? "สีสายห้อย" : "Charm Color"} <span className="text-xs font-semibold text-gray-400 ml-1">(+{CHARM_PRICE}฿)</span>
+                      {lang === "th" ? "สีพวงกุญแจ" : "Keychain Color"} <span className="text-xs font-semibold text-gray-400 ml-1">(+{CHARM_PRICE}฿)</span>
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {(charmOptions ?? []).map((option) => {
@@ -539,6 +539,9 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                   <span className="text-[10px] font-semibold text-gray-400">
                     · {t("charm.extra_letter_price", { price: LETTER_PRICE })}
                   </span>
+                  <span className="text-[10px] font-semibold text-gray-400">
+                    · {lang === "th" ? `สูงสุด ${MAX_LETTERS} ตัว` : `max ${MAX_LETTERS} letters`}
+                  </span>
                 </div>
 
                 {/* Selected letters display */}
@@ -577,7 +580,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                     )}
                     <span className="font-semibold text-gray-500">
                       {t("charm.charm_label")} +{CHARM_PRICE}฿
-                      {tempExtraLetters > 0 && ` · ตัวอักษร +${tempExtraLetters}×${LETTER_PRICE}฿`}
+                      {tempExtraLetters > 0 && ` · ${lang === "th" ? "ตัวอักษร" : "Letters"} +${tempExtraLetters}×${LETTER_PRICE}฿`}
                     </span>
                   </div>
                   <span className="font-black text-brand">+{tempCharmAddon}฿</span>

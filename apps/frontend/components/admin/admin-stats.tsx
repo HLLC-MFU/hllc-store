@@ -10,6 +10,7 @@ import {
   Store,
   CheckCircle2,
   XCircle,
+  RefreshCcw,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { money } from "@/components/admin/api-client";
@@ -26,6 +27,7 @@ export function AdminStats({ summary, onNavigateOrders, t }: AdminStatsProps) {
   const statsRevenue = summary?.totalRevenue ?? 0;
   const statsTotal = summary?.totalOrders ?? 0;
   const statsPending = summary?.pendingReview ?? 0;
+  const statsPendingPayment = summary?.byStatus["pending_payment"] ?? 0;
   const statsPacking = summary?.byStatus["packing"] ?? 0;
   const statsShipped = summary?.shippedDelivery ?? 0;
   const statsPickupReady = summary?.shippedPickup ?? 0;
@@ -41,6 +43,17 @@ export function AdminStats({ summary, onNavigateOrders, t }: AdminStatsProps) {
       bg: "bg-slate-50", text: "text-slate-600", border: "border-slate-100",
       cardBorder: "border-slate-100/80",
       urgent: false,
+    },
+    {
+      key: "pending_payment",
+      label: t("admin.status.pending_payment"),
+      value: statsPendingPayment,
+      icon: RefreshCcw,
+      bg: statsPendingPayment > 0 ? "bg-orange-50" : "bg-gray-50",
+      text: statsPendingPayment > 0 ? "text-orange-500" : "text-gray-400",
+      border: statsPendingPayment > 0 ? "border-orange-100" : "border-gray-100",
+      cardBorder: statsPendingPayment > 0 ? "border-orange-200 ring-2 ring-orange-500/5" : "border-gray-100",
+      urgent: statsPendingPayment > 0,
     },
     {
       key: "payment_review",

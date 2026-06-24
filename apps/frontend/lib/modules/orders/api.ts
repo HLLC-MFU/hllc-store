@@ -82,6 +82,7 @@ export function fetchAdminOrders(params?: {
   status?: string;
   search?: string;
   sort?: "asc" | "desc";
+  deliveryMode?: "all" | "delivery" | "pickup";
 }) {
   const qs = new URLSearchParams();
   if (params?.page && params.page > 1) qs.set("page", String(params.page));
@@ -89,12 +90,16 @@ export function fetchAdminOrders(params?: {
   if (params?.status && params.status !== "all") qs.set("status", params.status);
   if (params?.search) qs.set("search", params.search);
   if (params?.sort && params.sort !== "desc") qs.set("sort", params.sort);
+  if (params?.deliveryMode && params.deliveryMode !== "all") qs.set("deliveryMode", params.deliveryMode);
   const query = qs.toString() ? `?${qs}` : "";
   return apiValidated(ordersPageSchema, `/api/backend/admin/orders${query}`);
 }
 
-export function fetchAdminOrdersSummary() {
-  return apiValidated(ordersSummarySchema, "/api/backend/admin/orders/summary");
+export function fetchAdminOrdersSummary(deliveryMode?: "all" | "delivery" | "pickup") {
+  const qs = new URLSearchParams();
+  if (deliveryMode && deliveryMode !== "all") qs.set("deliveryMode", deliveryMode);
+  const query = qs.toString() ? `?${qs}` : "";
+  return apiValidated(ordersSummarySchema, `/api/backend/admin/orders/summary${query}`);
 }
 
 export function reviewPaymentSlip(orderId: string, approved: boolean, reviewedBy: string, note?: string) {

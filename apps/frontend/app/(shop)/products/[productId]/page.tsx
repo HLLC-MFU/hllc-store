@@ -50,6 +50,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     id: product.id,
     name: product.name,
     description: product.description,
+    subtitle: product.subtitle,
     price: product.price,
     stock: product.stock,
     options: product.options,

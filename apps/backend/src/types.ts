@@ -133,6 +133,7 @@ export type CreateProductInput = {
   name: LocalizedText;
   slug?: string;
   description?: LocalizedText;
+  subtitle?: LocalizedText;
   price: number;
   stock: number;
   category?: string;

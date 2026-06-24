@@ -83,15 +83,18 @@ export async function listAdminOrders(request: Request) {
   const page = Math.max(parseInt(url.searchParams.get("page") ?? "1", 10) || 1, 1);
   const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "50", 10) || 50, 200);
   const sortOrder = url.searchParams.get("sort") === "asc" ? "asc" : "desc";
+  const rawMode = url.searchParams.get("deliveryMode");
+  const deliveryMode = rawMode === "delivery" || rawMode === "pickup" ? rawMode : undefined;
 
   try {
     const result = await orderService.listOrders({
       status: status && orderService.isOrderStatus(status) ? status : undefined,
-      excludeStatuses: status ? undefined : ["pending_payment"],
+      excludeStatuses: status ? undefined : undefined,
       page,
       limit,
       search,
       sortOrder,
+      deliveryMode,
     });
     return ok({ orders: result.orders, total: result.total, page, limit });
   } catch (error) {
@@ -102,8 +105,11 @@ export async function listAdminOrders(request: Request) {
 export async function getAdminOrdersSummary(request: Request) {
   const authError = requireAdmin(request);
   if (authError) return authError;
+  const url = new URL(request.url);
+  const rawMode = url.searchParams.get("deliveryMode");
+  const deliveryMode = rawMode === "delivery" || rawMode === "pickup" ? rawMode : undefined;
   try {
-    return ok(await orderService.getOrdersSummary());
+    return ok(await orderService.getOrdersSummary(deliveryMode));
   } catch (error) {
     return badRequest(error);
   }
