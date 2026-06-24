@@ -137,9 +137,11 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
     if (!tempColor || tempLetters.length < 2) return;
     const newCustomName = `charm:${tempColor}:${tempLetters.join("")}`;
     const qty = item.quantity;
+    const basePrice = item.price - charmTotal; // strip existing charm price (0 if none)
+    const newPrice = basePrice + CHARM_PRICE + tempExtraLetters * LETTER_PRICE;
     onCharmEdit?.(item.customName, newCustomName);
     removeItem(item.productId, item.selectedOption, item.customName);
-    addItem({ ...item, customName: newCustomName });
+    addItem({ ...item, customName: newCustomName, price: newPrice });
     if (qty > 1) updateQty(item.productId, qty, item.selectedOption, newCustomName);
     setCharmOpen(false);
   }
@@ -157,8 +159,9 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
   function removeCharmOnly() {
     if (!charmInfo) return;
     const qty = item.quantity;
+    const basePrice = item.price - charmTotal;
     removeItem(item.productId, item.selectedOption, item.customName);
-    addItem({ ...item, customName: undefined });
+    addItem({ ...item, customName: undefined, price: basePrice });
     if (qty > 1) updateQty(item.productId, qty, item.selectedOption, undefined);
   }
 

@@ -29,18 +29,17 @@ interface ReceiptViewProps {
   receiptItems: CartItem[];
 }
 
-function charmAddonPrice(customName: string | undefined): number {
-  if (!customName?.startsWith("charm:")) return 0;
-  const letters = customName.split(":")[2] ?? "";
-  return 30 + Math.max(0, letters.length - 2) * 10;
+function parseReceiptCharm(customName: string | undefined) {
+  if (!customName?.startsWith("charm:")) return null;
+  const [, color = "", letters = ""] = customName.split(":");
+  return { color, letters };
 }
 
 export function ReceiptView({ lang, createdOrder, receiptItems }: ReceiptViewProps) {
   const shippingFee = createdOrder.shippingFee ?? 0;
-  const subtotal = receiptItems.reduce((sum, item) => {
-    const addon = charmAddonPrice(item.customName);
-    return sum + (item.price + addon) * item.quantity;
-  }, 0) || (createdOrder.subtotal ?? Math.max(0, createdOrder.total - shippingFee));
+  // item.price already includes charm — don't add addon separately
+  const subtotal = receiptItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    || (createdOrder.subtotal ?? Math.max(0, createdOrder.total - shippingFee));
   const grandTotal = subtotal + shippingFee;
 
   return (
@@ -84,38 +83,27 @@ export function ReceiptView({ lang, createdOrder, receiptItems }: ReceiptViewPro
               <span>{lang === "th" ? "ราคา" : "Price"}</span>
             </div>
             <div className="space-y-1.5">
-              {receiptItems.map((item, idx) => (
-                <div key={idx} className="space-y-0.5">
-                  {(() => {
-                    const addon = charmAddonPrice(item.customName);
-                    const unitPrice = item.price + addon;
-                    const charm = item.customName?.startsWith("charm:") ? item.customName : null;
-                    return (
-                      <>
-                        <div className="flex justify-between items-start gap-4">
-                          <span className="break-words line-clamp-2">
-                            {item.name[lang] || item.name.th}
-                          </span>
-                          <span className="shrink-0 font-bold">
-                            {money(item.price * item.quantity)}
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-neutral-500 pl-2">
-                          {item.quantity} x {money(item.price)}
-                          {item.selectedOption ? ` (${item.selectedOption})` : ""}
-                          {charm ? ` [${charm}]` : ""}
-                        </div>
-                        {addon > 0 && (
-                          <div className="flex justify-between text-[10px] text-neutral-500 pl-2">
-                            <span>+ {lang === "th" ? "สายห้อย" : "Keychain"}</span>
-                            <span>+{money(addon * item.quantity)}</span>
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
-              ))}
+              {receiptItems.map((item, idx) => {
+                const charm = parseReceiptCharm(item.customName);
+                return (
+                  <div key={idx} className="space-y-0.5">
+                    <div className="flex justify-between items-start gap-4">
+                      <span className="break-words line-clamp-2">
+                        {item.name[lang] || item.name.th}
+                        {charm ? ` + ${lang === "th" ? "สายห้อย" : "Keychain"}` : ""}
+                      </span>
+                      <span className="shrink-0 font-bold">
+                        {money(item.price * item.quantity)}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-neutral-500 pl-2">
+                      {item.quantity} × {money(item.price)}
+                      {item.selectedOption ? ` (${item.selectedOption})` : ""}
+                      {charm?.letters ? ` · ${charm.letters}` : ""}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
