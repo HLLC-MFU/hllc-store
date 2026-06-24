@@ -521,7 +521,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         {product.allowCustomName && charmOpen && (
               <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
                 <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={cancelCharmModal} />
-                <div className="relative w-full max-w-md bg-white rounded-4xl shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden max-h-[90vh] flex flex-col">
+                <div className="relative w-full max-w-md bg-white rounded-4xl shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden max-h-[95vh] flex flex-col">
 
                   {/* Charm image + info header */}
                   {charmStep === "color" && (() => {

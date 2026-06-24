@@ -47,7 +47,7 @@ export function CategoryBlocks({ blocks, fullPage = false }: { blocks: CategoryB
             fill
             src={block.imageUrl}
             alt={pick(block.title)}
-            className={`object-cover ${block.blockStatus ? "" : "transition-transform duration-300 group-hover:scale-105"}`}
+            className={`object-cover ${fullPage ? "object-top" : "object-center"} ${block.blockStatus ? "" : "transition-transform duration-300 group-hover:scale-105"}`}
             sizes="(max-width: 768px) 100vw, 640px"
           />
         ) : (
