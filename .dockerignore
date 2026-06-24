@@ -3,6 +3,6 @@
 **/dist
 **/.env
 **/.env.local
-**/uploads
+uploads
 .git
 .gitignore
