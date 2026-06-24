@@ -48,3 +48,4 @@ next-env.d.ts
 
 # uploaded product images
 /public/uploads/
+/uploads/

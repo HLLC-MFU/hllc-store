@@ -21,7 +21,7 @@ services:
       - mongo
     restart: unless-stopped
     volumes:
-      - uploads:/app/uploads
+      - ./uploads:/app/uploads
 
   frontend:
     build:
@@ -38,5 +38,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  uploads:
   mongo_data:

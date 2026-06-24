@@ -411,15 +411,8 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                       <SelectLabel>สินค้าทั่วไป</SelectLabel>
                       <SelectItem value="bottle">ขวดน้ำ</SelectItem>
                       <SelectItem value="secret-set">Secret Set</SelectItem>
-                      <SelectItem value="bracelet">สร้อยข้อมือพร้อมชาร์ม</SelectItem>
                     </SelectGroup>
                     <SelectSeparator />
-                    <SelectGroup>
-                      <SelectLabel>Charm</SelectLabel>
-                      <SelectItem value="charm-dangle">ที่ห้อย (Dangle)</SelectItem>
-                      <SelectItem value="charm-clip">ที่ล็อค (Clip-on)</SelectItem>
-                      <SelectItem value="charm-spacer">ที่กั้น (Spacer)</SelectItem>
-                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
