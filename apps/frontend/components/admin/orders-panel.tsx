@@ -23,12 +23,15 @@ type OrdersPanelProps = {
   onSearchChange: (s: string) => void;
   sortOrder: "asc" | "desc";
   onSortOrderChange: (s: "asc" | "desc") => void;
+  shippingFilter: "all" | "delivery" | "pickup";
+  onShippingFilterChange: (f: "all" | "delivery" | "pickup") => void;
   summary: OrdersSummary | null;
   onStatusChange: (orderId: string, status: OrderStatus) => void;
   onApproveSlip: (orderId: string, approved: boolean, note?: string) => void;
   onSaveTracking: (orderId: string, trackingNumber: string) => void;
   onCancelOrder: (orderId: string, reason: string) => void;
   onViewSlip: (images: string[], index: number) => void;
+  pinnedOrderPatch?: { id: string; status: OrderStatus } | null;
   t: (key: string) => string;
 };
 
@@ -63,37 +66,39 @@ export function OrdersPanel({
   onSearchChange,
   sortOrder,
   onSortOrderChange,
+  shippingFilter,
+  onShippingFilterChange,
   summary,
   onStatusChange,
   onApproveSlip,
   onSaveTracking,
   onCancelOrder,
   onViewSlip,
+  pinnedOrderPatch,
   t,
 }: OrdersPanelProps) {
-  const [shippingFilter, setShippingFilter] = React.useState<"all" | "delivery" | "pickup">("all");
   const [openModalOrderId, setOpenModalOrderId] = React.useState<string | null>(null);
+  const [pinnedOrder, setPinnedOrder] = React.useState<Order | null>(null);
+
+  // Apply direct status patch from parent (fires after API success, even if order is filtered out)
+  React.useEffect(() => {
+    if (!pinnedOrderPatch || !pinnedOrder || pinnedOrderPatch.id !== pinnedOrder.id) return;
+    setPinnedOrder((prev) => prev ? { ...prev, status: pinnedOrderPatch.status } : null);
+  }, [pinnedOrderPatch]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep pinned order fresh when orders prop updates (e.g. after status change)
+  React.useEffect(() => {
+    if (!openModalOrderId) return;
+    const fresh = orders.find((o) => o.id === openModalOrderId);
+    if (fresh) setPinnedOrder(fresh);
+  }, [orders, openModalOrderId]);
 
   const filteredOrders = React.useMemo(() => {
-    const base = orders.filter((o) => {
-      const isPickup = isPickupOrder(o);
-      const matchShipping =
-        shippingFilter === "all" ||
-        (shippingFilter === "pickup" && isPickup) ||
-        (shippingFilter === "delivery" && !isPickup);
-      const matchStatus =
-        statusFilter === "all" ||
-        (statusFilter === "shipped"        && o.status === "shipped" && !isPickup) ||
-        (statusFilter === "shipped_pickup" && o.status === "shipped" && isPickup)  ||
-        (statusFilter !== "shipped" && statusFilter !== "shipped_pickup" && o.status === statusFilter);
-      return matchShipping && matchStatus;
-    });
-    if (openModalOrderId && !base.find((o) => o.id === openModalOrderId)) {
-      const pinned = orders.find((o) => o.id === openModalOrderId);
-      if (pinned) return [pinned, ...base];
+    if (openModalOrderId && !orders.find((o) => o.id === openModalOrderId) && pinnedOrder) {
+      return [pinnedOrder, ...orders];
     }
-    return base;
-  }, [orders, shippingFilter, statusFilter, openModalOrderId]);
+    return orders;
+  }, [orders, openModalOrderId, pinnedOrder]);
 
   const filterItems = React.useMemo(() => buildFilterItems(summary, t), [summary, t]);
 
@@ -118,7 +123,7 @@ export function OrdersPanel({
                 return (
                   <button
                     key={opt.key}
-                    onClick={() => setShippingFilter(opt.key)}
+                    onClick={() => onShippingFilterChange(opt.key)}
                     className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${isActive ? opt.active : "text-slate-400 hover:text-slate-700"}`}
                   >
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? "bg-white" : opt.dot}`} />
@@ -218,8 +223,8 @@ export function OrdersPanel({
               t={t}
               onViewSlip={onViewSlip}
               useModal={true}
-              onModalOpen={() => setOpenModalOrderId(order.id)}
-              onModalClose={() => setOpenModalOrderId(null)}
+              onModalOpen={() => { setPinnedOrder(order); setOpenModalOrderId(order.id); }}
+              onModalClose={() => { setPinnedOrder(null); setOpenModalOrderId(null); }}
             />
           ))}
           {filteredOrders.length === 0 && (

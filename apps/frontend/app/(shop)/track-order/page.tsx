@@ -37,7 +37,28 @@ type Order = {
 
 const fmt = new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 });
 const money = (v: number) => fmt.format(v);
-const MAX_SLIP_BYTES = 2 * 1024 * 1024;
+const MAX_SLIP_BYTES = 10 * 1024 * 1024;
+const MAX_SLIP_BASE64 = 2_900_000;
+
+function compressImage(dataUrl: string, maxPx = 1800, quality = 0.85): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxPx || height > maxPx) {
+        if (width > height) { height = Math.round(height * maxPx / width); width = maxPx; }
+        else                { width  = Math.round(width  * maxPx / height); height = maxPx; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
 
 function itemName(name: string | { th: string; en?: string }, lang: "th" | "en") {
   if (typeof name === "string") return name;
@@ -49,7 +70,7 @@ function formatCustomName(raw: string): string {
   const parts = raw.slice(6).split(":");
   const color = parts[0] ?? "";
   const letters = parts[1] ?? "";
-  return `สายห้อย สี${color}${letters ? ` · ${letters}` : ""}`;
+  return `พวงกุญแจ สี${color}${letters ? ` · ${letters}` : ""}`;
 }
 
 function charmAddonPrice(customName: string | undefined): number {
@@ -101,7 +122,9 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
   const [slipPreview, setSlipPreview] = useState("");
   const [slipImage, setSlipImage] = useState("");
   const [confirmSlip, setConfirmSlip] = useState(false);
+  const [slipInputKey, setSlipInputKey] = useState(0);
   const slipInputRef = useRef<HTMLInputElement>(null);
+  function resetSlipInput() { setSlipInputKey(k => k + 1); }
   const showTracking = ["shipped", "completed"].includes(order.status) && Boolean(order.trackingNumber?.trim());
   const statusMeta = statusMetaForOrder(order);
   const needsNewSlip = order.status === "pending_payment" && order.slip.status === "rejected";
@@ -118,39 +141,40 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
   }
 
   function handleNewSlip(event: React.ChangeEvent<HTMLInputElement>) {
-    const input = event.currentTarget;
-    const file = input.files?.[0];
+    const file = event.currentTarget.files?.[0];
     if (!file) return;
 
     const allowed = ["image/jpeg", "image/png", "image/webp"];
     if (!allowed.includes(file.type)) {
       setUploadError(lang === "th" ? "รองรับเฉพาะ JPG, PNG, WEBP" : "Only JPG, PNG, or WEBP is supported");
-      input.value = "";
+      resetSlipInput();
       return;
     }
 
     if (file.size > MAX_SLIP_BYTES) {
-      setUploadError(lang === "th" ? "รูปไฟล์ใหญ่เกินไป" : "Image is too large. Please keep it under 5 MB");
-      input.value = "";
+      setUploadError(lang === "th" ? "รูปใหญ่เกินไป (สูงสุด 10 MB)" : "Image is too large (max 10 MB)");
+      resetSlipInput();
       return;
     }
 
     setUploadError("");
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const image = String(e.target?.result ?? "");
-      if (image.length > 2_900_000) {
-        setUploadError(lang === "th" ? "รูปไฟล์ใหญ่เกินไป ขอไม่เกิน 2 MB นะ" : "Image is too large, please keep it under 2 MB");
-        input.value = "";
-        return;
+    reader.onload = async (e) => {
+      try {
+        let image = String(e.target?.result ?? "");
+        if (image.length > MAX_SLIP_BASE64) {
+          image = await compressImage(image);
+        }
+        setSlipPreview(image);
+        setSlipImage(image);
+      } catch {
+        setUploadError(lang === "th" ? "บีบอัดรูปไม่สำเร็จ" : "Unable to process image");
       }
-      setSlipPreview(image);
-      setSlipImage(image);
-      input.value = "";
+      resetSlipInput();
     };
     reader.onerror = () => {
       setUploadError(lang === "th" ? "อ่านไฟล์ไม่สำเร็จ" : "Unable to read file");
-      input.value = "";
+      resetSlipInput();
     };
     reader.readAsDataURL(file);
   }
@@ -181,7 +205,7 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
     setSlipPreview("");
     setSlipImage("");
     setUploadError("");
-    if (slipInputRef.current) slipInputRef.current.value = "";
+    resetSlipInput();
   }
 
   return (
@@ -237,7 +261,7 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
               </div>
 
               <div className={`mt-4 rounded-xl border border-dashed p-3 ${uploadError ? "border-red-300 bg-red-50/70" : "border-red-200 bg-white/70"}`}>
-                <input ref={slipInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleNewSlip} />
+                <input key={slipInputKey} ref={slipInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleNewSlip} />
                 {slipPreview ? (
                   <div className="relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -132,7 +132,8 @@ export function AppHeader({ navItems = SHOP_NAV, showCart = true, showBack = tru
 
         {/* Center — logo */}
         <Link href={logoHref} onClick={onLogoClick} className="absolute left-1/2 -translate-x-1/2">
-          <Image src={appPath("/images/HLLCLOGO.png")} alt="HLLC" width={160} height={32} className="h-8 w-auto object-contain" priority />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={appPath("/images/HLLCLOGO.png")} alt="HLLC" className="h-8 w-auto object-contain" />
         </Link>
 
         {/* Right — lang + cart */}

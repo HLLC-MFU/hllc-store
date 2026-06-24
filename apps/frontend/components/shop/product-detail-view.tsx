@@ -26,6 +26,7 @@ export type ProductDetailProduct = {
   id: string;
   name: LocalizedText;
   description?: LocalizedText;
+  subtitle?: LocalizedText;
   price: number;
   stock: number;
   options?: ProductOption[];
@@ -352,30 +353,42 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
           {/* Name + Price */}
-          <div className="flex items-start justify-between gap-3 px-4 py-4">
-            <h1 className="flex-1 min-w-0 text-xl font-black text-gray-900 leading-snug">
-              {product.name[lang] || product.name.th}
-              <span className="ml-1.5 text-brand">✦</span>
-            </h1>
-            <span className="shrink-0 bg-brand text-white text-sm font-black px-3 py-1 rounded-full whitespace-nowrap">
-              {money(product.price)}
-            </span>
+          <div className="px-4 pt-4 pb-3 flex flex-col gap-1.5">
+            <div className="flex items-start justify-between gap-3">
+              <h1 className="text-xl font-black text-gray-900 leading-snug">
+                {product.name[lang] || product.name.th}
+                <span className="ml-1.5 text-brand">✦</span>
+              </h1>
+              <span className="shrink-0 bg-brand text-white text-sm font-black px-3 py-1 rounded-full whitespace-nowrap">
+                {money(product.price)}
+              </span>
+            </div>
+            {product.subtitle && (product.subtitle[lang] || product.subtitle.th) && (
+              <p className="text-xs font-semibold text-gray-400 leading-snug">
+                {product.subtitle[lang] || product.subtitle.th}
+              </p>
+            )}
           </div>
 
           {/* Description */}
           {descriptionText && (
             <>
               <div className="border-t border-gray-100" />
-              <div className="px-4 py-4">
-                <p className="text-sm font-bold text-gray-900 mb-3">{t("product.details")}</p>
-                <ul className="space-y-1.5">
-                  {descriptionText.split("\n").filter((line) => line.trim()).map((line, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-gray-500 leading-relaxed">
-                      <span className="text-brand shrink-0 mt-0.5">•</span>
-                      <span>{line.replace(/^[•\-*]\s*/, "")}</span>
-                    </li>
-                  ))}
-                </ul>
+              <div className="px-4 py-4 space-y-1.5">
+                {descriptionText.split("\n").filter((line) => line.trim()).map((line, i) => {
+                  if (line.startsWith("# ")) {
+                    return (
+                      <p key={i} className="text-sm font-bold text-gray-900 mt-3 first:mt-0">
+                        {line.slice(2)}
+                      </p>
+                    );
+                  }
+                  return (
+                    <p key={i} className="text-sm text-gray-500 leading-relaxed break-words">
+                      {line.replace(/^[•\-*]\s*/, "")}
+                    </p>
+                  );
+                })}
               </div>
             </>
           )}
@@ -586,7 +599,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                   {charmStep === "color" && (
                     <div className="px-5 py-4 overflow-y-auto">
                       <p className="mb-3 text-sm font-black text-gray-900">
-                        {lang === "th" ? "สีสายห้อย" : "Charm Color"} <span className="text-xs font-semibold text-gray-400 ml-1">(+{CHARM_PRICE}฿)</span>
+                        {lang === "th" ? "สีพวงกุญแจ" : "Keychain Color"} <span className="text-xs font-semibold text-gray-400 ml-1">(+{CHARM_PRICE}฿)</span>
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {charmOptions.map((option) => {
@@ -648,6 +661,9 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                         <span className="text-[10px] font-semibold text-gray-400">
                           · {t("charm.extra_letter_price", { price: LETTER_PRICE })}
                         </span>
+                        <span className="text-[10px] font-semibold text-gray-400">
+                          · {lang === "th" ? `สูงสุด ${MAX_LETTERS} ตัว` : `max ${MAX_LETTERS} letters`}
+                        </span>
                       </div>
 
                       {/* Selected letters display */}
@@ -686,7 +702,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                           )}
                           <span className="font-semibold text-gray-500">
                             {t("charm.charm_label")} +{CHARM_PRICE}฿
-                            {tempExtraLetters > 0 && ` · ตัวอักษร +${tempExtraLetters}×${LETTER_PRICE}฿`}
+                            {tempExtraLetters > 0 && ` · ${lang === "th" ? "ตัวอักษร" : "Letters"} +${tempExtraLetters}×${LETTER_PRICE}฿`}
                           </span>
                         </div>
                         <span className="font-black text-brand">+{tempCharmAddon}฿</span>
@@ -829,7 +845,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
               ))}
             </div>
           )}
-          <p className="text-base font-black text-gray-900 text-center">เพิ่มสายห้อยไหม?</p>
+          <p className="text-base font-black text-gray-900 text-center">เพิ่มพวงกุญแจไหม?</p>
           <p className="mt-1 text-xs text-gray-400 text-center font-medium">
             {t("charm.add_prompt_sub")}
           </p>

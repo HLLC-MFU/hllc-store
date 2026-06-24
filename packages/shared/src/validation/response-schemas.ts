@@ -99,6 +99,7 @@ export const productResponseSchema = z.object({
   name: localizedTextResponseSchema,
   slug: z.string(),
   description: localizedTextResponseSchema.optional(),
+  subtitle: localizedTextResponseSchema.optional(),
   price: z.number(),
   stock: z.number(),
   category: z.string().optional(),

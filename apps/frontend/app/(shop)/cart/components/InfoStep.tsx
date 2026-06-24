@@ -251,7 +251,7 @@ export function InfoStep({
                       const { color, letters } = parseCharm(item.customName);
                       return (
                         <span className="block text-[10px] font-bold text-amber-600">
-                          + สายห้อย {color}{letters ? ` · ${letters}` : ""}
+                          + พวงกุญแจ {color}{letters ? ` · ${letters}` : ""}
                         </span>
                       );
                     })()}

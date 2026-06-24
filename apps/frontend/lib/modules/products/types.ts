@@ -9,6 +9,7 @@ export type ProductInput = {
   name: { th: string; en?: string };
   slug: string;
   description: { th: string; en?: string };
+  subtitle?: { th: string; en?: string };
   price: number;
   stock: number;
   discount?: number;

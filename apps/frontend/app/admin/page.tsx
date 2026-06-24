@@ -47,6 +47,7 @@ export default function AdminPage() {
   const [ordersStatusFilter, setOrdersStatusFilter] = React.useState<string>("all");
   const [ordersSearch, setOrdersSearch] = React.useState("");
   const [ordersSortOrder, setOrdersSortOrder] = React.useState<"asc" | "desc">("desc");
+  const [ordersShippingFilter, setOrdersShippingFilter] = React.useState<"all" | "delivery" | "pickup">("all");
   const [summary, setSummary] = React.useState<OrdersSummary | null>(null);
   const [products, setProducts] = React.useState<Product[]>([]);
   const [showAddProduct, setShowAddProduct] = React.useState(false);
@@ -55,6 +56,7 @@ export default function AdminPage() {
   const [confirm, setConfirm] = React.useState<{ orderId: string; approved: boolean; note?: string } | null>(null);
   const [statusConfirm, setStatusConfirm] = React.useState<{ orderId: string; status: OrderStatus; isPickup?: boolean } | null>(null);
   const [lightbox, setLightbox] = React.useState<{ images: string[]; index: number } | null>(null);
+  const [pinnedOrderPatch, setPinnedOrderPatch] = React.useState<{ id: string; status: OrderStatus } | null>(null);
   const [adminUsers, setAdminUsers] = React.useState<AdminUser[]>([]);
   const [auditLogs, setAuditLogs] = React.useState<AuditLog[]>([]);
   const [paymentSettings, setPaymentSettings] = React.useState<PaymentSettings | null>(null);
@@ -141,8 +143,11 @@ export default function AdminPage() {
     statusFilter: string,
     search: string,
     sortOrder: "asc" | "desc",
+    shippingFilter: "all" | "delivery" | "pickup" = "all",
   ) => {
     const backendStatus = statusFilter === "shipped_pickup" ? "shipped" : statusFilter;
+    const backendDeliveryMode = statusFilter === "shipped_pickup" ? "pickup"
+      : shippingFilter !== "all" ? shippingFilter : undefined;
     const [ordersRes, summaryRes] = await Promise.all([
       ordersApi.fetchAdminOrders({
         page,
@@ -150,8 +155,9 @@ export default function AdminPage() {
         status: backendStatus !== "all" ? backendStatus : undefined,
         search: search.trim() || undefined,
         sort: sortOrder,
+        deliveryMode: backendDeliveryMode,
       }),
-      ordersApi.fetchAdminOrdersSummary(),
+      ordersApi.fetchAdminOrdersSummary(shippingFilter),
     ]);
     if (ordersRes.data) {
       setOrders(ordersRes.data.orders.filter((o) => !o.id.startsWith("demo-")));
@@ -164,16 +170,16 @@ export default function AdminPage() {
     if (summaryRes.data) setSummary(summaryRes.data);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const ordersParamsRef = React.useRef({ ordersPage, ordersStatusFilter, ordersSearch, ordersSortOrder });
+  const ordersParamsRef = React.useRef({ ordersPage, ordersStatusFilter, ordersSearch, ordersSortOrder, ordersShippingFilter });
   React.useEffect(() => {
-    ordersParamsRef.current = { ordersPage, ordersStatusFilter, ordersSearch, ordersSortOrder };
-  }, [ordersPage, ordersStatusFilter, ordersSearch, ordersSortOrder]);
+    ordersParamsRef.current = { ordersPage, ordersStatusFilter, ordersSearch, ordersSortOrder, ordersShippingFilter };
+  }, [ordersPage, ordersStatusFilter, ordersSearch, ordersSortOrder, ordersShippingFilter]);
 
   const loadData = React.useCallback(async () => {
     setLoading(true);
-    const { ordersPage: p, ordersStatusFilter: f, ordersSearch: s, ordersSortOrder: so } = ordersParamsRef.current;
+    const { ordersPage: p, ordersStatusFilter: f, ordersSearch: s, ordersSortOrder: so, ordersShippingFilter: dm } = ordersParamsRef.current;
     const [, productsRes] = await Promise.all([
-      loadOrders(p, f, s, so),
+      loadOrders(p, f, s, so, dm),
       productsApi.fetchAdminProducts(),
     ]);
     if (productsRes.data) {
@@ -197,8 +203,8 @@ export default function AdminPage() {
   React.useEffect(() => {
     if (!isLoggedIn) return;
     if (!isMounted.current) { isMounted.current = true; return; }
-    void loadOrders(ordersPage, ordersStatusFilter, ordersSearch, ordersSortOrder);
-  }, [isLoggedIn, ordersPage, ordersStatusFilter, ordersSearch, ordersSortOrder, loadOrders]);
+    void loadOrders(ordersPage, ordersStatusFilter, ordersSearch, ordersSortOrder, ordersShippingFilter);
+  }, [isLoggedIn, ordersPage, ordersStatusFilter, ordersSearch, ordersSortOrder, ordersShippingFilter, loadOrders]);
 
   React.useEffect(() => {
     if (!isLoggedIn) return;
@@ -218,8 +224,8 @@ export default function AdminPage() {
         try {
           const data = JSON.parse(e.data) as { type?: string };
           if (data.type === "orders-updated") {
-            const { ordersPage: p, ordersStatusFilter: f, ordersSearch: s, ordersSortOrder: so } = ordersParamsRef.current;
-            void loadOrders(p, f, s, so);
+            const { ordersPage: p, ordersStatusFilter: f, ordersSearch: s, ordersSortOrder: so, ordersShippingFilter: dm } = ordersParamsRef.current;
+            void loadOrders(p, f, s, so, dm);
           }
           if (data.type === "super-admin-data" && currentUser?.role === "superAdmin") void loadSuperAdminData();
         } catch {
@@ -309,6 +315,9 @@ export default function AdminPage() {
       notify(res.error, "error");
     } else {
       notify(approved ? t("admin.toast.slip_approved") : t("admin.toast.slip_rejected"));
+      const newStatus = approved ? "packing" : "pending_payment";
+      setPinnedOrderPatch({ id: orderId, status: newStatus });
+      setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: newStatus } : o));
       loadData();
     }
   }
@@ -331,6 +340,8 @@ export default function AdminPage() {
       notify(res.error, "error");
     } else {
       notify(t("admin.toast.product_updated"));
+      setPinnedOrderPatch({ id: orderId, status });
+      setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status } : o));
       loadData();
     }
   }
@@ -364,6 +375,8 @@ export default function AdminPage() {
       notify(res.error, "error");
     } else {
       notify("ยกเลิกคำสั่งซื้อแล้ว");
+      setPinnedOrderPatch({ id: orderId, status: "cancelled" });
+      setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: "cancelled" } : o));
       loadData();
     }
   }
@@ -540,11 +553,14 @@ export default function AdminPage() {
                 onSearchChange={(s) => { setOrdersSearch(s); setOrdersPage(1); }}
                 sortOrder={ordersSortOrder}
                 onSortOrderChange={(s) => { setOrdersSortOrder(s); setOrdersPage(1); }}
+                shippingFilter={ordersShippingFilter}
+                onShippingFilterChange={(f) => { setOrdersShippingFilter(f); setOrdersPage(1); }}
                 summary={summary}
                 onStatusChange={triggerStatusConfirm}
                 onApproveSlip={approveSlip}
                 onSaveTracking={saveTracking}
                 onCancelOrder={cancelOrder}
+                pinnedOrderPatch={pinnedOrderPatch}
                 t={t}
                 onViewSlip={(images, index) => setLightbox({ images, index })}
               />

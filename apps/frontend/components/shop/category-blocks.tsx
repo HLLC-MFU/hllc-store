@@ -48,7 +48,7 @@ export function CategoryBlocks({ blocks, fullPage = false }: { blocks: CategoryB
             src={block.imageUrl}
             alt={pick(block.title)}
             className={`object-cover ${fullPage ? "object-top" : "object-center"} ${block.blockStatus ? "" : "transition-transform duration-300 group-hover:scale-105"}`}
-            sizes="(max-width: 768px) 100vw, 640px"
+            sizes="(max-width: 768px) 100vw, (max-width: 1024px) calc(100vw - 224px), calc(100vw - 256px)"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">

@@ -248,17 +248,17 @@ export function slipRejectedEmail(customerName: string, note?: string, to = "", 
     subject: "HLLC Store - กรุณาส่งสลิปใหม่",
     text: `สวัสดีคุณ ${customerName}, สลิปการชำระเงินของคุณไม่ผ่านการตรวจสอบ${message ? ` (${message})` : ""} กรุณาอัปโหลดสลิปใหม่อีกครั้ง`,
     html: baseEmailHtml({
-      badge: "สลิปไม่ผ่าน",
+      badge: "หลักฐานการชำระเงินไม่ถูกต้อง",
       badgeBg: "#fee2e2",
       badgeColor: "#b91c1c",
-      alert: "เรายืนยันการชำระเงินจากสลิปไม่สำเร็จ",
+      alert: "หลักฐานการชำระเงินเกิดข้อผิดพลาด ",
       icon: "alert",
       headline: "ตรวจสอบสลิปไม่สำเร็จ",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>ขออภัย เราไม่สามารถยืนยันการชำระเงินจากสลิปที่คุณส่งมาได้ รบกวนตรวจสอบและส่งใหม่อีกครั้ง`,
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>เราไม่สามารถยืนยันการชำระเงินจากหลักฐานที่ส่งมาได้ โปรดตรวจสอบและส่งอีกครั้ง`,
       detailRows: [
-        { label: "สถานะสลิป", value: "ไม่ผ่านการตรวจสอบ", color: "#b91c1c" },
+        { label: "สถานะสลิป", value: "หลักฐานการชำระเงินไม่ถูกต้อง", color: "#b91c1c" },
       ],
-      note: message ? { label: "ข้อความจากร้าน", text: message } : undefined,
+      note: message ? { label: "แจ้งให้ทราบ", text: message } : undefined,
       customerPhone,
     }),
   };
@@ -278,10 +278,10 @@ export function trackingNumberEmail(
       badge: "จัดส่งแล้ว",
       badgeBg: "#dbeafe",
       badgeColor: "#1d4ed8",
-      alert: "พัสดุออกจากคลังแล้ว กำลังเดินทางถึงคุณ",
+      alert: "ผู้ส่งได้ทำการจัดส่งสินค้าแล้ว กำลังเดินทางถึงคุณ",
       icon: "arrow",
       headline: "พัสดุของคุณกำลังเดินทาง",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณถูกจัดส่งเรียบร้อยแล้ว ติดตามสถานะพัสดุได้จากปุ่มด้านล่าง`,
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณถูกจัดส่งเรียบร้อยแล้ว สามารถตรวจสอบสถานะการจัดส่งได้ที่ปุ่มข้างล่าง`,
       detailRows: [
         { label: "สถานะ", value: "จัดส่งแล้ว", color: "#1d4ed8" },
         { label: "เลขพัสดุ", value: trackingNumber },
@@ -303,15 +303,15 @@ export function pickupReadyEmail(
     subject: "HLLC Store - สินค้าพร้อมให้รับแล้ว",
     text: `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณพร้อมให้มารับแล้ว${location ? `ที่ ${location}` : ""}${pickupHours ? ` เวลา ${pickupHours}` : ""}`,
     html: baseEmailHtml({
-      badge: "พร้อมให้รับ",
+      badge: "พร้อมรับสินค้า",
       badgeBg: "#fef3c7",
       badgeColor: "#92400e",
-      alert: "สินค้าของคุณพร้อมให้เข้ารับที่ร้านแล้ว",
+      alert: "สินค้าพร้อมรับแล้วที่จุดรับสินค้า",
       icon: "target",
       headline: "สินค้าพร้อมให้เข้ารับแล้ว",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณพร้อมให้เข้ารับแล้ว กรุณาแสดงเบอร์โทรที่ใช้สั่งซื้อกับเจ้าหน้าที่เมื่อมาถึง`,
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณพร้อมให้เข้ารับแล้ว กรุณาแสดงเบอร์โทรที่ใช้สั่งซื้อกับเจ้าหน้าที่`,
       detailRows: [
-        { label: "สถานะ", value: "พร้อมให้รับ", color: "#92400e" },
+        { label: "สถานะ", value: "พร้อมรับสินค้า", color: "#92400e" },
         ...(location ? [{ label: "จุดรับสินค้า", value: location }] : []),
         ...(pickupHours ? [{ label: "เวลารับสินค้า", value: pickupHours }] : []),
       ],
@@ -326,7 +326,7 @@ function formatItemValue(i: { name: string; option?: string; customName?: string
     const parts = i.customName.slice(6).split(":");
     const color = parts[0] ?? "";
     const letters = parts[1] ?? "";
-    base += ` + สายห้อย สี${color}`;
+    base += ` + พวงกกุญแจ สี${color}`;
     if (letters) base += ` · ${letters}`;
   }
   return base;
@@ -360,7 +360,7 @@ export function orderConfirmedEmail(
       alert: "เราได้รับคำสั่งซื้อของคุณเรียบร้อยแล้ว",
       icon: "check",
       headline: "ขอบคุณที่สั่งซื้อกับเรา!",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณถูกบันทึกเรียบร้อยแล้ว`,
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณสำเร็จแล้ว`,
       detailRows: [
         ...itemRows,
         { label: "วิธีรับสินค้า", value: deliveryLabel },
@@ -377,15 +377,36 @@ export function slipReceivedEmail(customerName: string, to = "", customerPhone?:
     subject: "HLLC Store - ได้รับสลิปของคุณแล้ว",
     text: `สวัสดีคุณ ${customerName}, เราได้รับสลิปการชำระเงินของคุณแล้ว กำลังตรวจสอบและจะแจ้งผลให้ทราบโดยเร็ว`,
     html: baseEmailHtml({
-      badge: "รอตรวจสลิป",
+      badge: "รอตรวจสอบหลักฐานการชำระเงิน",
       badgeBg: "#fef3c7",
       badgeColor: "#92400e",
-      alert: "เราได้รับสลิปของคุณแล้ว กำลังตรวจสอบ",
+      alert: "เราได้รับหลักฐานการชำระเงินของคุณแล้ว กำลังตรวจสอบ",
       icon: "target",
-      headline: "ได้รับสลิปเรียบร้อยแล้ว",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>เราได้รับสลิปการชำระเงินของคุณแล้ว ทีมงานกำลังตรวจสอบและจะแจ้งผลให้ทราบทางอีเมลนี้โดยเร็วที่สุด`,
+      headline: "ได้รับหลักฐานการชำระเงินเรียบร้อยแล้ว",
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>ขณะนี้คำสั่งซื้อของคุณอยู่ระหว่างการตรวจสอบหลักฐานการชำระเงิน เมื่อการตรวจสอบเสร็จสิ้น ระบบจะแจ้งผลให้คท่านโดนอัติมัติ`,
       detailRows: [
-        { label: "สถานะสลิป", value: "รอตรวจสอบ", color: "#92400e" },
+        { label: "สถานะ", value: "รอตรวจสอบ", color: "#92400e" },
+      ],
+      customerPhone,
+    }),
+  };
+}
+
+export function orderCompletedEmail(customerName: string, to = "", customerPhone?: string): EmailPayload {
+  return {
+    to,
+    subject: "HLLC Store - รับสินค้าเรียบร้อยแล้ว",
+    text: `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณเสร็จสมบูรณ์แล้ว ขอบคุณที่อุดหนุน HLLC Store`,
+    html: baseEmailHtml({
+      badge: "จัดส่งสำเร็จ",
+      badgeBg: "#dcfce7",
+      badgeColor: "#166534",
+      alert: "คำสั่งซื้อของคุณเสร็จสมบูรณ์แล้ว",
+      icon: "check",
+      headline: "รับสินค้าเรียบร้อย!",
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>หลังว่าคุณจะชื่นชอบสินค้าของเรา  ขอบคุณสำหรับการสนันสนุนค่ะ/ครับ`,
+      detailRows: [
+        { label: "สถานะ", value: "คำสั่งซื้อของคุณเสร็จสมบูรณ์", color: "#166534" },
       ],
       customerPhone,
     }),
@@ -399,17 +420,17 @@ export function orderCancelledEmail(customerName: string, reason: string, to = "
     subject: "HLLC Store - คำสั่งซื้อถูกยกเลิก",
     text: `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณถูกยกเลิกแล้ว${message ? ` เหตุผล: ${message}` : ""}`,
     html: baseEmailHtml({
-      badge: "ยกเลิกแล้ว",
+      badge: "ยกเลิกคำสั่งซื้อ",
       badgeBg: "#fee2e2",
       badgeColor: "#b91c1c",
       alert: "คำสั่งซื้อนี้ถูกยกเลิกเรียบร้อยแล้ว",
       icon: "x",
       headline: "คำสั่งซื้อถูกยกเลิก",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณได้ถูกยกเลิกแล้ว หากมีการชำระเงินเข้ามา ทางร้านได้ดำเนินการคืนเงินเต็มจำนวน`,
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อถูกยกเลิกแล้ว ในกรณีที่ชำระเงินสำเร็จ ระบบจะทำการคืนเงินให้เต็มจำนวน`,
       detailRows: [
-        { label: "สถานะ", value: "ยกเลิกแล้ว", color: "#b91c1c" },
+        { label: "สถานะ", value: "ยกเลิกคำสั่งซื้อ", color: "#b91c1c" },
       ],
-      note: message ? { label: "เหตุผลการยกเลิก", text: message } : undefined,
+      note: message ? { label: "ระบุเหตุผลการยกเลิก", text: message } : undefined,
       customerPhone,
     }),
   };

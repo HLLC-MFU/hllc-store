@@ -74,11 +74,17 @@ export function toProduct(doc: Document): Product {
     };
   }
 
+  let subtitleObj: LocalizedText | undefined;
+  if (doc.subtitle && typeof doc.subtitle === "object") {
+    subtitleObj = { th: doc.subtitle.th || "", en: doc.subtitle.en || undefined };
+  }
+
   return {
     id: doc._id.toString(),
     name: nameObj,
     slug: typeof doc.slug === "string" && doc.slug ? doc.slug : createSlug(nameObj.th) || doc._id.toString(),
     description: descObj,
+    subtitle: subtitleObj,
     price: Number(doc.price ?? 0),
     stock: Number(doc.stock ?? 0),
     category: doc.category ?? "",
@@ -183,6 +189,11 @@ export async function updateProduct(
     if (input.description.en !== undefined) {
       updateData["description.en"] = typeof input.description.en === "string" ? input.description.en.trim() : "";
     }
+  }
+
+  if (input.subtitle !== undefined) {
+    updateData["subtitle.th"] = typeof input.subtitle.th === "string" ? input.subtitle.th.trim() : "";
+    updateData["subtitle.en"] = typeof input.subtitle.en === "string" ? input.subtitle.en.trim() : "";
   }
 
   if (input.price !== undefined) {

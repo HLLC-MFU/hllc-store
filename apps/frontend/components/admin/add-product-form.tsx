@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import NextImage from "next/image";
-import { AlertCircle, Check, DollarSign, FileText, Image, PackagePlus, Pencil, Plus, Upload, XCircle } from "lucide-react";
+import { AlertCircle, Check, ChevronDown, ChevronUp, DollarSign, FileText, Image, PackagePlus, Pencil, Plus, Upload, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,16 +95,30 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
   const [priceValue, setPriceValue] = React.useState(String(product?.price ?? ""));
   const [stockValue, setStockValue] = React.useState(String(product?.stock ?? ""));
   const [descItemsTh, setDescItemsTh] = React.useState<string[]>(() => {
-    const lines = (product?.description?.th ?? "").split("\n").map(l => l.replace(/^[•\-*]\s*/, "").trim()).filter(Boolean);
+    const lines = (product?.description?.th ?? "").split("\n").map(l => l.startsWith("# ") ? l : l.replace(/^[•\-*]\s*/, "").trim()).filter(Boolean);
     return lines.length > 0 ? lines : [""];
   });
   const [descItemsEn, setDescItemsEn] = React.useState<string[]>(() => {
-    const lines = (product?.description?.en ?? "").split("\n").map(l => l.replace(/^[•\-*]\s*/, "").trim()).filter(Boolean);
+    const lines = (product?.description?.en ?? "").split("\n").map(l => l.startsWith("# ") ? l : l.replace(/^[•\-*]\s*/, "").trim()).filter(Boolean);
     return lines.length > 0 ? lines : [""];
   });
   const [descLang, setDescLang] = React.useState<"th" | "en">("th");
+  const [subtitleLang, setSubtitleLang] = React.useState<"th" | "en">("th");
+  const [subtitleTh, setSubtitleTh] = React.useState(product?.subtitle?.th ?? "");
+  const [subtitleEn, setSubtitleEn] = React.useState(product?.subtitle?.en ?? "");
   const [fieldErrors, setFieldErrors] = React.useState<Set<string>>(new Set());
   const TOTAL_STEPS = 3;
+  const descEditorRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (step !== 3) return;
+    const timer = setTimeout(() => {
+      descEditorRef.current?.querySelectorAll<HTMLTextAreaElement>("textarea[data-ar]").forEach((el) => {
+        el.style.height = "auto";
+        el.style.height = el.scrollHeight + "px";
+      });
+    }, 320);
+    return () => clearTimeout(timer);
+  }, [step, descLang]);
 
   function markError(field: string) {
     setFieldErrors(prev => new Set([...prev, field]));
@@ -248,6 +262,11 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
           th: descItemsTh.filter(Boolean).join("\n") || product.description?.th || "",
           en: descItemsEn.filter(Boolean).join("\n") || undefined,
         },
+        subtitle: (() => {
+          const th = String(fd.get("subtitleTh") ?? "").trim();
+          const en = String(fd.get("subtitleEn") ?? "").trim();
+          return th ? { th, en: en || undefined } : undefined;
+        })(),
         category: placementByValue(placement)?.category,
         group: placementByValue(placement)?.group,
         charmType: placementByValue(placement)?.charmType,
@@ -334,7 +353,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
         })()}
 
         {/* Form */}
-        <div className={`px-5 pb-5 flex-1 ${step === 3 ? "flex flex-col overflow-hidden min-h-0" : "overflow-y-auto"}`}>
+        <div className="px-5 pb-5 flex-1 overflow-y-auto">
           <form
             ref={formRef}
             onSubmit={handleSubmit}
@@ -344,7 +363,6 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                 e.preventDefault();
               }
             }}
-            className={step === 3 ? "flex flex-col flex-1 min-h-0" : ""}
           >
             <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleFiles} className="hidden" disabled={uploading} />
 
@@ -499,8 +517,34 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
             </div>
 
             {/* ── Step 3: รายละเอียด ── */}
-            <div className={step !== 3 ? "hidden" : "flex flex-col gap-3 flex-1 min-h-0"}>
+            <div className={step !== 3 ? "hidden" : "flex flex-col gap-3"}>
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">ขั้นตอน 3 — รายละเอียดสินค้า</p>
+
+              {/* Subtitle — shown below product name in shop */}
+              <div className="flex flex-col gap-1.5">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">คำอธิบายใต้ชื่อสินค้า <span className="normal-case font-medium tracking-normal text-gray-300">(ไม่บังคับ)</span></p>
+                <div className="rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="flex border-b border-gray-100 bg-gray-50">
+                    <button type="button" onClick={() => setSubtitleLang("th")}
+                      className={`flex-1 py-1.5 text-xs font-black transition-all ${subtitleLang === "th" ? "bg-white shadow-sm text-gray-900" : "text-gray-400"}`}>
+                      <span className="mr-1 bg-gray-200 text-gray-500 px-1 py-0.5 rounded text-[8px] font-black leading-none">TH</span> คำอธิบายใต้ชื่อ
+                    </button>
+                    <button type="button" onClick={() => setSubtitleLang("en")}
+                      className={`flex-1 py-1.5 text-xs font-black transition-all ${subtitleLang === "en" ? "bg-white shadow-sm text-gray-900" : "text-gray-400"}`}>
+                      <span className="mr-1 bg-gray-200 text-gray-500 px-1 py-0.5 rounded text-[8px] font-black leading-none">EN</span> Subtitle under name
+                    </button>
+                  </div>
+                  <input type="hidden" name="subtitleTh" value={subtitleTh} />
+                  <input type="hidden" name="subtitleEn" value={subtitleEn} />
+                  <textarea
+                    value={subtitleLang === "th" ? subtitleTh : subtitleEn}
+                    rows={3}
+                    onChange={(e) => { subtitleLang === "th" ? setSubtitleTh(e.target.value) : setSubtitleEn(e.target.value); }}
+                    placeholder={subtitleLang === "th" ? "เช่น รุ่นพิเศษ Limited Edition" : "e.g. Limited Edition"}
+                    className="w-full px-3 py-2.5 text-xs bg-transparent outline-none resize-none leading-relaxed placeholder:text-gray-300 overflow-y-auto"
+                  />
+                </div>
+              </div>
 
               {/* Custom name — bottle only */}
               {placement === "bottle" && (
@@ -536,89 +580,77 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                 </button>
               </div>
 
-              {/* Bullet editor — TH */}
-              <div className={descLang !== "th" ? "hidden" : "flex flex-col gap-1.5 flex-1 min-h-0"}>
-                <div className={`rounded-xl border flex flex-col overflow-y-auto flex-1 ${err("descriptionTh") ? "border-red-400 bg-red-50/40" : "border-gray-200"}`}>
-                  <div className="p-3 flex flex-col gap-2 flex-1">
-                    {descItemsTh.map((item, i) => (
-                      <div key={i} className="flex items-start gap-2 group">
-                        <span className="text-brand shrink-0 text-sm mt-2 leading-none">•</span>
-                        <textarea
-                          value={item}
-                          rows={1}
-                          autoFocus={i === descItemsTh.length - 1 && item === ""}
-                          onChange={(e) => {
-                            const next = [...descItemsTh]; next[i] = e.target.value;
-                            setDescItemsTh(next);
-                            if (next.some(l => l.trim())) clearError("descriptionTh");
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") { e.preventDefault(); const next = [...descItemsTh]; next.splice(i + 1, 0, ""); setDescItemsTh(next); }
-                            if (e.key === "Backspace" && item === "" && descItemsTh.length > 1) { e.preventDefault(); setDescItemsTh(descItemsTh.filter((_, j) => j !== i)); }
-                          }}
-                          placeholder="พิมพ์รายละเอียด..."
-                          className="flex-1 text-sm py-1.5 bg-transparent outline-none placeholder:text-gray-300 border-b border-transparent focus:border-gray-200 transition-colors resize-none leading-relaxed"
-                          style={{ fieldSizing: "content" } as React.CSSProperties}
-                        />
-                        {descItemsTh.length > 1 && (
-                          <button type="button" onClick={() => setDescItemsTh(descItemsTh.filter((_, j) => j !== i))}
-                            className="shrink-0 mt-1.5 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
-                            <XCircle className="w-4 h-4 text-gray-300 hover:text-red-400" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="px-3 pb-3 border-t border-gray-100 pt-2">
-                    <button type="button" onClick={() => setDescItemsTh([...descItemsTh, ""])}
-                      className="flex items-center gap-1.5 text-xs text-brand/70 font-bold hover:text-brand transition-colors">
-                      <Plus className="w-3.5 h-3.5" /> เพิ่มรายการ
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bullet editor — EN */}
-              <div className={descLang !== "en" ? "hidden" : "flex flex-col gap-1.5 flex-1 min-h-0"}>
-                <div className={`rounded-xl border flex flex-col overflow-y-auto flex-1 ${err("descriptionEn") ? "border-red-400 bg-red-50/40" : "border-gray-200"}`}>
-                  <div className="p-3 flex flex-col gap-2 flex-1">
-                    {descItemsEn.map((item, i) => (
-                      <div key={i} className="flex items-start gap-2 group">
-                        <span className="text-brand shrink-0 text-sm mt-2 leading-none">•</span>
-                        <textarea
-                          value={item}
-                          rows={1}
-                          autoFocus={i === descItemsEn.length - 1 && item === ""}
-                          onChange={(e) => {
-                            const next = [...descItemsEn]; next[i] = e.target.value;
-                            setDescItemsEn(next);
-                            if (next.some(l => l.trim())) clearError("descriptionEn");
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") { e.preventDefault(); const next = [...descItemsEn]; next.splice(i + 1, 0, ""); setDescItemsEn(next); }
-                            if (e.key === "Backspace" && item === "" && descItemsEn.length > 1) { e.preventDefault(); setDescItemsEn(descItemsEn.filter((_, j) => j !== i)); }
-                          }}
-                          placeholder="Type description..."
-                          className="flex-1 text-sm py-1.5 bg-transparent outline-none placeholder:text-gray-300 border-b border-transparent focus:border-gray-200 transition-colors resize-none leading-relaxed"
-                          style={{ fieldSizing: "content" } as React.CSSProperties}
-                        />
-                        {descItemsEn.length > 1 && (
-                          <button type="button" onClick={() => setDescItemsEn(descItemsEn.filter((_, j) => j !== i))}
-                            className="shrink-0 mt-1.5 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
-                            <XCircle className="w-4 h-4 text-gray-300 hover:text-red-400" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="px-3 pb-3 border-t border-gray-100 pt-2">
-                    <button type="button" onClick={() => setDescItemsEn([...descItemsEn, ""])}
-                      className="flex items-center gap-1.5 text-xs text-brand/70 font-bold hover:text-brand transition-colors">
-                      <Plus className="w-3.5 h-3.5" /> Add item
-                    </button>
+              {/* Bullet/header editor — shared renderer */}
+              {([
+                { lang: "th", items: descItemsTh, setItems: setDescItemsTh, errKey: "descriptionTh", addLabel: "เพิ่มรายการ", addHeadLabel: "เพิ่มหัวข้อ", placeholder: "พิมพ์รายละเอียด...", headPlaceholder: "หัวข้อส่วน..." },
+                { lang: "en", items: descItemsEn, setItems: setDescItemsEn, errKey: "descriptionEn", addLabel: "Add item", addHeadLabel: "Add heading", placeholder: "Type description...", headPlaceholder: "Section heading..." },
+              ] as const).map(({ lang: l, items, setItems, errKey, addLabel, addHeadLabel, placeholder, headPlaceholder }) => (
+                <div key={l} ref={descLang === l ? descEditorRef : undefined} className={descLang !== l ? "hidden" : "flex flex-col gap-1.5"}>
+                  <div className={`rounded-xl border flex flex-col ${err(errKey) ? "border-red-400 bg-red-50/40" : "border-gray-200"}`}>
+                    <div className="p-3 flex flex-col gap-2">
+                      {items.map((item, i) => {
+                        const isHead = item.startsWith("# ");
+                        const displayVal = isHead ? item.slice(2) : item;
+                        return (
+                          <div key={i} className={`flex items-start gap-2 group ${isHead ? "mt-1 first:mt-0" : ""}`}>
+                            {isHead
+                              ? <span className="text-[9px] font-black text-gray-400 shrink-0 mt-2.5 leading-none uppercase tracking-wider bg-gray-100 px-1 py-0.5 rounded">H</span>
+                              : <span className="text-brand shrink-0 text-sm mt-2 leading-none">•</span>
+                            }
+                            <textarea
+                              value={displayVal}
+                              rows={1}
+                              autoFocus={i === items.length - 1 && displayVal === ""}
+                              data-ar=""
+                              onInput={(e) => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
+                              onChange={(e) => {
+                                const next = [...items];
+                                next[i] = isHead ? `# ${e.target.value}` : e.target.value;
+                                setItems(next);
+                                if (next.some(x => x.trim())) clearError(errKey);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") { e.preventDefault(); const next = [...items]; next.splice(i + 1, 0, ""); setItems(next); }
+                                if (e.key === "Backspace" && displayVal === "" && items.length > 1) { e.preventDefault(); setItems(items.filter((_, j) => j !== i)); }
+                              }}
+                              placeholder={isHead ? headPlaceholder : placeholder}
+                              className={`flex-1 py-1.5 bg-transparent outline-none placeholder:text-gray-300 border-b border-transparent focus:border-gray-200 transition-colors resize-none leading-relaxed overflow-hidden ${isHead ? "text-sm font-black text-gray-800" : "text-sm"}`}
+                            />
+                            <div className="shrink-0 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity mt-0.5">
+                              <button type="button" disabled={i === 0}
+                                onClick={() => { const next = [...items]; [next[i - 1], next[i]] = [next[i], next[i - 1]]; setItems(next); }}
+                                className="disabled:opacity-20 hover:text-gray-600 text-gray-300 transition-colors">
+                                <ChevronUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button type="button" disabled={i === items.length - 1}
+                                onClick={() => { const next = [...items]; [next[i], next[i + 1]] = [next[i + 1], next[i]]; setItems(next); }}
+                                className="disabled:opacity-20 hover:text-gray-600 text-gray-300 transition-colors">
+                                <ChevronDown className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            {items.length > 1 && (
+                              <button type="button" onClick={() => setItems(items.filter((_, j) => j !== i))}
+                                className="shrink-0 mt-1.5 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
+                                <XCircle className="w-4 h-4 text-gray-300 hover:text-red-400" />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="px-3 pb-3 border-t border-gray-100 pt-2 flex items-center gap-4">
+                      <button type="button" onClick={() => setItems([...items, ""])}
+                        className="flex items-center gap-1.5 text-xs text-brand/70 font-bold hover:text-brand transition-colors">
+                        <Plus className="w-3.5 h-3.5" /> {addLabel}
+                      </button>
+                      <button type="button" onClick={() => setItems([...items, "# "])}
+                        className="flex items-center gap-1.5 text-xs text-gray-400 font-bold hover:text-gray-600 transition-colors">
+                        <span className="text-[9px] font-black bg-gray-200 text-gray-500 px-1 py-0.5 rounded leading-none">H</span> {addHeadLabel}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
 
             {/* Navigation */}

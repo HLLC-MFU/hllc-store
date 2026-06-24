@@ -11,7 +11,7 @@ export type LocalizedText = {
 
 export type Product = {
   id: string; name: LocalizedText; slug: string;
-  description?: LocalizedText; price: number; stock: number;
+  description?: LocalizedText; subtitle?: LocalizedText; price: number; stock: number;
   discount?: number; // percent 0-100
   category?: string;
   group?: string;
@@ -58,7 +58,7 @@ export type Order = {
 };
 
 export const ORDER_STATUSES: OrderStatus[] = [
-  "payment_review", "packing", "shipped", "completed", "cancelled",
+  "pending_payment", "payment_review", "packing", "shipped", "completed", "cancelled",
 ];
 
 export const STATUS_BG: Record<OrderStatus, string> = {
