@@ -33,6 +33,21 @@ import { appPath } from "@/lib/client/app-path";
 import type { Order, OrderStatus } from "./types";
 import { STATUS_BG, STATUS_COLOR, STATUS_ICON } from "./types";
 import { money, timeAgo, isPickupOrder } from "./api-client";
+
+const CHARM_PRICE = 30;
+const FREE_LETTERS = 2;
+const LETTER_PRICE = 10;
+
+function parseCharmName(customName?: string | null) {
+  if (!customName?.startsWith("charm:")) return null;
+  const [, colorId, letters = ""] = customName.split(":");
+  return { colorId, letters };
+}
+
+function charmAddon(letters: string) {
+  const extra = Math.max(0, letters.length - FREE_LETTERS);
+  return CHARM_PRICE + extra * LETTER_PRICE;
+}
 import { ShippingLabel } from "@/components/shop/cart/shipping-label";
 
 export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking, onCancel, t, onViewSlip, useModal = false, onModalOpen, onModalClose }: {
@@ -311,24 +326,50 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
             <CardContent className="p-4 flex flex-col gap-4">
               <div className="flex flex-col gap-2.5">
                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">รายการสินค้า</span>
-                {order.items.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-800 font-semibold truncate">{item.name[lang] || item.name.th} <span className="text-gray-400 font-medium">×{item.quantity}</span></span>
-                    <div className="flex shrink-0 flex-col items-end gap-1 ml-3">
-                      <span className="text-sm font-black text-gray-900">{money(item.subtotal)}</span>
-                      {item.selectedOption ? (
-                        <span className="max-w-32 truncate rounded-md bg-brand/5 px-2 py-0.5 text-[10px] font-black text-brand">
-                          {item.selectedOption}
+                {order.items.map((item, i) => {
+                  const charm = parseCharmName(item.customName);
+                  const addon = charm ? charmAddon(charm.letters) : 0;
+                  const basePrice = item.price - addon;
+                  const extraLetters = charm ? Math.max(0, charm.letters.length - FREE_LETTERS) : 0;
+                  return (
+                    <div key={i} className="flex items-start justify-between gap-3">
+                      {/* Left: name + tags */}
+                      <div className="flex flex-col gap-1 min-w-0">
+                        <span className="text-sm text-gray-800 font-semibold">
+                          {item.name[lang] || item.name.th} <span className="text-gray-400 font-medium">×{item.quantity}</span>
                         </span>
-                      ) : null}
-                      {item.customName ? (
-                        <span className="max-w-40 truncate rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">
-                          ✎ {item.customName}
-                        </span>
-                      ) : null}
+                        {item.selectedOption ? (
+                          <span className="self-start rounded-md bg-brand/5 px-2 py-0.5 text-[10px] font-black text-brand">
+                            {item.selectedOption}
+                          </span>
+                        ) : null}
+                        {charm && (
+                          <span className="self-start rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">
+                            ✎ สายห้อย สี{charm.colorId}{charm.letters ? ` · ${charm.letters}` : ""}
+                          </span>
+                        )}
+                        {!charm && item.customName ? (
+                          <span className="self-start max-w-40 truncate rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">
+                            ✎ {item.customName}
+                          </span>
+                        ) : null}
+                      </div>
+                      {/* Right: price breakdown */}
+                      <div className="shrink-0 flex flex-col items-end gap-0.5">
+                        <span className="text-sm font-black text-gray-900">{money(item.subtotal)}</span>
+                        {charm && (
+                          <div className="flex flex-col items-end gap-0.5 mt-0.5">
+                            <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">{money(basePrice * item.quantity)} สินค้า</span>
+                            <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">+{money(CHARM_PRICE * item.quantity)} สายห้อย</span>
+                            {extraLetters > 0 && (
+                              <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">+{money(extraLetters * LETTER_PRICE * item.quantity)} ตัวอักษร</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="flex flex-col gap-1.5 pt-3 border-t border-slate-100">
@@ -906,30 +947,47 @@ export function OrderRow({ order, onStatusChange, onApproveSlip, onSaveTracking,
                     </div>
                   </div>
                   <div className="flex flex-col gap-2.5">
-                  {order.items.map((item, i) => (
-                    <div key={i} className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-800 font-semibold">{item.name[lang] || item.name.th} <span className="text-gray-400 font-medium">×{item.quantity}</span></span>
-                        <span className="text-sm font-black text-gray-900 shrink-0 ml-3">{money(item.subtotal)}</span>
+                  {order.items.map((item, i) => {
+                    const charm = parseCharmName(item.customName);
+                    const addon = charm ? charmAddon(charm.letters) : 0;
+                    const basePrice = item.price - addon;
+                    const extraLetters = charm ? Math.max(0, charm.letters.length - FREE_LETTERS) : 0;
+                    return (
+                    <div key={i} className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col gap-1 min-w-0">
+                        <span className="text-sm text-gray-800 font-semibold">
+                          {item.name[lang] || item.name.th} <span className="text-gray-400 font-medium">×{item.quantity}</span>
+                        </span>
+                        {item.selectedOption && (
+                          <span className="self-start rounded-md bg-brand/5 px-2 py-0.5 text-[10px] font-black text-brand">
+                            {item.selectedOption}
+                          </span>
+                        )}
+                        {charm ? (
+                          <span className="self-start rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">
+                            ✎ สายห้อย สี{charm.colorId}{charm.letters ? ` · ${charm.letters}` : ""}
+                          </span>
+                        ) : item.customName ? (
+                          <span className="self-start max-w-40 truncate rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">
+                            ✎ {item.customName}
+                          </span>
+                        ) : null}
                       </div>
-                      {(item.selectedOption || item.customName) && (
-                        <div className="flex flex-wrap gap-1.5 pl-2 border-l-2 border-brand/20">
-                          {item.selectedOption && (
-                            <div className="flex items-center gap-1 rounded-lg bg-brand/5 px-2.5 py-1">
-                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">ตัวเลือก</span>
-                              <span className="text-[11px] font-black text-brand">{item.selectedOption}</span>
-                            </div>
-                          )}
-                          {item.customName && (
-                            <div className="flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1">
-                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">ชื่อ</span>
-                              <span className="text-[11px] font-black text-amber-700">{item.customName}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      <div className="shrink-0 flex flex-col items-end gap-0.5">
+                        <span className="text-sm font-black text-gray-900">{money(item.subtotal)}</span>
+                        {charm && (
+                          <div className="flex flex-col items-end gap-0.5 mt-0.5">
+                            <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">{money(basePrice * item.quantity)} สินค้า</span>
+                            <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">+{money(CHARM_PRICE * item.quantity)} สายห้อย</span>
+                            {extraLetters > 0 && (
+                              <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">+{money(extraLetters * LETTER_PRICE * item.quantity)} ตัวอักษร</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  ))}
+                    );
+                  })}
                   </div>{/* end items scroll */}
                 </div>
                 <div className="flex flex-col gap-1.5 pt-3 border-t border-slate-100">

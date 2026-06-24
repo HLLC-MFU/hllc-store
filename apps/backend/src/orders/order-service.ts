@@ -54,27 +54,36 @@ function notifyEmail(payload: ReturnType<typeof trackingNumberEmail>) {
   });
 }
 
+function charmAddonPrice(customName?: string): number {
+  if (!customName?.startsWith("charm:")) return 0;
+  const letters = customName.split(":")[2] ?? "";
+  return 30 + Math.max(0, letters.length - 2) * 10;
+}
+
 function toOrder(doc: Document): Order {
   const products: Document[] = doc._products ?? [];
   const items: OrderItem[] = (doc.items as Document[]).map((item) => {
     const product = products.find((p) => p._id.equals(item.productId));
+    const customName = typeof item.customName === "string" && item.customName.trim()
+      ? item.customName.trim()
+      : undefined;
+    const storedPrice = typeof item._price === "number" ? item._price : (product?.price ?? 0);
+    const price = storedPrice + charmAddonPrice(customName);
     return {
       productId: item.productId.toString(),
       name: product?.name && typeof product.name === "object"
         ? product.name as import("../types").LocalizedText
         : { th: typeof product?.name === "string" ? product.name : "สินค้าถูกลบ" },
-      price: product?.price ?? 0,
+      price,
       quantity: item.quantity,
-      subtotal: (product?.price ?? 0) * item.quantity,
+      subtotal: price * item.quantity,
       selectedOption: typeof item.selectedOption === "string" && item.selectedOption.trim()
         ? item.selectedOption.trim()
         : undefined,
-      customName: typeof item.customName === "string" && item.customName.trim()
-        ? item.customName.trim()
-        : undefined,
+      customName,
     };
   });
-  const subtotal = Number(doc.subtotal ?? items.reduce((sum, item) => sum + item.subtotal, 0));
+  const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
   const shippingFee = Number(doc.shippingFee ?? 0);
 
   return {
@@ -84,7 +93,7 @@ function toOrder(doc: Document): Order {
     subtotal,
     shippingFee,
     deliveryMode: doc.deliveryMode === "pickup" ? "pickup" : "delivery",
-    total: doc.total,
+    total: subtotal + shippingFee,
     status: doc.status,
     slip: doc.slip,
     slipHistory: Array.isArray(doc.slipHistory) ? doc.slipHistory : [],
@@ -160,12 +169,13 @@ export async function createOrder(input: CreateOrderInput) {
       throw new Error(`not enough option stock: ${matchedOption.label}`);
     }
 
+    const addon = charmAddonPrice(item.customName || undefined);
     return {
       productId: product._id,
       quantity: item.quantity,
       selectedOption,
       customName: item.customName,
-      _price: product.price,
+      _price: product.price + addon,
     };
   });
 
