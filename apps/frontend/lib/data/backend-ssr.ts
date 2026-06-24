@@ -11,9 +11,15 @@ import { normalizeUploads } from "@/lib/client/normalize-uploads";
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
 
 async function fetchBackend<T>(path: string, schema: z.ZodType<T>): Promise<T> {
-  const response = await fetch(`${BACKEND_URL}${path}`, { cache: "no-store" });
-  const payload = (await response.json()) as { data?: unknown };
-  return schema.parse(normalizeUploads(payload.data));
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const response = await fetch(`${BACKEND_URL}${path}`, { cache: "no-store", signal: controller.signal });
+    const payload = (await response.json()) as { data?: unknown };
+    return schema.parse(normalizeUploads(payload.data));
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function getHomeContent(): Promise<HomeContent> {
