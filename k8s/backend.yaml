@@ -77,6 +77,36 @@ spec:
                 secretKeyRef:
                   name: hllc-store-secret
                   key: ADMIN_PASSWORD_HASH
+            - name: GMAIL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: hllc-store-secret
+                  key: GMAIL_USER
+                  optional: true
+            - name: GMAIL_APP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hllc-store-secret
+                  key: GMAIL_APP_PASSWORD
+                  optional: true
+            - name: GMAIL_OAUTH_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: hllc-store-secret
+                  key: GMAIL_OAUTH_CLIENT_ID
+                  optional: true
+            - name: GMAIL_OAUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: hllc-store-secret
+                  key: GMAIL_OAUTH_CLIENT_SECRET
+                  optional: true
+            - name: GMAIL_OAUTH_REFRESH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hllc-store-secret
+                  key: GMAIL_OAUTH_REFRESH_TOKEN
+                  optional: true
           volumeMounts:
             - name: uploads
               mountPath: /app/uploads
