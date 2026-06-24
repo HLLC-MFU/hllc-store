@@ -29,12 +29,12 @@ export async function listCustomerOrders(request: Request) {
       throw new Error("customerPhone is required");
     }
 
-    const orders = await orderService.listOrders({
+    const result = await orderService.listOrders({
       customerPhone,
       status: status && orderService.isOrderStatus(status) ? status : undefined,
     });
 
-    return ok(orders.map(orderService.toPublicOrder));
+    return ok(result.orders.map(orderService.toPublicOrder));
   } catch (error) {
     return badRequest(error);
   }
@@ -79,14 +79,31 @@ export async function listAdminOrders(request: Request) {
 
   const url = new URL(request.url);
   const status = url.searchParams.get("status");
+  const search = url.searchParams.get("search") ?? undefined;
+  const page = Math.max(parseInt(url.searchParams.get("page") ?? "1", 10) || 1, 1);
+  const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "50", 10) || 50, 200);
+  const sortOrder = url.searchParams.get("sort") === "asc" ? "asc" : "desc";
 
   try {
-    return ok(
-      await orderService.listOrders({
-        status: status && orderService.isOrderStatus(status) ? status : undefined,
-        excludeStatuses: status ? undefined : ["pending_payment"],
-      }),
-    );
+    const result = await orderService.listOrders({
+      status: status && orderService.isOrderStatus(status) ? status : undefined,
+      excludeStatuses: status ? undefined : ["pending_payment"],
+      page,
+      limit,
+      search,
+      sortOrder,
+    });
+    return ok({ orders: result.orders, total: result.total, page, limit });
+  } catch (error) {
+    return badRequest(error);
+  }
+}
+
+export async function getAdminOrdersSummary(request: Request) {
+  const authError = requireAdmin(request);
+  if (authError) return authError;
+  try {
+    return ok(await orderService.getOrdersSummary());
   } catch (error) {
     return badRequest(error);
   }

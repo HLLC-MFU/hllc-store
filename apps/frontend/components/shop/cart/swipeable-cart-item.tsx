@@ -44,6 +44,7 @@ export interface SwipeableCartItemProps {
   item: CartItem;
   lang: "th" | "en";
   selected: boolean;
+  isBlocked?: boolean;
   charmImages?: Record<string, string>;
   charmOptions?: CharmOption[];
   onSelect: (item: CartItem) => void;
@@ -57,6 +58,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
   item,
   lang,
   selected,
+  isBlocked = false,
   charmImages,
   charmOptions,
   onSelect,
@@ -209,13 +211,14 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
               {/* Checkbox */}
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); onSelect(item); }}
-                className="shrink-0 cursor-pointer"
-                aria-checked={selected}
+                onClick={(e) => { e.stopPropagation(); if (!isBlocked) onSelect(item); }}
+                className={`shrink-0 ${isBlocked ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}
+                aria-checked={selected && !isBlocked}
                 role="checkbox"
+                disabled={isBlocked}
               >
-                <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-colors ${selected ? "bg-brand border-brand" : "border-gray-300 bg-white"}`}>
-                  {selected && <Check className="h-3 w-3 text-white" />}
+                <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-colors ${selected && !isBlocked ? "bg-brand border-brand" : "border-gray-300 bg-white"}`}>
+                  {selected && !isBlocked && <Check className="h-3 w-3 text-white" />}
                 </div>
               </button>
 
@@ -240,7 +243,12 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
                 {/* Name + edit button */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="line-clamp-2 text-sm font-black text-gray-900 leading-snug">
+                    {isBlocked && (
+                      <span className="inline-block mb-1 text-[10px] font-black px-2 py-0.5 rounded-lg bg-gray-100 text-gray-500">
+                        {lang === "th" ? "ยังไม่เปิดขาย" : "Not available"}
+                      </span>
+                    )}
+                    <p className={`line-clamp-2 text-sm font-black leading-snug ${isBlocked ? "text-gray-400" : "text-gray-900"}`}>
                       {item.name[lang] || item.name.th}
                     </p>
                     {item.selectedOption && (

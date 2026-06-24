@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, Search, XCircle } from "lucide-react";
+import { AlertCircle, ArrowDownUp, ChevronLeft, ChevronRight, Search, XCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,32 +9,43 @@ import type { Order, OrderStatus } from "@/components/admin/types";
 import { ORDER_STATUSES } from "@/components/admin/types";
 import { isPickupOrder } from "@/components/admin/api-client";
 import OrderRow from "@/components/admin/order-row";
+import type { OrdersSummary } from "@/lib/modules/orders";
 
 type OrdersPanelProps = {
   orders: Order[];
+  total: number;
+  page: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  statusFilter: string;
+  onStatusFilterChange: (f: string) => void;
+  search: string;
+  onSearchChange: (s: string) => void;
+  sortOrder: "asc" | "desc";
+  onSortOrderChange: (s: "asc" | "desc") => void;
+  summary: OrdersSummary | null;
   onStatusChange: (orderId: string, status: OrderStatus) => void;
   onApproveSlip: (orderId: string, approved: boolean, note?: string) => void;
   onSaveTracking: (orderId: string, trackingNumber: string) => void;
   onCancelOrder: (orderId: string, reason: string) => void;
   onViewSlip: (images: string[], index: number) => void;
-  initialStatusFilter?: OrderStatus | "all";
   t: (key: string) => string;
 };
 
-function buildFilterItems(orders: Order[], t: (key: string) => string) {
+function buildFilterItems(summary: OrdersSummary | null, t: (key: string) => string) {
+  const b = summary?.byStatus ?? {};
+  const total = summary?.totalOrders ?? 0;
   const items: { key: string; label: string; count: number }[] = [
-    { key: "all", label: t("admin.orders.filter_all"), count: orders.length },
+    { key: "all", label: t("admin.orders.filter_all"), count: total },
   ];
   for (const s of ORDER_STATUSES) {
     if (s === "shipped") {
-      const deliveryCount = orders.filter((o) => o.status === "shipped" && !isPickupOrder(o)).length;
-      const pickupCount = orders.filter((o) => o.status === "shipped" && isPickupOrder(o)).length;
-      items.push({ key: "shipped", label: t("admin.status.shipped"), count: deliveryCount });
-      items.push({ key: "shipped_pickup", label: t("admin.status.shipped_pickup"), count: pickupCount });
+      items.push({ key: "shipped",        label: t("admin.status.shipped"),        count: summary?.shippedDelivery ?? 0 });
+      items.push({ key: "shipped_pickup", label: t("admin.status.shipped_pickup"), count: summary?.shippedPickup  ?? 0 });
     } else if (s === "completed") {
-      items.push({ key: "completed", label: t("admin.status.completed_pickup"), count: orders.filter((o) => o.status === "completed").length });
+      items.push({ key: "completed", label: t("admin.status.completed_pickup"), count: b["completed"] ?? 0 });
     } else {
-      items.push({ key: s, label: t(`admin.status.${s}`), count: orders.filter((o) => o.status === s).length });
+      items.push({ key: s, label: t(`admin.status.${s}`), count: b[s] ?? 0 });
     }
   }
   return items;
@@ -42,59 +53,52 @@ function buildFilterItems(orders: Order[], t: (key: string) => string) {
 
 export function OrdersPanel({
   orders,
+  total,
+  page,
+  totalPages,
+  onPageChange,
+  statusFilter,
+  onStatusFilterChange,
+  search,
+  onSearchChange,
+  sortOrder,
+  onSortOrderChange,
+  summary,
   onStatusChange,
   onApproveSlip,
   onSaveTracking,
   onCancelOrder,
   onViewSlip,
-  initialStatusFilter,
   t,
 }: OrdersPanelProps) {
   const [shippingFilter, setShippingFilter] = React.useState<"all" | "delivery" | "pickup">("all");
-  const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all" | "shipped_pickup">(initialStatusFilter ?? "all");
   const [openModalOrderId, setOpenModalOrderId] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    if (initialStatusFilter) setStatusFilter(initialStatusFilter);
-  }, [initialStatusFilter]);
-  const [searchQuery, setSearchQuery] = React.useState("");
-
-  const shippingFilteredOrders = React.useMemo(() => {
-    return orders.filter((o) => {
+  const filteredOrders = React.useMemo(() => {
+    const base = orders.filter((o) => {
       const isPickup = isPickupOrder(o);
-      return (
+      const matchShipping =
         shippingFilter === "all" ||
         (shippingFilter === "pickup" && isPickup) ||
-        (shippingFilter === "delivery" && !isPickup)
-      );
-    });
-  }, [orders, shippingFilter]);
-
-  const filteredOrders = React.useMemo(() => {
-    const base = shippingFilteredOrders.filter((o) => {
-      const isPickup = isPickupOrder(o);
+        (shippingFilter === "delivery" && !isPickup);
       const matchStatus =
         statusFilter === "all" ||
-        (statusFilter === "shipped" && o.status === "shipped" && !isPickup) ||
-        (statusFilter === "shipped_pickup" && o.status === "shipped" && isPickup) ||
-        (statusFilter === "completed" && o.status === "completed") ||
-        (statusFilter !== "shipped" && statusFilter !== "shipped_pickup" && statusFilter !== "completed" && o.status === statusFilter);
-
-      const q = searchQuery.toLowerCase().trim();
-      const matchSearch = !q ||
-        o.customer.name.toLowerCase().includes(q) ||
-        o.customer.phone.includes(q) ||
-        o.id.toLowerCase().includes(q);
-
-      return matchStatus && matchSearch;
+        (statusFilter === "shipped"        && o.status === "shipped" && !isPickup) ||
+        (statusFilter === "shipped_pickup" && o.status === "shipped" && isPickup)  ||
+        (statusFilter !== "shipped" && statusFilter !== "shipped_pickup" && o.status === statusFilter);
+      return matchShipping && matchStatus;
     });
-    // Keep the open modal order in the list even if it no longer matches the filter
     if (openModalOrderId && !base.find((o) => o.id === openModalOrderId)) {
       const pinned = orders.find((o) => o.id === openModalOrderId);
       if (pinned) return [pinned, ...base];
     }
     return base;
-  }, [shippingFilteredOrders, statusFilter, searchQuery, openModalOrderId, orders]);
+  }, [orders, shippingFilter, statusFilter, openModalOrderId]);
+
+  const filterItems = React.useMemo(() => buildFilterItems(summary, t), [summary, t]);
+
+  const pageStart = total === 0 ? 0 : (page - 1) * 50 + 1;
+  const pageEnd   = Math.min(page * 50, total);
 
   return (
     <div className="flex flex-col lg:flex-row gap-5">
@@ -106,8 +110,8 @@ export function OrdersPanel({
             <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">{t("admin.orders.shipping_type")}</span>
             <div className="flex bg-slate-100 p-1 rounded-xl">
               {([
-                { key: "all",      label: t("admin.orders.shipping_all"), active: "bg-slate-800 text-white shadow-sm", dot: "bg-slate-400" },
-                { key: "delivery", label: t("admin.orders.shipping_delivery"),   active: "bg-blue-500 text-white shadow-sm",  dot: "bg-blue-400" },
+                { key: "all",      label: t("admin.orders.shipping_all"),      active: "bg-slate-800 text-white shadow-sm", dot: "bg-slate-400" },
+                { key: "delivery", label: t("admin.orders.shipping_delivery"), active: "bg-blue-500 text-white shadow-sm",  dot: "bg-blue-400" },
                 { key: "pickup",   label: t("admin.orders.shipping_pickup"),   active: "bg-amber-500 text-white shadow-sm", dot: "bg-amber-400" },
               ] as const).map((opt) => {
                 const isActive = shippingFilter === opt.key;
@@ -126,17 +130,17 @@ export function OrdersPanel({
           </CardContent>
         </Card>
 
-        {/* Status filter — desktop only vertical list */}
+        {/* Status filter — desktop only */}
         <Card className="hidden lg:block rounded-2xl shadow-xs">
           <CardContent className="p-4 flex flex-col gap-2">
             <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">{t("admin.orders.status_label")}</span>
             <div className="flex flex-col gap-1.5">
-              {buildFilterItems(shippingFilteredOrders, t).map(({ key, label, count }) => {
+              {filterItems.map(({ key, label, count }) => {
                 const isActive = statusFilter === key;
                 return (
                   <button
                     key={key}
-                    onClick={() => setStatusFilter(key as typeof statusFilter)}
+                    onClick={() => onStatusFilterChange(key)}
                     className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       isActive ? "bg-brand text-white" : "bg-slate-50 text-gray-600 hover:bg-slate-100"
                     }`}
@@ -151,18 +155,27 @@ export function OrdersPanel({
         </Card>
       </div>
 
-      {/* RIGHT PANEL — Search + Order list */}
+      {/* RIGHT PANEL */}
       <div className="flex-1 min-w-0 flex flex-col gap-3">
-        <h2 className="font-bold text-gray-900 text-sm">{t("admin.orders.all")}</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-bold text-gray-900 text-sm">{t("admin.orders.all")}</h2>
+          <button
+            onClick={() => onSortOrderChange(sortOrder === "desc" ? "asc" : "desc")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-600 transition-colors cursor-pointer"
+          >
+            <ArrowDownUp className="w-3.5 h-3.5" />
+            {sortOrder === "desc" ? "ใหม่สุด" : "เก่าสุด"}
+          </button>
+        </div>
 
         {/* Status pills — mobile only */}
         <div className="lg:hidden flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {buildFilterItems(shippingFilteredOrders, t).map(({ key, label, count }) => {
+          {filterItems.map(({ key, label, count }) => {
             const isActive = statusFilter === key;
             return (
               <button
                 key={key}
-                onClick={() => setStatusFilter(key as typeof statusFilter)}
+                onClick={() => onStatusFilterChange(key)}
                 className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-bold transition-all cursor-pointer border-2 ${
                   isActive
                     ? "bg-brand text-white border-brand shadow-md shadow-brand/20"
@@ -180,19 +193,19 @@ export function OrdersPanel({
         <div className="bg-white border border-gray-200/60 rounded-2xl px-4 py-3 shadow-2xs flex items-center gap-3 focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/5 transition-all">
           <Search className="w-4 h-4 text-gray-400 shrink-0" />
           <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
             placeholder={t("admin.orders.search_placeholder")}
             className="flex-1 bg-transparent border-none text-xs text-gray-800 placeholder:text-gray-400 shadow-none focus-visible:ring-0 p-0 h-auto"
           />
-          {searchQuery && (
-            <Button variant="ghost" size="icon" onClick={() => setSearchQuery("")} className="text-gray-400 hover:text-gray-600 cursor-pointer h-auto w-auto p-0">
+          {search && (
+            <Button variant="ghost" size="icon" onClick={() => onSearchChange("")} className="text-gray-400 hover:text-gray-600 cursor-pointer h-auto w-auto p-0">
               <XCircle className="w-3.5 h-3.5" />
             </Button>
           )}
         </div>
 
-        {/* Order list — modal mode */}
+        {/* Order list */}
         <div className="flex flex-col gap-3">
           {filteredOrders.map((order) => (
             <OrderRow
@@ -216,6 +229,55 @@ export function OrdersPanel({
             </div>
           )}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-2">
+            <span className="text-xs text-gray-400 font-semibold">
+              {pageStart}–{pageEnd} จาก {total.toLocaleString()} คำสั่งซื้อ
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => onPageChange(page - 1)}
+                disabled={page <= 1}
+                className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4 text-slate-600" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+                .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+                  if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("…");
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((item, idx) =>
+                  item === "…" ? (
+                    <span key={`ellipsis-${idx}`} className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">…</span>
+                  ) : (
+                    <button
+                      key={item}
+                      onClick={() => onPageChange(item as number)}
+                      className={`w-8 h-8 flex items-center justify-center rounded-xl text-xs font-black transition-colors cursor-pointer ${
+                        item === page
+                          ? "bg-brand text-white shadow-sm"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  )
+                )}
+              <button
+                onClick={() => onPageChange(page + 1)}
+                disabled={page >= totalPages}
+                className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              >
+                <ChevronRight className="w-4 h-4 text-slate-600" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

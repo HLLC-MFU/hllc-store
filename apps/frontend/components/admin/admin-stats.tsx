@@ -12,28 +12,25 @@ import {
   XCircle,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import type { Order } from "@/components/admin/types";
-import { money, isPickupOrder } from "@/components/admin/api-client";
+import { money } from "@/components/admin/api-client";
+import type { OrdersSummary } from "@/lib/modules/orders";
 
 type AdminStatsProps = {
-  orders: Order[];
-  pendingSlips: Order[];
+  summary: OrdersSummary | null;
   setActiveTab: (tab: string) => void;
   onNavigateOrders: (filter: string) => void;
   t: (key: string, replacements?: Record<string, string | number>) => string;
 };
 
-export function AdminStats({ orders, pendingSlips, onNavigateOrders, t }: AdminStatsProps) {
-  const statsRevenue = orders.reduce((sum, o) =>
-    ["packing", "shipped", "completed"].includes(o.status) ? sum + o.total : sum, 0
-  );
-  const statsTotal = orders.length;
-  const statsPending = pendingSlips.length;
-  const statsPacking = orders.filter(o => o.status === "packing").length;
-  const statsShipped = orders.filter(o => o.status === "shipped" && !isPickupOrder(o)).length;
-  const statsPickupReady = orders.filter(o => o.status === "shipped" && isPickupOrder(o)).length;
-  const statsCompleted = orders.filter(o => o.status === "completed").length;
-  const statsCancelled = orders.filter(o => o.status === "cancelled").length;
+export function AdminStats({ summary, onNavigateOrders, t }: AdminStatsProps) {
+  const statsRevenue = summary?.totalRevenue ?? 0;
+  const statsTotal = summary?.totalOrders ?? 0;
+  const statsPending = summary?.pendingReview ?? 0;
+  const statsPacking = summary?.byStatus["packing"] ?? 0;
+  const statsShipped = summary?.shippedDelivery ?? 0;
+  const statsPickupReady = summary?.shippedPickup ?? 0;
+  const statsCompleted = summary?.byStatus["completed"] ?? 0;
+  const statsCancelled = summary?.byStatus["cancelled"] ?? 0;
 
   const statCards = [
     {
