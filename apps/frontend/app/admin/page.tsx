@@ -484,7 +484,7 @@ export default function AdminPage() {
                 onCancelOrder={cancelOrder}
                 t={t}
                 onViewSlip={(images, index) => setLightbox({ images, index })}
-                initialStatusFilter={ordersFilter as OrderStatus | "all" | "shipped_pickup"}
+                initialStatusFilter={ordersFilter as OrderStatus | "all"}
               />
             </TabsContent>
 

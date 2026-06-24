@@ -33,6 +33,7 @@ export type ProductDetailProduct = {
   customNameMaxLength?: number;
   imageUrls?: string[];
   charmImages?: Record<string, string>;
+  comingSoon?: boolean;
 };
 
 const currencyFormatter = new Intl.NumberFormat("th-TH", {
@@ -84,9 +85,9 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   const displayImages = selectedOption?.imageUrl
     ? [selectedOption.imageUrl, ...images.filter((src) => src !== selectedOption.imageUrl)]
     : images;
-  const outOfStock = options.length > 0
+  const outOfStock = !product.comingSoon && (options.length > 0
     ? options.every((option) => (option.stock ?? product.stock) < 1)
-    : product.stock < 1;
+    : product.stock < 1);
   const selectedOptionOutOfStock = Boolean(selectedOption && selectedOptionStock < 1);
   const mustSelectOption = false;
 
@@ -311,7 +312,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                   <button
                     type="button"
                     onClick={() => scrollTo(currentIndex - 1, scrollContainerRef)}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm shadow-md flex items-center justify-center text-gray-700 hover:bg-white active:scale-90 transition-all"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center text-gray-600 hover:bg-gray-50 active:scale-90 transition-all"
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
@@ -321,19 +322,19 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                   <button
                     type="button"
                     onClick={() => scrollTo(currentIndex + 1, scrollContainerRef)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm shadow-md flex items-center justify-center text-gray-700 hover:bg-white active:scale-90 transition-all"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center text-gray-600 hover:bg-gray-50 active:scale-90 transition-all"
                   >
                     <ChevronRight className="w-5 h-5" />
                   </button>
                 )}
                 {/* Dots */}
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-black/30 backdrop-blur-sm rounded-full px-2 py-1">
                   {displayImages.map((_, i) => (
                     <button
                       key={i}
                       type="button"
                       onClick={() => scrollTo(i, scrollContainerRef)}
-                      className={`rounded-full transition-all ${i === currentIndex ? "w-4 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50"}`}
+                      className={`rounded-full transition-all ${i === currentIndex ? "w-4 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/60"}`}
                     />
                   ))}
                 </div>
@@ -506,8 +507,8 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
               </span>
               <button
                 type="button"
-                onClick={() => setQuantity((q) => Math.min(selectedOptionStock, q + 1))}
-                disabled={mustSelectOption || selectedOptionOutOfStock || quantity >= selectedOptionStock}
+                onClick={() => setQuantity((q) => Math.min(Math.max(0, selectedOptionStock - cartQty), q + 1))}
+                disabled={mustSelectOption || selectedOptionOutOfStock || quantity >= Math.max(0, selectedOptionStock - cartQty)}
                 className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-white hover:bg-[#6b1c18] transition-colors text-lg leading-none disabled:bg-gray-200 disabled:text-gray-400"
               >
                 +
@@ -520,42 +521,75 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         {product.allowCustomName && charmOpen && (
               <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
                 <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={cancelCharmModal} />
-                <div className="relative w-full max-w-md bg-white rounded-4xl shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden max-h-[85vh] overflow-y-auto">
+                <div className="relative w-full max-w-md bg-white rounded-4xl shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden max-h-[90vh] flex flex-col">
 
-                  {/* Header */}
-                  <div className="flex items-center justify-between px-5 pt-5 pb-4">
-                    {/* Step indicator */}
-                    <div className="flex items-center gap-2">
-                      <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black transition-colors ${charmStep === "color" ? "bg-brand text-white" : "bg-emerald-500 text-white"}`}>
-                        {charmStep === "color" ? "1" : "✓"}
+                  {/* Charm image + info header */}
+                  {charmStep === "color" && (() => {
+                    const previewOption = charmOptions.find(o => o.label === tempColor) ?? charmOptions[0];
+                    const previewImg = previewOption?.imageUrl;
+                    return (
+                      <div className="relative border-b border-gray-100">
+                        <div className="flex gap-4 px-4 py-4">
+                          {/* Charm preview image — left */}
+                          <div className="relative w-28 h-28 shrink-0 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100">
+                            {previewImg && (
+                              <Image
+                                src={previewImg}
+                                alt={previewOption ? (lang === "en" && previewOption.labelEn ? previewOption.labelEn : previewOption.label) : ""}
+                                fill
+                                className="object-contain"
+                                sizes="112px"
+                              />
+                            )}
+                          </div>
+                          {/* Price + free letters info — right */}
+                          <div className="flex flex-col justify-center gap-2 flex-1 min-w-0 pr-8">
+                            <span className="text-2xl font-black text-brand">+{CHARM_PRICE}฿</span>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
+                                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-white text-[8px] font-black">✓</span>
+                                {lang === "th" ? `ตัวอักษรฟรี ${FREE_LETTERS} ตัว` : `${FREE_LETTERS} free letters`}
+                              </div>
+                              <div className="text-[11px] text-gray-400 font-medium">
+                                {lang === "th" ? `ตัวอักษรเพิ่มเติม +${LETTER_PRICE}฿ ตัว` : `+${LETTER_PRICE}฿ per extra letter`}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={cancelCharmModal}
+                          className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
                       </div>
-                      <span className={`text-[11px] font-black ${charmStep === "color" ? "text-gray-900" : "text-emerald-600"}`}>
-                        {t("charm.color_step")}
-                      </span>
-                      <div className={`h-px w-6 ${charmStep === "color" ? "bg-gray-200" : "bg-emerald-300"}`} />
-                      <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black transition-colors ${charmStep === "letters" ? "bg-brand text-white" : "bg-gray-100 text-gray-400"}`}>
-                        2
+                    );
+                  })()}
+
+                  {/* Step indicator (letters step only) */}
+                  {charmStep === "letters" && (
+                    <div className="flex items-center justify-between px-5 pt-5 pb-4 shrink-0">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black bg-emerald-500 text-white">✓</div>
+                        <span className="text-[11px] font-black text-emerald-600">{t("charm.color_step")}</span>
+                        <div className="h-px w-6 bg-emerald-300" />
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black bg-brand text-white">2</div>
+                        <span className="text-[11px] font-black text-gray-900">{t("charm.letters_step")}</span>
                       </div>
-                      <span className={`text-[11px] font-black ${charmStep === "letters" ? "text-gray-900" : "text-gray-400"}`}>
-                        {t("charm.letters_step")}
-                      </span>
+                      <button type="button" onClick={cancelCharmModal} className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
+                        <X className="h-4 w-4" />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={cancelCharmModal}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
+                  )}
 
                   {/* Step 1: Color */}
                   {charmStep === "color" && (
-                    <div className="px-5 pb-5">
-                      <p className="mb-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                        {t("charm.choose_color_heading", { price: CHARM_PRICE })}
+                    <div className="px-5 py-4 overflow-y-auto">
+                      <p className="mb-3 text-sm font-black text-gray-900">
+                        {lang === "th" ? "สีสายห้อย" : "Charm Color"} <span className="text-xs font-semibold text-gray-400 ml-1">(+{CHARM_PRICE}฿)</span>
                       </p>
-                      <div className="grid grid-cols-4 gap-3">
+                      <div className="flex flex-wrap gap-2">
                         {charmOptions.map((option) => {
                           const selected = tempColor === option.label;
                           const displayName = lang === "en" && option.labelEn ? option.labelEn : option.label;
@@ -564,24 +598,24 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                               key={option.label}
                               type="button"
                               onClick={() => setTempColor(option.label)}
-                              className="flex flex-col items-center gap-0.5 p-1 transition-all cursor-pointer"
+                              className={`flex items-center gap-1.5 h-9 rounded-2xl border-2 pl-1.5 pr-3 text-sm font-black transition-all ${
+                                selected
+                                  ? "border-brand bg-brand/5 text-brand"
+                                  : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                              }`}
                             >
-                              <span className={`text-[9px] font-black leading-tight text-center ${selected ? "text-brand" : "text-gray-400"}`}>
-                                {displayName}
-                              </span>
                               {option.imageUrl ? (
                                 <Image
                                   src={option.imageUrl}
                                   alt={displayName}
-                                  width={64}
-                                  height={64}
-                                  className={`h-16 w-16 rounded-2xl object-cover border-2 transition-all ${selected ? "border-brand scale-105" : "border-transparent"}`}
+                                  width={24}
+                                  height={24}
+                                  className="h-6 w-6 rounded-full object-cover shrink-0"
                                 />
                               ) : (
-                                <div
-                                  className={`h-14 w-14 rounded-2xl border-2 transition-all bg-gray-200 ${selected ? "border-brand scale-105" : "border-transparent"}`}
-                                />
+                                <span className="h-6 w-6 rounded-full bg-gray-100 shrink-0" />
                               )}
+                              {displayName}
                             </button>
                           );
                         })}
@@ -618,7 +652,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                       </div>
 
                       {/* Selected letters display */}
-                      <div className="mb-3 flex min-h-[2.5rem] items-center gap-1.5">
+                      <div className="mb-3 flex min-h-10 items-center gap-1.5">
                         <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
                           {tempLetters.length > 0 ? (
                             tempLetters.map((letter, idx) => (
@@ -703,7 +737,11 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
             )}
         {/* Action bar — desktop only (mobile uses fixed bar below) */}
         <div className="mt-2 hidden lg:block">
-          {outOfStock ? (
+          {product.comingSoon ? (
+            <div className="w-full py-3.5 rounded-2xl bg-gray-100 text-center text-sm font-bold text-gray-400">
+              {lang === "th" ? "เร็วๆ นี้" : "Coming Soon"}
+            </div>
+          ) : outOfStock ? (
             <div className="w-full py-3.5 rounded-2xl bg-gray-100 text-center text-sm font-bold text-gray-400">
               {t("product.out_of_stock")}
             </div>
@@ -738,7 +776,11 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
 
       {/* Fixed bottom bar — mobile only */}
       <div className="lg:hidden fixed inset-x-0 bottom-0 z-20 bg-white border-t border-gray-100 px-4 py-3">
-        {outOfStock ? (
+        {product.comingSoon ? (
+          <div className="w-full py-3.5 rounded-2xl bg-gray-100 text-center text-sm font-bold text-gray-400">
+            {lang === "th" ? "เร็วๆ นี้" : "Coming Soon"}
+          </div>
+        ) : outOfStock ? (
           <div className="w-full py-3.5 rounded-2xl bg-gray-100 text-center text-sm font-bold text-gray-400">
             {t("product.out_of_stock")}
           </div>

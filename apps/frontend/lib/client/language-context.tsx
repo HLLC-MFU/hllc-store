@@ -137,7 +137,7 @@ const DICTIONARY: TranslationDict = {
   "admin.status.packing": { th: "กำลังแพ็ค", en: "Packing" },
   "admin.status.shipped": { th: "จัดส่งแล้ว", en: "Shipped" },
   "admin.status.shipped_pickup": { th: "พร้อมรับสินค้า", en: "Ready for Pickup" },
-  "admin.status.completed": { th: "ถึงมือแล้ว", en: "Delivered" },
+  "admin.status.completed": { th: "รับสินค้าแล้ว", en: "Picked Up" },
   "admin.status.completed_pickup": { th: "รับสินค้าแล้ว", en: "Picked Up" },
   "admin.status.cancelled": { th: "ยกเลิกแล้ว", en: "Cancelled" },
 
@@ -150,7 +150,7 @@ const DICTIONARY: TranslationDict = {
   "admin.order.change_status": { th: "เปลี่ยนสถานะ", en: "Change Status" },
   "admin.order.next_stage": { th: "ขั้นถัดไป", en: "Next Step" },
   "admin.order.prev_stage": { th: "ย้อนกลับ", en: "Go Back" },
-  "admin.order.is_completed": { th: "ส่งถึงมือเรียบร้อยแล้ว!", en: "Order delivered!" },
+  "admin.order.is_completed": { th: "ลูกค้ารับสินค้าแล้ว! ✓", en: "Customer picked up! ✓" },
   "admin.order.item": { th: "รายการสินค้า", en: "Items" },
 
   // Admin Modals

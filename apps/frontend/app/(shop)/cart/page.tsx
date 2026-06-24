@@ -343,7 +343,7 @@ export default function CartPage() {
                   <SwipeableCartItem
                     key={itemKey(item)} item={item} lang={lang}
                     selected={selectedIds.has(itemKey(item))} onSelect={toggleSelect}
-                    onDecrease={decreaseQty} onIncrease={(i) => updateQty(i.productId, i.quantity + 1, i.selectedOption, i.customName)}
+                    onDecrease={decreaseQty} onIncrease={(i) => { const total = items.filter((c) => c.productId === i.productId).reduce((s, c) => s + c.quantity, 0); if (i.stock === undefined || total < i.stock) updateQty(i.productId, i.quantity + 1, i.selectedOption, i.customName); }}
                     onRemove={(i) => removeItem(i.productId, i.selectedOption, i.customName)}
                     onCharmEdit={handleCharmEdit(item)}
                     charmImages={charmImages}

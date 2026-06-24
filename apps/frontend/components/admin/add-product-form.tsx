@@ -141,7 +141,7 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
   const step1Valid = imagePreviews.length > 0 && nameValue.trim().length > 0 && !!placement;
   const step2Valid = priceValue.trim() !== "" && stockValue.trim() !== "";
 
-  const MAX_IMAGES = 5;
+  const MAX_IMAGES = 6;
   const [uploading, setUploading] = React.useState(false);
 
   function formText(fd: FormData, name: string) {
@@ -543,8 +543,9 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                     {descItemsTh.map((item, i) => (
                       <div key={i} className="flex items-start gap-2 group">
                         <span className="text-brand shrink-0 text-sm mt-2 leading-none">•</span>
-                        <input
+                        <textarea
                           value={item}
+                          rows={1}
                           autoFocus={i === descItemsTh.length - 1 && item === ""}
                           onChange={(e) => {
                             const next = [...descItemsTh]; next[i] = e.target.value;
@@ -556,7 +557,8 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                             if (e.key === "Backspace" && item === "" && descItemsTh.length > 1) { e.preventDefault(); setDescItemsTh(descItemsTh.filter((_, j) => j !== i)); }
                           }}
                           placeholder="พิมพ์รายละเอียด..."
-                          className="flex-1 text-sm py-1.5 bg-transparent outline-none placeholder:text-gray-300 border-b border-transparent focus:border-gray-200 transition-colors"
+                          className="flex-1 text-sm py-1.5 bg-transparent outline-none placeholder:text-gray-300 border-b border-transparent focus:border-gray-200 transition-colors resize-none leading-relaxed"
+                          style={{ fieldSizing: "content" } as React.CSSProperties}
                         />
                         {descItemsTh.length > 1 && (
                           <button type="button" onClick={() => setDescItemsTh(descItemsTh.filter((_, j) => j !== i))}
@@ -583,8 +585,9 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                     {descItemsEn.map((item, i) => (
                       <div key={i} className="flex items-start gap-2 group">
                         <span className="text-brand shrink-0 text-sm mt-2 leading-none">•</span>
-                        <input
+                        <textarea
                           value={item}
+                          rows={1}
                           autoFocus={i === descItemsEn.length - 1 && item === ""}
                           onChange={(e) => {
                             const next = [...descItemsEn]; next[i] = e.target.value;
@@ -596,7 +599,8 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
                             if (e.key === "Backspace" && item === "" && descItemsEn.length > 1) { e.preventDefault(); setDescItemsEn(descItemsEn.filter((_, j) => j !== i)); }
                           }}
                           placeholder="Type description..."
-                          className="flex-1 text-sm py-1.5 bg-transparent outline-none placeholder:text-gray-300 border-b border-transparent focus:border-gray-200 transition-colors"
+                          className="flex-1 text-sm py-1.5 bg-transparent outline-none placeholder:text-gray-300 border-b border-transparent focus:border-gray-200 transition-colors resize-none leading-relaxed"
+                          style={{ fieldSizing: "content" } as React.CSSProperties}
                         />
                         {descItemsEn.length > 1 && (
                           <button type="button" onClick={() => setDescItemsEn(descItemsEn.filter((_, j) => j !== i))}

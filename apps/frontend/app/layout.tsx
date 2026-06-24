@@ -18,7 +18,7 @@ const nunito = Nunito({
 
 export const metadata: Metadata = {
   title: "HLLC Store",
-  description: "ECOM store and admin backend",
+  description: "Official HLLC online store. Discover limited edition tumblers, charm sets, and exclusive collectibles.",
   icons: {
     icon: "/store/images/HLLCLOGO.png",
     apple: "/store/images/HLLCLOGO.png",
