@@ -118,7 +118,7 @@ export function AdminLogin({ onLogin, loading = false }: AdminLoginProps) {
           </form>
 
           <a
-            href={appdPath("/admin/register")}
+            href={appPath("/admin/register")}
             className="flex items-center justify-center h-12 w-full rounded-2xl border-2 border-brand text-brand text-sm font-black hover:bg-brand/5 transition-colors"
           >
             {lang === "th" ? "ตั้งรหัสผ่านสำหรับบัญชีใหม่" : "Set password for new account"}
