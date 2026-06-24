@@ -423,9 +423,9 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
 
       {/* Charm edit modal — matches product-detail-view design */}
       {charmOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+        <div className="fixed inset-0 z-60 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setCharmOpen(false)} />
-          <div className="relative w-full max-w-md bg-white rounded-4xl shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden max-h-[85vh] overflow-y-auto">
+          <div className="relative w-full max-w-md bg-white rounded-4xl shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden max-h-[95vh] flex flex-col">
 
             {/* Step 1: Color — image+price header + pill grid */}
             {charmStep === "color" && (() => {
@@ -495,9 +495,24 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
               );
             })()}
 
-            {/* Step 2: Letters */}
+            {/* Step 2: Letters — stepper header */}
             {charmStep === "letters" && (
-              <div className="px-5 pb-5">
+              <div className="flex items-center justify-between px-5 pt-5 pb-4 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black bg-emerald-500 text-white">✓</div>
+                  <span className="text-[11px] font-black text-emerald-600">{t("charm.color_step")}</span>
+                  <div className="h-px w-6 bg-emerald-300" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black bg-brand text-white">2</div>
+                  <span className="text-[11px] font-black text-gray-900">{t("charm.letters_step")}</span>
+                </div>
+                <button type="button" onClick={() => setCharmOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            {charmStep === "letters" && (
+              <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-5">
                 {/* Free letters info */}
                 <div className="mb-3 flex items-center gap-2">
                   <div className="flex items-center gap-1">
