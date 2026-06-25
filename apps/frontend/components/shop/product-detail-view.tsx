@@ -846,7 +846,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
               ))}
             </div>
           )}
-          <p className="text-base font-black text-gray-900 text-center">เพิ่มพวงกุญแจไหม?</p>
+          <p className="text-base font-black text-gray-900 text-center">{t("charm.add_prompt_title")}</p>
           <p className="mt-1 text-xs text-gray-400 text-center font-medium">
             {t("charm.add_prompt_sub")}
           </p>
