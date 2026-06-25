@@ -15,6 +15,7 @@ type Props = {
 
 const EMPTY: PaymentSettings = {
   bankName: "",
+  bankNameEn: "",
   bankAccountName: "",
   bankAccountNumber: "",
 };
@@ -45,8 +46,12 @@ export function PaymentAccountPanel({ settings, loading, onSave }: Props) {
               <Landmark className="h-4 w-4" /> โอนผ่านบัญชีธนาคาร
             </p>
             <div>
-              <label className={labelCls}>ธนาคาร</label>
+              <label className={labelCls}>ธนาคาร (ไทย)</label>
               <Input value={form.bankName} onChange={set("bankName")} placeholder="เช่น ธนาคารกรุงเทพ" className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>ธนาคาร (EN)</label>
+              <Input value={form.bankNameEn ?? ""} onChange={set("bankNameEn")} placeholder="e.g. Bangkok Bank" className={inputCls} />
             </div>
             <div>
               <label className={labelCls}>ชื่อบัญชี</label>

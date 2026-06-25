@@ -33,7 +33,7 @@ type Order = {
   customer?: { name: string; phone: string; email: string; address: string };
 };
 
-const MAX_SLIP_BYTES = 2 * 1024 * 1024;
+const MAX_SLIP_BYTES = 10 * 1024 * 1024;
 
 function saveOrderLookup(orderId: string, phone: string) {
   try {
@@ -322,6 +322,7 @@ export default function CartPage() {
         },
         items: selectedItems.map((item) => ({ productId: item.productId, quantity: item.quantity, selectedOption: item.selectedOption || undefined, customName: item.customName || undefined })),
         deliveryMode,
+        lang,
       });
 
       try {

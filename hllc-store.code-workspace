@@ -46,7 +46,9 @@
     "tailwindCSS.experimental.classRegex": [
       ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
       ["cx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
-    ]
+    ],
+    "liveServer.settings.multiRootWorkspaceName": "🏠 root",
+    "liveServer.settings.port": 5501
   },
   "extensions": {
     "recommendations": [

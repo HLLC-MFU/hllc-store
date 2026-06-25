@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { apiValidated } from "@/components/admin/api-client";
+import { apiValidated, csrfHeaders } from "@/components/admin/api-client";
 import { appPath } from "@/lib/client/app-path";
 import { normalizeUploads } from "@/lib/client/normalize-uploads";
 import { validateResponse } from "@hllc/shared/validation/response-schemas";
@@ -114,4 +114,32 @@ export function updateAdminOrder(orderId: string, input: UpdateAdminOrderInput) 
     method: "PATCH",
     body: JSON.stringify(input),
   });
+}
+
+export async function exportAdminOrdersCSV(params?: {
+  status?: string;
+  search?: string;
+  sort?: "asc" | "desc";
+  deliveryMode?: "all" | "delivery" | "pickup";
+}): Promise<void> {
+  const qs = new URLSearchParams();
+  if (params?.status && params.status !== "all") qs.set("status", params.status);
+  if (params?.search) qs.set("search", params.search);
+  if (params?.sort && params.sort !== "desc") qs.set("sort", params.sort);
+  if (params?.deliveryMode && params.deliveryMode !== "all") qs.set("deliveryMode", params.deliveryMode);
+  const query = qs.toString() ? `?${qs}` : "";
+
+  const response = await fetch(appPath(`/api/backend/admin/orders/export${query}`), {
+    headers: csrfHeaders(),
+  });
+  if (!response.ok) throw new Error("Export failed");
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const date = new Date().toISOString().slice(0, 10);
+  a.download = `orders-${date}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }

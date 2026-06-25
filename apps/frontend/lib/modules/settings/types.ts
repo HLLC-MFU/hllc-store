@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const paymentSettingsResponseSchema = z.object({
   bankName: z.string(),
+  bankNameEn: z.string().optional().default(""),
   bankAccountName: z.string(),
   bankAccountNumber: z.string(),
 });

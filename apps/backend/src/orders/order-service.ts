@@ -100,6 +100,7 @@ function toOrder(doc: Document): Order {
     trackingNumber: doc.trackingNumber,
     cancellationReason: doc.cancellationReason,
     adminNotes: doc.adminNotes ?? [],
+    lang: doc.lang === "en" ? "en" : "th",
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
@@ -192,6 +193,7 @@ export async function createOrder(input: CreateOrderInput) {
   );
   const total = subtotal + shippingFee;
 
+  const lang = parsed.lang === "en" ? "en" : "th";
   const timestamp = now();
   const order = {
     customer,
@@ -205,6 +207,7 @@ export async function createOrder(input: CreateOrderInput) {
     shippingFee,
     deliveryMode,
     total,
+    lang,
     status: "pending_payment" satisfies OrderStatus,
     slip: {
       imageUrl: "",
@@ -226,12 +229,13 @@ export async function createOrder(input: CreateOrderInput) {
       orderConfirmedEmail(customer.name, customer.email, {
         items: storedItems.map((si) => {
           const product = products.find((p) => p._id.equals(si.productId));
-          const name = typeof product?.name === "object" ? ((product.name as { th?: string }).th ?? "") : String(product?.name ?? "");
-          return { name, qty: si.quantity, option: si.selectedOption || undefined, customName: si.customName || undefined };
+          const productName = typeof product?.name === "object" ? product.name as { th?: string; en?: string } : { th: String(product?.name ?? "") };
+          return { name: productName.th ?? "", nameEn: productName.en, qty: si.quantity, option: si.selectedOption || undefined, customName: si.customName || undefined };
         }),
         deliveryMode,
         customerPhone: customer.phone,
         pickupLocation: pickupLocation || undefined,
+        lang,
       }),
     );
   }
@@ -412,7 +416,7 @@ export async function attachPaymentSlip(orderId: string, input: PaymentSlipInput
 
   const updated = toOrder(result);
   if (updated.customer.email) {
-    notifyEmail(slipReceivedEmail(updated.customer.name, updated.customer.email, updated.customer.phone));
+    notifyEmail(slipReceivedEmail(updated.customer.name, updated.customer.email, updated.customer.phone, updated.lang));
   }
 
   return updated;
@@ -477,11 +481,11 @@ export async function reviewPaymentSlip(orderId: string, input: ReviewSlipInput)
   publishOrdersUpdated();
 
   if (input.approved && order.customer.email) {
-    notifyEmail(slipApprovedEmail(order.customer.name, order.customer.email, order.customer.phone));
+    notifyEmail(slipApprovedEmail(order.customer.name, order.customer.email, order.customer.phone, order.lang));
   }
 
   if (!input.approved && order.customer.email) {
-    notifyEmail(slipRejectedEmail(order.customer.name, input.note, order.customer.email, order.customer.phone));
+    notifyEmail(slipRejectedEmail(order.customer.name, input.note, order.customer.email, order.customer.phone, order.lang));
   }
 
   return toOrder(result);
@@ -526,12 +530,12 @@ export async function transitionOrderStatus(orderId: string, status: OrderStatus
   if (status === "shipped" && updated.deliveryMode === "pickup") {
     const { pickupLocation, pickupHours } = await getShippingSettings();
     notifyEmail(
-      pickupReadyEmail(updated.customer.name, updated.customer.email, updated.customer.phone, pickupLocation || undefined, pickupHours || undefined),
+      pickupReadyEmail(updated.customer.name, updated.customer.email, updated.customer.phone, pickupLocation || undefined, pickupHours || undefined, updated.lang),
     );
   }
 
   if (status === "completed" && updated.customer.email) {
-    notifyEmail(orderCompletedEmail(updated.customer.name, updated.customer.email, updated.customer.phone));
+    notifyEmail(orderCompletedEmail(updated.customer.name, updated.customer.email, updated.customer.phone, updated.lang));
   }
 
   publishOrdersUpdated();
@@ -563,6 +567,7 @@ export async function setOrderTrackingNumber(orderId: string, trackingNumber: st
       updated.trackingNumber ?? trackingNumber,
       updated.customer.email,
       updated.customer.phone,
+      updated.lang,
     ),
   );
 
@@ -632,6 +637,7 @@ export async function cancelOrder(orderId: string, reason: string, cancelledBy: 
       cancelled.cancellationReason ?? reason,
       cancelled.customer.email,
       cancelled.customer.phone,
+      cancelled.lang,
     ),
   );
 
@@ -648,13 +654,13 @@ export async function resendOrderEmail(orderId: string) {
   const isPickup = order.deliveryMode === "pickup";
 
   if (order.slip.status === "approved" && order.status === "packing") {
-    await sendEmail(slipApprovedEmail(order.customer.name, order.customer.email, order.customer.phone));
+    await sendEmail(slipApprovedEmail(order.customer.name, order.customer.email, order.customer.phone, order.lang));
   } else if (order.status === "shipped" && isPickup) {
-    await sendEmail(pickupReadyEmail(order.customer.name, order.customer.email, order.customer.phone, pickupLocation || undefined, pickupHours || undefined));
+    await sendEmail(pickupReadyEmail(order.customer.name, order.customer.email, order.customer.phone, pickupLocation || undefined, pickupHours || undefined, order.lang));
   } else if (order.status === "shipped" && order.trackingNumber) {
-    await sendEmail(trackingNumberEmail(order.customer.name, order.trackingNumber, order.customer.email, order.customer.phone));
+    await sendEmail(trackingNumberEmail(order.customer.name, order.trackingNumber, order.customer.email, order.customer.phone, order.lang));
   } else if (order.status === "cancelled") {
-    await sendEmail(orderCancelledEmail(order.customer.name, order.cancellationReason ?? "", order.customer.email, order.customer.phone));
+    await sendEmail(orderCancelledEmail(order.customer.name, order.cancellationReason ?? "", order.customer.email, order.customer.phone, order.lang));
   } else {
     throw new Error("ไม่มี email ที่เหมาะสมสำหรับสถานะนี้");
   }
@@ -686,6 +692,46 @@ export async function addAdminNote(
   }
 
   return toOrder(result);
+}
+
+export async function listAllOrdersForExport(filters?: {
+  status?: OrderStatus;
+  search?: string;
+  sortOrder?: "asc" | "desc";
+  deliveryMode?: "delivery" | "pickup";
+}): Promise<Order[]> {
+  const orders = await getOrdersCollection();
+  const query: Document = {};
+
+  if (filters?.status) {
+    query.status = filters.status;
+  }
+  if (filters?.deliveryMode) {
+    query.deliveryMode = filters.deliveryMode;
+  }
+  if (filters?.search?.trim()) {
+    const s = filters.search.trim();
+    const orClauses: Document[] = [
+      { "customer.name": { $regex: s, $options: "i" } },
+      { "customer.phone": { $regex: s } },
+      { "customer.email": { $regex: s, $options: "i" } },
+      { "customer.address": { $regex: s, $options: "i" } },
+      { trackingNumber: { $regex: s, $options: "i" } },
+    ];
+    try { orClauses.push({ _id: assertObjectId(s) }); } catch { /* not a valid ObjectId */ }
+    query.$or = orClauses;
+  }
+
+  const sortDir = filters?.sortOrder === "asc" ? 1 : -1;
+  const results = await orders
+    .aggregate([
+      { $match: query },
+      { $sort: { createdAt: sortDir } },
+      ...ORDERS_LOOKUP_PIPELINE,
+    ])
+    .toArray();
+
+  return results.map(toOrder);
 }
 
 export function isOrderStatus(value: string): value is OrderStatus {

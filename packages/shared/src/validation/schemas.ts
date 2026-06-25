@@ -82,6 +82,7 @@ export const createOrderSchema = z.object({
   }),
   items: z.array(cartItemInputSchema).min(1, "At least one item is required"),
   deliveryMode: z.enum(["delivery", "pickup"]).optional(),
+  lang: z.enum(["th", "en"]).optional(),
 });
 
 /* ================================================================
@@ -210,6 +211,7 @@ export const imageUrlSchema = z
 
 export const paymentSettingsSchema = z.object({
   bankName: z.string().trim().min(1, "กรุณากรอกชื่อธนาคาร").max(60),
+  bankNameEn: z.string().trim().max(60).optional().default(""),
   bankAccountName: z.string().trim().min(1, "กรุณากรอกชื่อบัญชี").max(80),
   bankAccountNumber: z.string().trim().regex(/^[0-9-]{6,20}$/, "เลขบัญชีไม่ถูกต้อง"),
 });

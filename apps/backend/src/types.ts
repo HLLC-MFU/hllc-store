@@ -101,6 +101,7 @@ export type Order = {
   trackingNumber?: string;
   cancellationReason?: string;
   adminNotes?: { text: string; by: string; at: string; action: string }[];
+  lang?: "th" | "en";
   createdAt: string;
   updatedAt: string;
 };

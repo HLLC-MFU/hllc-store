@@ -8,12 +8,14 @@ import type { LocalizedText } from "../types";
 
 export type PaymentSettings = {
   bankName: string;
+  bankNameEn: string;
   bankAccountName: string;
   bankAccountNumber: string;
 };
 
 const DEFAULTS: PaymentSettings = {
   bankName: "ธนาคารกรุงเทพ",
+  bankNameEn: "Bangkok Bank",
   bankAccountName: "นันทเดช วงศ์ไชยา",
   bankAccountNumber: "6621540027",
 };
@@ -24,6 +26,7 @@ export async function getPaymentSettings(): Promise<PaymentSettings> {
   if (!doc) return { ...DEFAULTS };
   return {
     bankName: typeof doc.bankName === "string" ? doc.bankName : DEFAULTS.bankName,
+    bankNameEn: typeof doc.bankNameEn === "string" ? doc.bankNameEn : DEFAULTS.bankNameEn,
     bankAccountName: typeof doc.bankAccountName === "string" ? doc.bankAccountName : DEFAULTS.bankAccountName,
     bankAccountNumber: typeof doc.bankAccountNumber === "string" ? doc.bankAccountNumber : DEFAULTS.bankAccountNumber,
   };

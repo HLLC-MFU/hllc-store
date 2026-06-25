@@ -564,6 +564,14 @@ export default function AdminPage() {
                 perPage={ORDERS_PER_PAGE}
                 t={t}
                 onViewSlip={(images, index) => setLightbox({ images, index })}
+                onExport={() => {
+                  ordersApi.exportAdminOrdersCSV({
+                    status: ordersStatusFilter,
+                    search: ordersSearch || undefined,
+                    sort: ordersSortOrder,
+                    deliveryMode: ordersShippingFilter,
+                  }).catch((err: unknown) => notify(err instanceof Error ? err.message : "Export failed"));
+                }}
               />
             </TabsContent>
 
