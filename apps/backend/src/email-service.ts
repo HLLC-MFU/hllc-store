@@ -225,8 +225,8 @@ function baseEmailHtml(opts: BaseEmailOptions) {
 export function slipApprovedEmail(customerName: string, to = "", customerPhone?: string): EmailPayload {
   return {
     to,
-    subject: "HLLC Store - สลิปผ่านการอนุมัติแล้ว",
-    text: `สวัสดีคุณ ${customerName}, สลิปการชำระเงินของคุณผ่านการอนุมัติแล้ว เรากำลังเตรียมจัดส่งสินค้าให้คุณ`,
+    subject: "HLLC Store - ยืนยันการชำระเงินเรียบร้อยแล้ว",
+    text: `สวัสดีคุณ ${customerName}, หลักฐานการชำระเงินของคุณผ่านการตรวจสอบแล้ว เรากำลังเตรียมจัดส่งสินค้าให้คุณ`,
     html: baseEmailHtml({
       badge: "ชำระเงินสำเร็จ",
       badgeBg: "#dcfce7",
@@ -234,7 +234,7 @@ export function slipApprovedEmail(customerName: string, to = "", customerPhone?:
       alert: "เราได้รับการชำระเงินของคุณเรียบร้อยแล้ว",
       icon: "check",
       headline: "ยืนยันการชำระเงินเรียบร้อย",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>เราได้รับการชำระเงินของคุณแล้ว ทางร้านกำลังเตรียมจัดส่งสินค้าให้โดยเร็วที่สุด`,
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>เราได้รับการชำระเงินของคุณแล้ว ทางร้านกำลังเตรียมจัดส่งสินค้า`,
       detailRows: [
         { label: "สถานะ", value: "ชำระเงินสำเร็จ", color: "#166534" },
       ],
