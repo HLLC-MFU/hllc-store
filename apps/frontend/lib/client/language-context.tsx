@@ -119,7 +119,7 @@ const DICTIONARY: TranslationDict = {
   // Admin Orders Tab
   "admin.orders.pending_review": { th: "รอตรวจสลิป ({count})", en: "Pending ({count})" },
   "admin.orders.all": { th: "ออเดอร์ทั้งหมด", en: "All Orders" },
-  "admin.orders.search_placeholder": { th: "ค้นหาชื่อ, เบอร์ หรือ ID...", en: "Search name, phone or ID..." },
+  "admin.orders.search_placeholder": { th: "ค้นหาชื่อ, เบอร์, อีเมล หรือเลขพัสดุ...", en: "Search name, phone, email or tracking no..." },
   "admin.orders.filter_all": { th: "ทั้งหมด", en: "All" },
   "admin.orders.filter_delivery": { th: "จัดส่ง", en: "Delivery" },
   "admin.orders.filter_pickup": { th: "รับเอง", en: "Pickup" },

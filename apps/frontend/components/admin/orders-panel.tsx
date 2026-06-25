@@ -32,6 +32,7 @@ type OrdersPanelProps = {
   onCancelOrder: (orderId: string, reason: string) => void;
   onViewSlip: (images: string[], index: number) => void;
   pinnedOrderPatch?: { id: string; status: OrderStatus } | null;
+  perPage: number;
   t: (key: string) => string;
 };
 
@@ -75,6 +76,7 @@ export function OrdersPanel({
   onCancelOrder,
   onViewSlip,
   pinnedOrderPatch,
+  perPage,
   t,
 }: OrdersPanelProps) {
   const [openModalOrderId, setOpenModalOrderId] = React.useState<string | null>(null);
@@ -102,8 +104,8 @@ export function OrdersPanel({
 
   const filterItems = React.useMemo(() => buildFilterItems(summary, t), [summary, t]);
 
-  const pageStart = total === 0 ? 0 : (page - 1) * 50 + 1;
-  const pageEnd   = Math.min(page * 50, total);
+  const pageStart = total === 0 ? 0 : (page - 1) * perPage + 1;
+  const pageEnd   = Math.min(page * perPage, total);
 
   return (
     <div className="flex flex-col lg:flex-row gap-5">

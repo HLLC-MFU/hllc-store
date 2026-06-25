@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/lib/client/language-context";
+
 function InstagramIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -36,11 +38,14 @@ const CONTACT = {
 };
 
 export function ShopFooter() {
+  const { lang } = useLanguage();
   return (
     <footer className="bg-brand">
       <div className="mx-auto max-w-sm px-6 pt-8 pb-28 flex flex-col items-center gap-5">
 
-        <p className="text-[11px] font-black uppercase tracking-widest text-white/50">ติดต่อเรา</p>
+        <p className="text-[11px] font-black uppercase tracking-widest text-white/50">
+          {lang === "en" ? "Contact Us" : "ติดต่อเรา"}
+        </p>
 
         <div className="flex flex-col gap-3 w-fit mx-auto">
 
