@@ -299,7 +299,8 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                     src={src}
                     alt={`${product.name[lang] || product.name.th} ${i + 1}`}
                     className="object-contain"
-                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    sizes="100vw"
+                    quality={90}
                     priority={i === 0}
                   />
                 </div>
