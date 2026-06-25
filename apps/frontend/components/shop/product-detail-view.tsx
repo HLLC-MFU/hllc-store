@@ -299,7 +299,8 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                     src={src}
                     alt={`${product.name[lang] || product.name.th} ${i + 1}`}
                     className="object-contain"
-                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    sizes="100vw"
+                    quality={90}
                     priority={i === 0}
                   />
                 </div>
@@ -385,7 +386,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                   }
                   return (
                     <p key={i} className="text-sm text-gray-500 leading-relaxed break-words">
-                      {line.replace(/^[•\-*]\s*/, "")}
+                      {line}
                     </p>
                   );
                 })}

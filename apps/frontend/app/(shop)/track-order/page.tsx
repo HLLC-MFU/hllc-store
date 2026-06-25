@@ -303,24 +303,40 @@ function OrderCard({ order, lang, onSlipUploaded }: { order: Order; lang: "th" |
           )}
 
           {showTracking && (
-            <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-              <div className="flex items-center gap-2.5 min-w-0">
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 flex flex-col gap-3">
+              <div className="flex items-center gap-2.5">
                 <Truck className="h-4 w-4 text-emerald-600 shrink-0" />
-                <div className="min-w-0">
+                <div>
                   <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider">
                     {lang === "th" ? "เลขพัสดุ" : "Tracking No."}
                   </p>
-                  <p className="mt-0.5 font-mono text-sm font-black text-gray-900 tracking-wide break-all">{order.trackingNumber}</p>
+                  <p className="mt-0.5 font-mono text-sm font-black text-gray-900 tracking-wide">{order.trackingNumber}</p>
                 </div>
               </div>
-              <button
-                onClick={copyTracking}
-                className="shrink-0 flex items-center gap-1.5 rounded-xl bg-white border border-emerald-200 px-3 py-1.5 text-[11px] font-black text-emerald-700 hover:bg-emerald-100 active:scale-95 transition-all cursor-pointer"
-              >
-                {copied
-                  ? <><Check className="h-3.5 w-3.5" />{lang === "th" ? "คัดลอกแล้ว" : "Copied"}</>
-                  : <><Copy className="h-3.5 w-3.5" />{lang === "th" ? "คัดลอก" : "Copy"}</>}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={copyTracking}
+                  className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-white border border-emerald-200 px-3 py-2 text-[11px] font-black text-emerald-700 hover:bg-emerald-100 active:scale-95 transition-all cursor-pointer"
+                >
+                  {copied
+                    ? <><Check className="h-3.5 w-3.5" />{lang === "th" ? "คัดลอกแล้ว" : "Copied"}</>
+                    : <><Copy className="h-3.5 w-3.5" />{lang === "th" ? "คัดลอก" : "Copy"}</>}
+                </button>
+                <a
+                  href={`https://www.flashexpress.co.th/fle/tracking/?se=${encodeURIComponent(order.trackingNumber ?? "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex flex-col items-center justify-center gap-0.5 rounded-xl bg-emerald-600 px-3 py-2 text-white hover:bg-emerald-700 active:scale-95 transition-all"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Truck className="h-3.5 w-3.5" />
+                    <span className="text-[11px] font-black">{lang === "th" ? "ติดตามพัสดุ" : "Track Parcel"}</span>
+                  </div>
+                  <span className="text-[9px] font-semibold text-emerald-200">
+                    Flash Express ↗
+                  </span>
+                </a>
+              </div>
             </div>
           )}
 

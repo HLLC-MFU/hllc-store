@@ -131,7 +131,7 @@ type BaseEmailOptions = {
   badgeBg: string;
   badgeColor: string;
   alert: string;
-  icon: "check" | "alert" | "arrow" | "target" | "x";
+  icon: "check" | "alert" | "arrow" | "target" | "x" | "clock" | "star";
   headline: string;
   /** HTML allowed — escape dynamic parts at the call site. */
   intro: string;
@@ -169,6 +169,8 @@ function baseEmailHtml(opts: BaseEmailOptions) {
     arrow: "&#9658;",
     target: "&#9679;",
     x: "&#215;",
+    clock: "&#9783;",
+    star: "&#9733;",
   }[opts.icon];
 
   return `<div style="margin:0;padding:8px 4px;background:#f3f4f6;font-family:Arial,'Noto Sans Thai',sans-serif;color:#111827;">
@@ -313,7 +315,7 @@ export function pickupReadyEmail(
       badgeBg: "#fef3c7",
       badgeColor: "#92400e",
       alert: "สินค้าพร้อมรับแล้วที่จุดรับสินค้า",
-      icon: "target",
+      icon: "star",
       headline: "สินค้าพร้อมให้เข้ารับแล้ว",
       intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณพร้อมให้เข้ารับแล้ว กรุณาแสดงเบอร์โทรที่ใช้สั่งซื้อกับเจ้าหน้าที่`,
       detailRows: [
@@ -332,7 +334,7 @@ function formatItemValue(i: { name: string; option?: string; customName?: string
     const parts = i.customName.slice(6).split(":");
     const color = parts[0] ?? "";
     const letters = parts[1] ?? "";
-    base += ` + พวงกกุญแจ สี${color}`;
+    base += ` + พวงกุญแจ สี${color}`;
     if (letters) base += ` · ${letters}`;
   }
   return base;
@@ -387,9 +389,9 @@ export function slipReceivedEmail(customerName: string, to = "", customerPhone?:
       badgeBg: "#fef3c7",
       badgeColor: "#92400e",
       alert: "เราได้รับหลักฐานการชำระเงินของคุณแล้ว กำลังตรวจสอบ",
-      icon: "target",
+      icon: "clock",
       headline: "ได้รับหลักฐานการชำระเงินเรียบร้อยแล้ว",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>ขณะนี้คำสั่งซื้อของคุณอยู่ระหว่างการตรวจสอบหลักฐานการชำระเงิน เมื่อการตรวจสอบเสร็จสิ้น ระบบจะแจ้งผลให้คท่านโดยอัตโนมัติ`,
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>ขณะนี้คำสั่งซื้อของคุณอยู่ระหว่างการตรวจสอบหลักฐานการชำระเงิน เมื่อการตรวจสอบเสร็จสิ้น ระบบจะแจ้งผลให้ท่านโดยอัตโนมัติ`,
       detailRows: [
         { label: "สถานะ", value: "รอตรวจสอบ", color: "#92400e" },
       ],
@@ -410,7 +412,7 @@ export function orderCompletedEmail(customerName: string, to = "", customerPhone
       alert: "คำสั่งซื้อของคุณเสร็จสมบูรณ์แล้ว",
       icon: "check",
       headline: "รับสินค้าเรียบร้อย!",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>หลังว่าคุณจะชื่นชอบสินค้าของเรา  ขอบคุณสำหรับการสนันสนุนค่ะ/ครับ`,
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>หวังว่าคุณจะชื่นชอบสินค้าของเรา ขอบคุณสำหรับการสนับสนุนค่ะ/ครับ`,
       detailRows: [
         { label: "สถานะ", value: "คำสั่งซื้อของคุณเสร็จสมบูรณ์", color: "#166534" },
       ],
