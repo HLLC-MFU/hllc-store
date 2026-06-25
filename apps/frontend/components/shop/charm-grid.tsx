@@ -72,7 +72,7 @@ function CharmCard({ product, lang }: { product: ShopProduct; lang: "th" | "en" 
       {/* Image */}
       <div className="relative aspect-square overflow-hidden bg-gray-50">
         {product.imageUrl ? (
-          <Image fill src={product.imageUrl} alt={product.name[lang] || product.name.th} className="object-cover" sizes="(max-width: 640px) 50vw, 25vw" />
+          <Image fill src={product.imageUrl} alt={product.name[lang] || product.name.th} className="object-cover" sizes="(max-width: 640px) 50vw, 25vw" quality={90} />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             <ImageIcon className="h-10 w-10 text-gray-200" />
