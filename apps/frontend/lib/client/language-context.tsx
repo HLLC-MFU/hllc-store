@@ -252,6 +252,7 @@ const DICTIONARY: TranslationDict = {
   "charm.charm_label": { th: "พวงกุญแจ", en: "Keychain" },
   "charm.change_color": { th: "เปลี่ยนสี", en: "Change color" },
   "charm.confirm": { th: "ยืนยัน", en: "Confirm" },
+  "charm.add_prompt_title": { th: "เพิ่มพวงกุญแจไหม?", en: "Add a keychain?" },
   "charm.add_prompt_sub": { th: "เพิ่มพวงกุญแจชื่อพร้อมกับสินค้านี้ได้เลย", en: "You can add a keychain with this item" },
   "charm.add_with_price": { th: "เพิ่มพวงกุญแจ +30฿", en: "Add keychain +30฿" },
   "charm.no_thanks": { th: "ไม่เพิ่ม", en: "No thanks" },
