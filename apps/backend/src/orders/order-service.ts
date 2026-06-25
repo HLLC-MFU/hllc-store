@@ -476,6 +476,10 @@ export async function reviewPaymentSlip(orderId: string, input: ReviewSlipInput)
 
   publishOrdersUpdated();
 
+  if (input.approved && order.customer.email) {
+    notifyEmail(slipApprovedEmail(order.customer.name, order.customer.email, order.customer.phone));
+  }
+
   if (!input.approved && order.customer.email) {
     notifyEmail(slipRejectedEmail(order.customer.name, input.note, order.customer.email, order.customer.phone));
   }
