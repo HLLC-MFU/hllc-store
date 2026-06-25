@@ -385,7 +385,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
                   }
                   return (
                     <p key={i} className="text-sm text-gray-500 leading-relaxed break-words">
-                      {line.replace(/^[•\-*]\s*/, "")}
+                      {line}
                     </p>
                   );
                 })}

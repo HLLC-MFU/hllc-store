@@ -246,7 +246,7 @@ const DICTIONARY: TranslationDict = {
   "charm.letters_step": { th: "ตัวอักษร", en: "Letters" },
   "charm.choose_color_heading": { th: "เลือกสีพวงกุญแจ — +{price}฿", en: "Choose keychain color — +{price}฿" },
   "charm.next_add_letters": { th: "ถัดไป — เพิ่มตัวอักษร", en: "Next — Add letters" },
-  "charm.free_letters": { th: "{count} ตัวแรกฟรี", en: "First {count} free" },
+  "charm.free_letters": { th: "{count} ตัวแรกฟรี", en: "Free {count} letters" },
   "charm.extra_letter_price": { th: "ตัวต่อไป +{price}฿", en: "+{price}฿ each after" },
   "charm.tap_letters_below": { th: "แตะตัวอักษรด้านล่างเพื่อเพิ่ม", en: "Tap letters below to add" },
   "charm.charm_label": { th: "พวงกุญแจ", en: "Keychain" },

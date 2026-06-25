@@ -95,11 +95,11 @@ export function AddProductForm({ onSubmit, onUpdate, notify, t, open: controlled
   const [priceValue, setPriceValue] = React.useState(String(product?.price ?? ""));
   const [stockValue, setStockValue] = React.useState(String(product?.stock ?? ""));
   const [descItemsTh, setDescItemsTh] = React.useState<string[]>(() => {
-    const lines = (product?.description?.th ?? "").split("\n").map(l => l.startsWith("# ") ? l : l.replace(/^[•*]\s*/, "").trim()).filter(Boolean);
+    const lines = (product?.description?.th ?? "").split("\n").map(l => l.trim()).filter(Boolean);
     return lines.length > 0 ? lines : [""];
   });
   const [descItemsEn, setDescItemsEn] = React.useState<string[]>(() => {
-    const lines = (product?.description?.en ?? "").split("\n").map(l => l.startsWith("# ") ? l : l.replace(/^[•*]\s*/, "").trim()).filter(Boolean);
+    const lines = (product?.description?.en ?? "").split("\n").map(l => l.trim()).filter(Boolean);
     return lines.length > 0 ? lines : [""];
   });
   const [descLang, setDescLang] = React.useState<"th" | "en">("th");
