@@ -273,6 +273,7 @@ export async function listOrders(filters?: {
       { "customer.phone": { $regex: s } },
       { "customer.email": { $regex: s, $options: "i" } },
       { "customer.address": { $regex: s, $options: "i" } },
+      { trackingNumber: { $regex: s, $options: "i" } },
     ];
     try { orClauses.push({ _id: assertObjectId(s) }); } catch { /* not a valid ObjectId */ }
     query.$or = orClauses;

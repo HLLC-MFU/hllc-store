@@ -561,6 +561,7 @@ export default function AdminPage() {
                 onSaveTracking={saveTracking}
                 onCancelOrder={cancelOrder}
                 pinnedOrderPatch={pinnedOrderPatch}
+                perPage={ORDERS_PER_PAGE}
                 t={t}
                 onViewSlip={(images, index) => setLightbox({ images, index })}
               />

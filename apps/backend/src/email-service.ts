@@ -135,7 +135,7 @@ type BaseEmailOptions = {
   headline: string;
   /** HTML allowed — escape dynamic parts at the call site. */
   intro: string;
-  detailRows: { label: string; value: string; color?: string }[];
+  detailRows: { label: string; value: string; color?: string; href?: string }[];
   note?: { label: string; text: string };
   customerPhone?: string;
 };
@@ -146,7 +146,7 @@ function baseEmailHtml(opts: BaseEmailOptions) {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 10px;border-collapse:separate;border-spacing:0;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;">
         <tr>
           <td style="padding:11px 13px;color:#6b7280;font-size:12px;font-weight:700;line-height:1.4;">${escapeHtml(row.label)}</td>
-          <td align="right" style="padding:11px 13px;color:${row.color ?? "#111827"};font-size:13px;font-weight:800;line-height:1.4;">${escapeHtml(row.value)}</td>
+          <td align="right" style="padding:11px 13px;color:${row.color ?? "#111827"};font-size:13px;font-weight:800;line-height:1.4;">${row.href ? `<a href="${escapeHtml(row.href)}" style="color:${row.color ?? "#1d4ed8"};text-decoration:underline;">${escapeHtml(row.value)}</a>` : escapeHtml(row.value)}</td>
         </tr>
       </table>`)
     .join("");
@@ -166,8 +166,8 @@ function baseEmailHtml(opts: BaseEmailOptions) {
   const iconGlyph = {
     check: "&#10003;",
     alert: "!",
-    arrow: "&#8599;",
-    target: "&#9678;",
+    arrow: "&#9658;",
+    target: "&#9679;",
     x: "&#215;",
   }[opts.icon];
 
@@ -245,18 +245,18 @@ export function slipRejectedEmail(customerName: string, note?: string, to = "", 
   const message = note?.trim();
   return {
     to,
-    subject: "HLLC Store - กรุณาส่งสลิปใหม่",
-    text: `สวัสดีคุณ ${customerName}, สลิปการชำระเงินของคุณไม่ผ่านการตรวจสอบ${message ? ` (${message})` : ""} กรุณาอัปโหลดสลิปใหม่อีกครั้ง`,
+    subject: "HLLC Store - หลักฐานการชำระเงินไม่ถูกต้อง",
+    text: `สวัสดีคุณ ${customerName}, ขออภัย เราไม่สามารถยืนยันการชำระเงินจากหลักฐานที่ส่งมาได้ โปรดตรวจสอบและส่งอีกครั้ง`,
     html: baseEmailHtml({
       badge: "หลักฐานการชำระเงินไม่ถูกต้อง",
       badgeBg: "#fee2e2",
       badgeColor: "#b91c1c",
       alert: "หลักฐานการชำระเงินเกิดข้อผิดพลาด ",
       icon: "alert",
-      headline: "ตรวจสอบสลิปไม่สำเร็จ",
+      headline: "หลักฐานการชำระเงินเกิดข้อผิดพลาด",
       intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>เราไม่สามารถยืนยันการชำระเงินจากหลักฐานที่ส่งมาได้ โปรดตรวจสอบและส่งอีกครั้ง`,
       detailRows: [
-        { label: "สถานะสลิป", value: "หลักฐานการชำระเงินไม่ถูกต้อง", color: "#b91c1c" },
+        { label: "สถานะการชำระเงิน", value: "หลักฐานการชำระเงินไม่ถูกต้อง", color: "#b91c1c" },
       ],
       note: message ? { label: "แจ้งให้ทราบ", text: message } : undefined,
       customerPhone,
@@ -273,7 +273,7 @@ export function trackingNumberEmail(
   return {
     to,
     subject: "HLLC Store - จัดส่งสินค้าแล้ว",
-    text: `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณถูกจัดส่งแล้ว เลขพัสดุ: ${trackingNumber}`,
+    text: `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณถูกจัดส่งแล้ว เลขพัสดุ: ${trackingNumber} ติดตามพัสดุ Flash Express: https://www.flashexpress.co.th/fle/tracking/?se=${encodeURIComponent(trackingNumber)}`,
     html: baseEmailHtml({
       badge: "จัดส่งแล้ว",
       badgeBg: "#dbeafe",
@@ -281,10 +281,16 @@ export function trackingNumberEmail(
       alert: "ผู้ส่งได้ทำการจัดส่งสินค้าแล้ว กำลังเดินทางถึงคุณ",
       icon: "arrow",
       headline: "พัสดุของคุณกำลังเดินทาง",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณถูกจัดส่งเรียบร้อยแล้ว สามารถตรวจสอบสถานะการจัดส่งได้ที่ปุ่มข้างล่าง`,
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณถูกจัดส่งเรียบร้อยแล้ว สามารถใช้เลขพัสดุด้านล่างเพื่อติดตามสถานะได้เลย`,
       detailRows: [
         { label: "สถานะ", value: "จัดส่งแล้ว", color: "#1d4ed8" },
         { label: "เลขพัสดุ", value: trackingNumber },
+        {
+          label: "ติดตามพัสดุ Flash Express",
+          value: "กดที่นี่เพื่อติดตาม →",
+          href: `https://www.flashexpress.co.th/fle/tracking/?se=${encodeURIComponent(trackingNumber)}`,
+          color: "#1d4ed8",
+        },
       ],
       customerPhone,
     }),
@@ -374,8 +380,8 @@ export function orderConfirmedEmail(
 export function slipReceivedEmail(customerName: string, to = "", customerPhone?: string): EmailPayload {
   return {
     to,
-    subject: "HLLC Store - ได้รับสลิปของคุณแล้ว",
-    text: `สวัสดีคุณ ${customerName}, เราได้รับสลิปการชำระเงินของคุณแล้ว กำลังตรวจสอบและจะแจ้งผลให้ทราบโดยเร็ว`,
+    subject: "HLLC Store - ได้รับหลักฐานการชำระเงินแล้ว",
+    text: `สวัสดีคุณ ${customerName}, เราได้รับหลักฐานการชำระเงินของคุณแล้ว`,
     html: baseEmailHtml({
       badge: "รอตรวจสอบหลักฐานการชำระเงิน",
       badgeBg: "#fef3c7",
@@ -383,7 +389,7 @@ export function slipReceivedEmail(customerName: string, to = "", customerPhone?:
       alert: "เราได้รับหลักฐานการชำระเงินของคุณแล้ว กำลังตรวจสอบ",
       icon: "target",
       headline: "ได้รับหลักฐานการชำระเงินเรียบร้อยแล้ว",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>ขณะนี้คำสั่งซื้อของคุณอยู่ระหว่างการตรวจสอบหลักฐานการชำระเงิน เมื่อการตรวจสอบเสร็จสิ้น ระบบจะแจ้งผลให้คท่านโดนอัติมัติ`,
+      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>ขณะนี้คำสั่งซื้อของคุณอยู่ระหว่างการตรวจสอบหลักฐานการชำระเงิน เมื่อการตรวจสอบเสร็จสิ้น ระบบจะแจ้งผลให้คท่านโดยอัตโนมัติ`,
       detailRows: [
         { label: "สถานะ", value: "รอตรวจสอบ", color: "#92400e" },
       ],
