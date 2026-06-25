@@ -124,8 +124,6 @@ function trackingUrl(customerPhone?: string) {
   return `${siteUrl().replace(/\/$/, "")}/track-order${customerPhone ? `?customerPhone=${encodeURIComponent(customerPhone)}` : ""}`;
 }
 
-const CTA_LABEL = "ดูคำสั่งซื้อ / ติดตามสถานะ";
-
 type BaseEmailOptions = {
   badge: string;
   badgeBg: string;
@@ -138,6 +136,8 @@ type BaseEmailOptions = {
   detailRows: { label: string; value: string; color?: string; href?: string }[];
   note?: { label: string; text: string };
   customerPhone?: string;
+  ctaLabel?: string;
+  footerText?: string;
 };
 
 function baseEmailHtml(opts: BaseEmailOptions) {
@@ -207,12 +207,12 @@ function baseEmailHtml(opts: BaseEmailOptions) {
         <table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin:20px auto 26px;border-collapse:collapse;">
           <tr>
             <td align="center" bgcolor="#a52a25" style="border-radius:8px;">
-              <a href="${escapeHtml(trackingUrl(opts.customerPhone))}" style="display:inline-block;padding:11px 22px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:800;line-height:1.25;">${CTA_LABEL}</a>
+              <a href="${escapeHtml(trackingUrl(opts.customerPhone))}" style="display:inline-block;padding:11px 22px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:800;line-height:1.25;">${opts.ctaLabel ?? "ดูคำสั่งซื้อ / ติดตามสถานะ"}</a>
             </td>
           </tr>
         </table>
         <div style="border-top:1px solid #e5e7eb;padding-top:16px;text-align:center;color:#9ca3af;font-size:11px;font-weight:700;line-height:1.55;">
-          อีเมลฉบับนี้ส่งโดยอัตโนมัติ กรุณาอย่าตอบกลับ<br>
+          ${opts.footerText ?? "อีเมลฉบับนี้ส่งโดยอัตโนมัติ กรุณาอย่าตอบกลับ"}<br>
           © HLLC Store
         </div>
       </td>
@@ -222,46 +222,60 @@ function baseEmailHtml(opts: BaseEmailOptions) {
 }
 
 // ── Email templates ──────────────────────────────────────────────────────────
-export function slipApprovedEmail(customerName: string, to = "", customerPhone?: string): EmailPayload {
+export function slipApprovedEmail(customerName: string, to = "", customerPhone?: string, lang: "th" | "en" = "th"): EmailPayload {
+  const en = lang === "en";
   return {
     to,
-    subject: "HLLC Store - ยืนยันการชำระเงินเรียบร้อยแล้ว",
-    text: `สวัสดีคุณ ${customerName}, หลักฐานการชำระเงินของคุณผ่านการตรวจสอบแล้ว เรากำลังเตรียมจัดส่งสินค้าให้คุณ`,
+    subject: en ? "HLLC Store – Payment Completed" : "HLLC Store - ยืนยันการชำระเงินเรียบร้อยแล้ว",
+    text: en
+      ? `Hi ${customerName}, Your payment has been verified. We're preparing your order now.`
+      : `สวัสดีคุณ ${customerName}, หลักฐานการชำระเงินของคุณผ่านการตรวจสอบแล้ว เรากำลังเตรียมจัดส่งสินค้าให้คุณ`,
     html: baseEmailHtml({
-      badge: "ชำระเงินสำเร็จ",
+      badge: en ? "Payment Confirmed" : "ชำระเงินสำเร็จ",
       badgeBg: "#dcfce7",
       badgeColor: "#166534",
-      alert: "เราได้รับการชำระเงินของคุณเรียบร้อยแล้ว",
+      alert: en ? "Your payment has been confirmed" : "เราได้รับการชำระเงินของคุณเรียบร้อยแล้ว",
       icon: "check",
-      headline: "ยืนยันการชำระเงินเรียบร้อย",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>เราได้รับการชำระเงินของคุณแล้ว ทางร้านกำลังเตรียมจัดส่งสินค้า`,
+      headline: en ? "Payment Confirmed" : "ยืนยันการชำระเงินเรียบร้อย",
+      intro: en
+        ? `Hi <b>${escapeHtml(customerName)}</b><br>Your payment has been verified. We're preparing your order now.`
+        : `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>เราได้รับการชำระเงินของคุณแล้ว ทางร้านกำลังเตรียมจัดส่งสินค้า`,
       detailRows: [
-        { label: "สถานะ", value: "ชำระเงินสำเร็จ", color: "#166534" },
+        { label: en ? "Status" : "สถานะ", value: en ? "Payment Confirmed" : "ชำระเงินสำเร็จ", color: "#166534" },
       ],
       customerPhone,
+      ctaLabel: en ? "View order / Track status" : undefined,
+      footerText: en ? "This is an automated email — please do not reply." : undefined,
     }),
   };
 }
 
-export function slipRejectedEmail(customerName: string, note?: string, to = "", customerPhone?: string): EmailPayload {
+export function slipRejectedEmail(customerName: string, note?: string, to = "", customerPhone?: string, lang: "th" | "en" = "th"): EmailPayload {
   const message = note?.trim();
+  const en = lang === "en";
   return {
     to,
-    subject: "HLLC Store - หลักฐานการชำระเงินไม่ถูกต้อง",
-    text: `สวัสดีคุณ ${customerName}, ขออภัย เราไม่สามารถยืนยันการชำระเงินจากหลักฐานที่ส่งมาได้ โปรดตรวจสอบและส่งอีกครั้ง`,
+    subject: en ? "HLLC Store – Payment issue" : "HLLC Store - หลักฐานการชำระเงินไม่ถูกต้อง",
+    text: en
+      ? `Hi ${customerName}, We couldn't verify your proof of payment. Please upload a clearer image and try again.`
+      : `สวัสดีคุณ ${customerName}, ขออภัย เราไม่สามารถยืนยันการชำระเงินจากหลักฐานที่ส่งมาได้ โปรดตรวจสอบและส่งอีกครั้ง`,
     html: baseEmailHtml({
-      badge: "หลักฐานการชำระเงินไม่ถูกต้อง",
+      badge: en ? "Payment Issue" : "หลักฐานการชำระเงินไม่ถูกต้อง",
       badgeBg: "#fee2e2",
       badgeColor: "#b91c1c",
-      alert: "หลักฐานการชำระเงินเกิดข้อผิดพลาด ",
+      alert: en ? "We couldn't verify your proof of payment" : "หลักฐานการชำระเงินเกิดข้อผิดพลาด",
       icon: "alert",
-      headline: "หลักฐานการชำระเงินเกิดข้อผิดพลาด",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>เราไม่สามารถยืนยันการชำระเงินจากหลักฐานที่ส่งมาได้ โปรดตรวจสอบและส่งอีกครั้ง`,
+      headline: en ? "Proof of Payment Issue" : "หลักฐานการชำระเงินเกิดข้อผิดพลาด",
+      intro: en
+        ? `Hi <b>${escapeHtml(customerName)}</b><br>We weren't able to verify your proof of payment. Please check and resubmit.`
+        : `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>เราไม่สามารถยืนยันการชำระเงินจากหลักฐานที่ส่งมาได้ โปรดตรวจสอบและส่งอีกครั้ง`,
       detailRows: [
-        { label: "สถานะการชำระเงิน", value: "หลักฐานการชำระเงินไม่ถูกต้อง", color: "#b91c1c" },
+        { label: en ? "Status" : "สถานะการชำระเงิน", value: en ? "Payment Issue" : "หลักฐานการชำระเงินไม่ถูกต้อง", color: "#b91c1c" },
       ],
-      note: message ? { label: "แจ้งให้ทราบ", text: message } : undefined,
+      note: message ? { label: en ? "Note from store" : "แจ้งให้ทราบ", text: message } : undefined,
       customerPhone,
+      ctaLabel: en ? "View order / Track status" : undefined,
+      footerText: en ? "This is an automated email — please do not reply." : undefined,
     }),
   };
 }
@@ -271,30 +285,38 @@ export function trackingNumberEmail(
   trackingNumber: string,
   to = "",
   customerPhone?: string,
+  lang: "th" | "en" = "th",
 ): EmailPayload {
+  const en = lang === "en";
   return {
     to,
-    subject: "HLLC Store - จัดส่งสินค้าแล้ว",
-    text: `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณถูกจัดส่งแล้ว เลขพัสดุ: ${trackingNumber} ติดตามพัสดุ Flash Express: https://www.flashexpress.co.th/fle/tracking/?se=${encodeURIComponent(trackingNumber)}`,
+    subject: en ? "HLLC Store – Your order has shipped" : "HLLC Store - จัดส่งสินค้าแล้ว",
+    text: en
+      ? `Hi ${customerName}, your order has shipped. Tracking number: ${trackingNumber}. Track with Flash Express: https://www.flashexpress.co.th/fle/tracking/?se=${encodeURIComponent(trackingNumber)}`
+      : `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณถูกจัดส่งแล้ว เลขพัสดุ: ${trackingNumber} ติดตามพัสดุ Flash Express: https://www.flashexpress.co.th/fle/tracking/?se=${encodeURIComponent(trackingNumber)}`,
     html: baseEmailHtml({
-      badge: "จัดส่งแล้ว",
+      badge: en ? "Shipped" : "จัดส่งแล้ว",
       badgeBg: "#dbeafe",
       badgeColor: "#1d4ed8",
-      alert: "ผู้ส่งได้ทำการจัดส่งสินค้าแล้ว กำลังเดินทางถึงคุณ",
+      alert: en ? "Your order is on its way" : "สินค้าของคุณถูกจัดส่งแล้ว",
       icon: "arrow",
-      headline: "พัสดุของคุณกำลังเดินทาง",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณถูกจัดส่งเรียบร้อยแล้ว สามารถใช้เลขพัสดุด้านล่างเพื่อติดตามสถานะได้เลย`,
+      headline: en ? "Your package is on the way" : "พัสดุของคุณกำลังเดินทาง",
+      intro: en
+        ? `Hi <b>${escapeHtml(customerName)}</b><br>Your order is on its way! Use the tracking number below to check delivery status.`
+        : `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณถูกจัดส่งเรียบร้อยแล้ว สามารถใช้หมายเลขพัสดุด้านล่างเพื่อติดตามสถานะการจัดส่ง`,
       detailRows: [
-        { label: "สถานะ", value: "จัดส่งแล้ว", color: "#1d4ed8" },
-        { label: "เลขพัสดุ", value: trackingNumber },
+        { label: en ? "Status" : "สถานะ", value: en ? "Shipped" : "จัดส่งแล้ว", color: "#1d4ed8" },
+        { label: en ? "Tracking number" : "เลขพัสดุ", value: trackingNumber },
         {
-          label: "ติดตามพัสดุ Flash Express",
-          value: "กดที่นี่เพื่อติดตาม →",
+          label: en ? "Track via Flash Express" : "ติดตามพัสดุ Flash Express",
+          value: en ? "Check delivery status →" : "กดที่นี่เพื่อติดตาม →",
           href: `https://www.flashexpress.co.th/fle/tracking/?se=${encodeURIComponent(trackingNumber)}`,
           color: "#1d4ed8",
         },
       ],
       customerPhone,
+      ctaLabel: en ? "View order / Track status" : undefined,
+      footerText: en ? "This is an automated email — please do not reply." : undefined,
     }),
   };
 }
@@ -305,37 +327,51 @@ export function pickupReadyEmail(
   customerPhone?: string,
   location?: string,
   pickupHours?: string,
+  lang: "th" | "en" = "th",
 ): EmailPayload {
+  const en = lang === "en";
   return {
     to,
-    subject: "HLLC Store - สินค้าพร้อมให้รับแล้ว",
-    text: `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณพร้อมให้มารับแล้ว${location ? `ที่ ${location}` : ""}${pickupHours ? ` เวลา ${pickupHours}` : ""}`,
+    subject: en ? "HLLC Store – Ready for Pickup" : "HLLC Store - สินค้าพร้อมให้รับแล้ว",
+    text: en
+      ? `Hi ${customerName}, your order is ready for pickup${location ? ` at ${location}` : ""}${pickupHours ? `, ${pickupHours}` : ""}.`
+      : `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณพร้อมให้มารับแล้ว${location ? `ที่ ${location}` : ""}${pickupHours ? ` เวลา ${pickupHours}` : ""}`,
     html: baseEmailHtml({
-      badge: "พร้อมรับสินค้า",
+      badge: en ? "Ready for Pickup" : "พร้อมรับสินค้า",
       badgeBg: "#fef3c7",
       badgeColor: "#92400e",
-      alert: "สินค้าพร้อมรับแล้วที่จุดรับสินค้า",
+      alert: en ? "Your order is ready for pickup" : "สินค้าพร้อมรับแล้วที่จุดรับสินค้า",
       icon: "star",
-      headline: "สินค้าพร้อมให้เข้ารับแล้ว",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณพร้อมให้เข้ารับแล้ว กรุณาแสดงเบอร์โทรที่ใช้สั่งซื้อกับเจ้าหน้าที่`,
+      headline: en ? "Ready for pickup!" : "สินค้าพร้อมให้เข้ารับแล้ว",
+      intro: en
+        ? `Hi <b>${escapeHtml(customerName)}</b><br>Your order is ready. Please provide your phone number to our staff when picking up.`
+        : `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณพร้อมให้เข้ารับแล้ว กรุณาแสดงเบอร์โทรที่ใช้สั่งซื้อกับเจ้าหน้าที่`,
       detailRows: [
-        { label: "สถานะ", value: "พร้อมรับสินค้า", color: "#92400e" },
-        ...(location ? [{ label: "จุดรับสินค้า", value: location }] : []),
-        ...(pickupHours ? [{ label: "เวลารับสินค้า", value: pickupHours }] : []),
+        { label: en ? "Status" : "สถานะ", value: en ? "Ready for Pickup" : "พร้อมรับสินค้า", color: "#92400e" },
+        ...(location ? [{ label: en ? "Location" : "จุดรับสินค้า", value: location }] : []),
+        ...(pickupHours ? [{ label: en ? "Hours" : "เวลารับสินค้า", value: pickupHours }] : []),
       ],
       customerPhone,
+      ctaLabel: en ? "View order / Track status" : undefined,
+      footerText: en ? "This is an automated email — please do not reply." : undefined,
     }),
   };
 }
 
-function formatItemValue(i: { name: string; option?: string; customName?: string }): string {
-  let base = i.option ? `${i.name} (${i.option})` : i.name;
+function formatItemValue(i: { name: string; nameEn?: string; option?: string; customName?: string }, lang: "th" | "en" = "th"): string {
+  const displayName = (lang === "en" && i.nameEn) ? i.nameEn : i.name;
+  let base = i.option ? `${displayName} (${i.option})` : displayName;
   if (i.customName?.startsWith("charm:")) {
     const parts = i.customName.slice(6).split(":");
     const color = parts[0] ?? "";
     const letters = parts[1] ?? "";
-    base += ` + พวงกุญแจ สี${color}`;
-    if (letters) base += ` · ${letters}`;
+    if (lang === "en") {
+      base += ` + keychain, ${color}`;
+      if (letters) base += ` · ${letters}`;
+    } else {
+      base += ` + พวงกุญแจ สี${color}`;
+      if (letters) base += ` · ${letters}`;
+    }
   }
   return base;
 }
@@ -344,102 +380,131 @@ export function orderConfirmedEmail(
   customerName: string,
   to = "",
   opts: {
-    items: { name: string; qty: number; option?: string; customName?: string }[];
+    items: { name: string; nameEn?: string; qty: number; option?: string; customName?: string }[];
     deliveryMode: "delivery" | "pickup";
     customerPhone?: string;
     pickupLocation?: string;
+    lang?: "th" | "en";
   },
 ): EmailPayload {
+  const en = opts.lang === "en";
   const deliveryLabel = opts.deliveryMode === "pickup"
-    ? (opts.pickupLocation ? `รับที่ ${opts.pickupLocation}` : "รับที่ร้าน")
-    : "จัดส่งพัสดุ";
+    ? (opts.pickupLocation ? (en ? `Pickup at ${opts.pickupLocation}` : `รับที่ ${opts.pickupLocation}`) : (en ? "Pickup at store" : "รับที่ร้าน"))
+    : (en ? "Delivery" : "จัดส่งพัสดุ");
   const itemRows = opts.items.map((i) => ({
     label: `${i.qty}×`,
-    value: formatItemValue(i),
+    value: formatItemValue(i, opts.lang),
   }));
   return {
     to,
-    subject: "HLLC Store - รับคำสั่งซื้อเรียบร้อยแล้ว",
-    text: `สวัสดีคุณ ${customerName}, เราได้รับคำสั่งซื้อของคุณเรียบร้อยแล้ว: ${opts.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}`,
+    subject: en ? "HLLC Store – Order received" : "HLLC Store - รับคำสั่งซื้อเรียบร้อยแล้ว",
+    text: en
+      ? `Hi ${customerName}, your order has been received: ${opts.items.map((i) => `${i.qty}× ${i.nameEn ?? i.name}`).join(", ")}`
+      : `สวัสดีคุณ ${customerName}, เราได้รับคำสั่งซื้อของคุณเรียบร้อยแล้ว: ${opts.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}`,
     html: baseEmailHtml({
-      badge: "รับคำสั่งซื้อแล้ว",
+      badge: en ? "Order Received" : "รับคำสั่งซื้อแล้ว",
       badgeBg: "#ede9fe",
       badgeColor: "#5b21b6",
-      alert: "เราได้รับคำสั่งซื้อของคุณเรียบร้อยแล้ว",
+      alert: en ? "Your order has been received" : "เราได้รับคำสั่งซื้อของคุณเรียบร้อยแล้ว",
       icon: "check",
-      headline: "ขอบคุณที่สั่งซื้อกับเรา!",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณสำเร็จแล้ว`,
+      headline: en ? "Thanks for your order!" : "ขอบคุณที่สั่งซื้อกับเรา!",
+      intro: en
+        ? `Hi <b>${escapeHtml(customerName)}</b><br>Your order is confirmed `
+        : `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อของคุณสำเร็จแล้ว`,
       detailRows: [
         ...itemRows,
-        { label: "วิธีรับสินค้า", value: deliveryLabel },
-        { label: "สถานะ", value: "รอตรวจสอบการชำระเงิน", color: "#92400e" },
+        { label: en ? "Delivery" : "วิธีรับสินค้า", value: deliveryLabel },
+        { label: en ? "Status" : "สถานะ", value: en ? "Under payment review" : "รอตรวจสอบการชำระเงิน", color: "#92400e" },
       ],
       customerPhone: opts.customerPhone,
+      ctaLabel: en ? "View order / Track status" : undefined,
+      footerText: en ? "This is an automated email — please do not reply." : undefined,
     }),
   };
 }
 
-export function slipReceivedEmail(customerName: string, to = "", customerPhone?: string): EmailPayload {
+export function slipReceivedEmail(customerName: string, to = "", customerPhone?: string, lang: "th" | "en" = "th"): EmailPayload {
+  const en = lang === "en";
   return {
     to,
-    subject: "HLLC Store - ได้รับหลักฐานการชำระเงินแล้ว",
-    text: `สวัสดีคุณ ${customerName}, เราได้รับหลักฐานการชำระเงินของคุณแล้ว`,
+    subject: en ? "HLLC Store – Payment slip received" : "HLLC Store - ได้รับหลักฐานการชำระเงินแล้ว",
+    text: en
+      ? `Hi ${customerName}, we got your payment slip and are reviewing it now. We'll update you soon.`
+      : `สวัสดีคุณ ${customerName}, เราได้รับหลักฐานการชำระเงินของคุณแล้ว`,
     html: baseEmailHtml({
-      badge: "รอตรวจสอบหลักฐานการชำระเงิน",
+      badge: en ? "Under Review" : "รอตรวจสอบหลักฐานการชำระเงิน",
       badgeBg: "#fef3c7",
       badgeColor: "#92400e",
-      alert: "เราได้รับหลักฐานการชำระเงินของคุณแล้ว กำลังตรวจสอบ",
+      alert: en ? "We've received your proof of payment" : "เราได้รับหลักฐานการชำระเงินของคุณแล้ว กำลังตรวจสอบ",
       icon: "clock",
-      headline: "ได้รับหลักฐานการชำระเงินเรียบร้อยแล้ว",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>ขณะนี้คำสั่งซื้อของคุณอยู่ระหว่างการตรวจสอบหลักฐานการชำระเงิน เมื่อการตรวจสอบเสร็จสิ้น ระบบจะแจ้งผลให้ท่านโดยอัตโนมัติ`,
+      headline: en ? "Proof of Payment Received" : "ได้รับหลักฐานการชำระเงินเรียบร้อยแล้ว",
+      intro: en
+        ? `Hi <b>${escapeHtml(customerName)}</b><br>We're reviewing your proof of payment now. We'll notify you once it's verified.`
+        : `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>ขณะนี้คำสั่งซื้อของคุณอยู่ระหว่างการตรวจสอบหลักฐานการชำระเงิน เมื่อการตรวจสอบเสร็จสิ้น ระบบจะแจ้งผลให้ท่านโดยอัตโนมัติ`,
       detailRows: [
-        { label: "สถานะ", value: "รอตรวจสอบ", color: "#92400e" },
+        { label: en ? "Status" : "สถานะ", value: en ? "Under review" : "รอตรวจสอบ", color: "#92400e" },
       ],
       customerPhone,
+      ctaLabel: en ? "View order / Track status" : undefined,
+      footerText: en ? "This is an automated email — please do not reply." : undefined,
     }),
   };
 }
 
-export function orderCompletedEmail(customerName: string, to = "", customerPhone?: string): EmailPayload {
+export function orderCompletedEmail(customerName: string, to = "", customerPhone?: string, lang: "th" | "en" = "th"): EmailPayload {
+  const en = lang === "en";
   return {
     to,
-    subject: "HLLC Store - รับสินค้าเรียบร้อยแล้ว",
-    text: `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณเสร็จสมบูรณ์แล้ว ขอบคุณที่อุดหนุน HLLC Store`,
+    subject: en ? "HLLC Store – Order Completed" : "HLLC Store - รับสินค้าเรียบร้อยแล้ว",
+    text: en
+      ? `Hi ${customerName}, Hope you enjoy your purchase! Thanks for shopping with us`
+      : `สวัสดีคุณ ${customerName}, หวังว่าคุณจะชื่นชอบสินค้าของเรา ขอบคุณสำหรับการสนับสนุนค่ะ/ครับ`,
     html: baseEmailHtml({
-      badge: "จัดส่งสำเร็จ",
+      badge: en ? "Completed" : "เสร็จสมบูรณ์",
       badgeBg: "#dcfce7",
       badgeColor: "#166534",
-      alert: "คำสั่งซื้อของคุณเสร็จสมบูรณ์แล้ว",
+      alert: en ? "Your order has been completed" : "คำสั่งซื้อของคุณเสร็จสมบูรณ์แล้ว",
       icon: "check",
-      headline: "รับสินค้าเรียบร้อย!",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>หวังว่าคุณจะชื่นชอบสินค้าของเรา ขอบคุณสำหรับการสนับสนุนค่ะ/ครับ`,
+      headline: en ? "Enjoy your purchase!" : "รับสินค้าเรียบร้อย!",
+      intro: en
+        ? `Hi <b>${escapeHtml(customerName)}</b><br>Hope you enjoy your purchase! Thanks for shopping with us.`
+        : `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>หวังว่าคุณจะชื่นชอบสินค้าของเรา ขอบคุณสำหรับการสนับสนุนค่ะ/ครับ`,
       detailRows: [
-        { label: "สถานะ", value: "คำสั่งซื้อของคุณเสร็จสมบูรณ์", color: "#166534" },
+        { label: en ? "Status" : "สถานะ", value: en ? "Completed" : "คำสั่งซื้อของคุณเสร็จสมบูรณ์", color: "#166534" },
       ],
       customerPhone,
+      ctaLabel: en ? "View order / Track status" : undefined,
+      footerText: en ? "This is an automated email — please do not reply." : undefined,
     }),
   };
 }
 
-export function orderCancelledEmail(customerName: string, reason: string, to = "", customerPhone?: string): EmailPayload {
+export function orderCancelledEmail(customerName: string, reason: string, to = "", customerPhone?: string, lang: "th" | "en" = "th"): EmailPayload {
   const message = reason?.trim();
+  const en = lang === "en";
   return {
     to,
-    subject: "HLLC Store - คำสั่งซื้อถูกยกเลิก",
-    text: `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณถูกยกเลิกแล้ว${message ? ` เหตุผล: ${message}` : ""}`,
+    subject: en ? "HLLC Store – Cancelled" : "HLLC Store - คำสั่งซื้อถูกยกเลิก",
+    text: en
+      ? `Hi ${customerName}, your order has been cancelled.${message ? ` Reason: ${message}` : ""}`
+      : `สวัสดีคุณ ${customerName}, คำสั่งซื้อของคุณถูกยกเลิกแล้ว${message ? ` เหตุผล: ${message}` : ""}`,
     html: baseEmailHtml({
-      badge: "ยกเลิกคำสั่งซื้อ",
+      badge: en ? "Cancelled" : "ยกเลิกคำสั่งซื้อ",
       badgeBg: "#fee2e2",
       badgeColor: "#b91c1c",
-      alert: "คำสั่งซื้อนี้ถูกยกเลิกเรียบร้อยแล้ว",
+      alert: en ? "Your order has been cancelled" : "คำสั่งซื้อนี้ถูกยกเลิกเรียบร้อยแล้ว",
       icon: "x",
-      headline: "คำสั่งซื้อถูกยกเลิก",
-      intro: `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อถูกยกเลิกแล้ว ในกรณีที่ชำระเงินสำเร็จ ระบบจะทำการคืนเงินให้เต็มจำนวน`,
+      headline: en ? "Order Cancelled" : "คำสั่งซื้อถูกยกเลิก",
+      intro: en
+        ? `Hi <b>${escapeHtml(customerName)}</b><br>Your order has been cancelled. If you already paid, a full refund will be processed.`
+        : `สวัสดีคุณ <b>${escapeHtml(customerName)}</b><br>คำสั่งซื้อถูกยกเลิกแล้ว ในกรณีที่ชำระเงินสำเร็จ ระบบจะทำการคืนเงินให้เต็มจำนวน`,
       detailRows: [
-        { label: "สถานะ", value: "ยกเลิกคำสั่งซื้อ", color: "#b91c1c" },
+        { label: en ? "Status" : "สถานะ", value: en ? "Cancelled" : "ยกเลิกคำสั่งซื้อ", color: "#b91c1c" },
       ],
-      note: message ? { label: "ระบุเหตุผลการยกเลิก", text: message } : undefined,
+      note: message ? { label: en ? "Reason" : "ระบุเหตุผลการยกเลิก", text: message } : undefined,
       customerPhone,
+      ctaLabel: en ? "View order / Track status" : undefined,
+      footerText: en ? "This is an automated email — please do not reply." : undefined,
     }),
   };
 }

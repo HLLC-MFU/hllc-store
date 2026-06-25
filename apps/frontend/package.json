@@ -8,6 +8,12 @@
     "start": "next start --hostname 0.0.0.0",
     "lint": "eslint"
   },
+  "browserslist": [
+    "iOS >= 15",
+    "Safari >= 15",
+    "Chrome >= 90",
+    "Firefox >= 90"
+  ],
   "dependencies": {
     "@base-ui-components/react": "1.0.0-rc.0",
     "@hllc/shared": "workspace:*",

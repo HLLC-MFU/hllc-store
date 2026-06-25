@@ -100,6 +100,7 @@ app.patch("/api/backend/orders/:orderId", (c) =>
 app.get("/api/backend/admin/orders", (c) => orderController.listAdminOrders(c.req.raw));
 app.get("/api/backend/admin/orders/pending", (c) => orderController.getPendingOrdersCount(c.req.raw));
 app.get("/api/backend/admin/orders/summary", (c) => orderController.getAdminOrdersSummary(c.req.raw));
+app.get("/api/backend/admin/orders/export", (c) => orderController.exportAdminOrders(c.req.raw));
 app.get("/api/backend/admin/orders/:orderId", (c) =>
   orderController.getAdminOrder(c.req.raw, c.req.param("orderId")),
 );

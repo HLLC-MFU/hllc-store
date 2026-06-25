@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, ArrowDownUp, ChevronLeft, ChevronRight, Search, XCircle } from "lucide-react";
+import { AlertCircle, ArrowDownUp, ChevronLeft, ChevronRight, Download, Search, XCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,7 @@ type OrdersPanelProps = {
   pinnedOrderPatch?: { id: string; status: OrderStatus } | null;
   perPage: number;
   t: (key: string) => string;
+  onExport?: () => void;
 };
 
 function buildFilterItems(summary: OrdersSummary | null, t: (key: string) => string) {
@@ -78,6 +79,7 @@ export function OrdersPanel({
   pinnedOrderPatch,
   perPage,
   t,
+  onExport,
 }: OrdersPanelProps) {
   const [openModalOrderId, setOpenModalOrderId] = React.useState<string | null>(null);
   const [pinnedOrder, setPinnedOrder] = React.useState<Order | null>(null);
@@ -166,13 +168,24 @@ export function OrdersPanel({
       <div className="flex-1 min-w-0 flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="font-bold text-gray-900 text-sm">{t("admin.orders.all")}</h2>
-          <button
-            onClick={() => onSortOrderChange(sortOrder === "desc" ? "asc" : "desc")}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-600 transition-colors cursor-pointer"
-          >
-            <ArrowDownUp className="w-3.5 h-3.5" />
-            {sortOrder === "desc" ? "ใหม่สุด" : "เก่าสุด"}
-          </button>
+          <div className="flex items-center gap-2">
+            {onExport && (
+              <button
+                onClick={onExport}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-600 transition-colors cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                CSV
+              </button>
+            )}
+            <button
+              onClick={() => onSortOrderChange(sortOrder === "desc" ? "asc" : "desc")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-600 transition-colors cursor-pointer"
+            >
+              <ArrowDownUp className="w-3.5 h-3.5" />
+              {sortOrder === "desc" ? "ใหม่สุด" : "เก่าสุด"}
+            </button>
+          </div>
         </div>
 
         {/* Status pills — mobile only */}

@@ -202,7 +202,9 @@ export function InfoStep({
                   {lang === "th" ? "สถานที่รับสินค้า" : "Pickup location"}
                 </p>
                 <p className="text-sm font-black text-gray-900">
-                  {pickupLocation ? `รับสินค้าเองที่ ${pickupLocation}` : t("checkout.pickup_at_d1")}
+                  {pickupLocation
+                    ? `${lang === "th" ? "รับสินค้าเองที่" : "Pickup at"} ${pickupLocation}`
+                    : t("checkout.pickup_at_d1")}
                 </p>
               </div>
             </div>

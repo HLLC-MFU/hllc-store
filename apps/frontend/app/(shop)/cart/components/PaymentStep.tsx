@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowLeft, Check, Copy, Landmark, Upload, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, Copy, ImageIcon, Landmark, X } from "lucide-react";
 import { CheckoutFooter } from "./CheckoutFooter";
 import { fetchPaymentSettings, type PaymentSettings } from "@/lib/modules/settings";
 
@@ -22,6 +22,11 @@ type Props = {
   onContinue: () => void;
 };
 
+function openInChrome() {
+  const { host, pathname, search, protocol } = window.location;
+  window.location.href = `intent://${host}${pathname}${search}#Intent;scheme=${protocol.replace(":", "")};action=android.intent.action.VIEW;end`;
+}
+
 export function PaymentStep({
   lang, t, selectedPayableTotal, selectedShippingFee,
   slipPreview, slipError, orderError, onSlipFile, onClearSlip, onBack, onContinue,
@@ -29,6 +34,7 @@ export function PaymentStep({
   const fileRef = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = useState<PaymentSettings | null>(null);
   const [copied, setCopied] = useState(false);
+  const isLineApp = typeof navigator !== "undefined" && /Line\//i.test(navigator.userAgent);
   const [toastMsg, setToastMsg] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
@@ -97,8 +103,9 @@ export function PaymentStep({
       {!settings ? (
         <div className="h-28 animate-pulse rounded-2xl bg-gray-100" />
       ) : (
-        <div className={`rounded-2xl border p-3 transition-all duration-300 ${copied ? "border-emerald-500 bg-emerald-50/70 ring-1 ring-emerald-500/10" : "border-gray-200 bg-white"}`}>
-          <div className="flex items-center gap-3">
+        <div className={`rounded-2xl border transition-all duration-300 overflow-hidden ${copied ? "border-emerald-500 bg-emerald-50/70 ring-1 ring-emerald-500/10" : "border-gray-200 bg-white"}`}>
+          {/* Bank name + account name */}
+          <div className="flex items-center gap-3 px-3 pt-3 pb-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
               <Landmark className="h-6 w-6" />
             </div>
@@ -106,14 +113,17 @@ export function PaymentStep({
               <p className="text-[10px] font-black uppercase text-gray-400">
                 {lang === "th" ? "บัญชีรับชำระ" : "Payment account"}
               </p>
-              <p className="mt-0.5 text-sm font-black text-gray-950">{settings.bankName}</p>
-              <p className="mt-1 text-xs font-bold text-gray-500 break-words">{settings.bankAccountName}</p>
-              <p className="mt-1 font-mono text-lg font-black tracking-wide text-brand">{settings.bankAccountNumber}</p>
+              <p className="mt-0.5 text-sm font-black text-gray-950">{(lang === "en" && settings.bankNameEn) ? settings.bankNameEn : settings.bankName}</p>
+              <p className="mt-0.5 whitespace-pre-line text-xs font-semibold leading-snug text-gray-500">{settings.bankAccountName}</p>
             </div>
+          </div>
+          {/* Account number + copy */}
+          <div className={`flex items-center justify-between gap-2 border-t px-3 py-2.5 ${copied ? "border-emerald-200 bg-emerald-50" : "border-gray-100 bg-gray-50"}`}>
+            <p className="font-mono text-lg font-black tracking-wide text-brand">{settings.bankAccountNumber}</p>
             <button
               type="button"
               onClick={copyAccount}
-              className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-xs font-black text-gray-700 shadow-sm hover:bg-gray-50"
+              className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-xs font-black text-gray-700 shadow-sm hover:bg-gray-50"
             >
               {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
               {copied ? (lang === "th" ? "คัดลอกแล้ว" : "Copied") : (lang === "th" ? "คัดลอก" : "Copy")}
@@ -128,7 +138,6 @@ export function PaymentStep({
           {lang === "th" ? "แนบสลิปการโอน" : "Attach payment slip"}
         </p>
         <div className={`rounded-xl border border-dashed p-3 transition-colors ${slipError ? "border-red-400 bg-red-50 ring-1 ring-red-200" : "border-gray-200"}`}>
-          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={onSlipFile} />
           {slipPreview ? (
             <div className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -140,15 +149,35 @@ export function PaymentStep({
                 <X className="h-4 w-4" />
               </button>
             </div>
+          ) : isLineApp ? (
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-50">
+                <AlertCircle className="h-6 w-6 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-sm font-black text-gray-700">
+                  {lang === "th" ? "ไม่รองรับในแอป LINE" : "Not supported in LINE app"}
+                </p>
+                <p className="mt-1 text-xs text-gray-400">
+                  {lang === "th" ? "กรุณาเปิดลิ้งค์นี้ใน Chrome" : "Please open this link in Chrome"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={openInChrome}
+                className="rounded-xl bg-brand px-6 py-2.5 text-sm font-black text-white active:scale-95 transition-transform shadow-md shadow-brand/20"
+              >
+                {lang === "th" ? "เปิดใน Chrome" : "Open in Chrome"}
+              </button>
+            </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className={`flex w-full flex-col items-center gap-2 py-10 ${slipError ? "text-red-500" : "text-gray-400"}`}
-            >
-              <Upload className="h-7 w-7" />
-              <span className="text-xs font-bold">{t("checkout.upload_tap")}</span>
-            </button>
+            <label className={`relative flex w-full cursor-pointer flex-col items-center gap-3 py-10 ${slipError ? "text-red-400" : "text-gray-400"}`}>
+              <input type="file" accept="image/*" className="absolute inset-0 h-full w-full cursor-pointer opacity-0" onChange={onSlipFile} />
+              <div className={`flex h-14 w-14 items-center justify-center rounded-full ${slipError ? "bg-red-50" : "bg-gray-100"}`}>
+                <ImageIcon className="h-6 w-6" />
+              </div>
+              <span className="text-xs font-bold">{lang === "th" ? "แตะเพื่ออัปโหลดสลิป" : "Tap to upload slip"}</span>
+            </label>
           )}
         </div>
       </div>

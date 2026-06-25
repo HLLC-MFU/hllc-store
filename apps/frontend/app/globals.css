@@ -19,6 +19,17 @@
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+[role="button"],
+label,
+select,
+input[type="submit"],
+input[type="button"] {
+  touch-action: manipulation;
 }
 
 body {
