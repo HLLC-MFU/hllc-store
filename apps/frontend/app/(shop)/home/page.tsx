@@ -29,6 +29,7 @@ export default async function HomePage() {
     subtitle: bottleBlock?.subtitle,
     hasSubBlocks: false,
     blockStatus: bottleStatus,
+    buttonPosition: "bottom-right",
   });
 
   // Block 3: Secret Set — same single-product shortcut logic
@@ -54,6 +55,7 @@ export default async function HomePage() {
     subtitle: secretBlock?.subtitle,
     hasSubBlocks: false,
     blockStatus: secretStatus,
+    buttonPosition: "top-right",
   });
 
   return <HomeClient blocks={blocks} />;

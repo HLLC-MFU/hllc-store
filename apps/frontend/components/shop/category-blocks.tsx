@@ -15,6 +15,7 @@ export type CategoryBlock = {
   subtitle?: LocalizedText;
   hasSubBlocks?: boolean;
   blockStatus?: "comingSoon" | "closed";
+  buttonPosition?: "top-right" | "bottom-right";
 };
 
 export function CategoryBlocks({ blocks, fullPage = false }: { blocks: CategoryBlock[]; fullPage?: boolean }) {
@@ -30,13 +31,13 @@ export function CategoryBlocks({ blocks, fullPage = false }: { blocks: CategoryB
   }
 
   const wrapperClass = fullPage
-    ? "flex h-full flex-col gap-2 overflow-hidden bg-white p-2 md:gap-3 md:p-3"
+    ? "flex h-full flex-col gap-2 overflow-hidden bg-white p-2 md:grid md:grid-cols-2 md:gap-3 md:p-3"
     : "flex flex-col gap-4";
   const baseClass = fullPage
-    ? "group relative flex min-h-0 flex-1 overflow-hidden rounded-[1.75rem] border border-white bg-white shadow-[0_8px_24px_rgba(15,23,42,0.12)] ring-1 ring-gray-900/5 transition-all duration-300"
-    : "group relative block overflow-hidden rounded-3xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] transition-all duration-300";
+    ? "group relative flex min-h-0 flex-1 overflow-hidden rounded-[1.75rem] border border-white bg-white ring-1 ring-gray-900/5 transition-all duration-300 md:flex-none"
+    : "group relative block overflow-hidden rounded-3xl bg-white transition-all duration-300";
   const mediaClass = fullPage
-    ? "relative aspect-[4/3] md:aspect-auto md:h-full md:min-h-0 w-full bg-gray-100"
+    ? "relative aspect-[4/3] w-full bg-gray-100 md:aspect-square"
     : "relative aspect-[4/3] w-full bg-gray-100";
 
   function BlockInner({ block }: { block: CategoryBlock }) {
@@ -81,7 +82,7 @@ export function CategoryBlocks({ blocks, fullPage = false }: { blocks: CategoryB
         </div>
 
         {!block.blockStatus && (
-          <div className="absolute bottom-5 right-5">
+          <div className={`absolute right-5 ${block.buttonPosition === "top-right" ? "top-5" : "bottom-5"}`}>
             <span className="inline-flex h-9 items-center justify-center gap-1.5 rounded-2xl bg-brand px-4 text-xs font-black text-white shadow-lg shadow-black/20">
               {block.hasSubBlocks
                 ? (lang === "th" ? "เลือกดู" : "Browse")
