@@ -16,8 +16,8 @@ export function HomeClient({ blocks }: HomeClientProps) {
   const { lang } = useLanguage();
 
   return (
-    <div className="fixed inset-0 top-14 md:top-0 md:left-56 lg:left-64 bg-white flex flex-col md:justify-center">
-      <div className="flex-1 min-h-0 md:flex-none">
+    <div className="fixed inset-0 top-14 md:top-0 md:left-56 lg:left-64 bg-white flex flex-col sm:justify-center">
+      <div className="flex-1 min-h-0 sm:flex-none overflow-hidden sm:overflow-visible">
         <CategoryBlocks blocks={blocks} fullPage />
       </div>
       <div className="hidden md:flex items-center justify-center gap-4 py-6 shrink-0">

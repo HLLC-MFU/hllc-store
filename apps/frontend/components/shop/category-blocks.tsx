@@ -16,6 +16,7 @@ export type CategoryBlock = {
   hasSubBlocks?: boolean;
   blockStatus?: "comingSoon" | "closed";
   buttonPosition?: "top-right" | "bottom-right";
+  titlePosition?: "top-left" | "bottom-left";
 };
 
 export function CategoryBlocks({ blocks, fullPage = false }: { blocks: CategoryBlock[]; fullPage?: boolean }) {
@@ -31,13 +32,13 @@ export function CategoryBlocks({ blocks, fullPage = false }: { blocks: CategoryB
   }
 
   const wrapperClass = fullPage
-    ? "flex h-full flex-col gap-2 overflow-hidden bg-white p-2 md:grid md:grid-cols-2 md:gap-3 md:p-3"
+    ? "flex flex-col gap-3 h-full overflow-y-auto snap-y snap-mandatory bg-white px-3 py-3 sm:grid sm:grid-cols-2 sm:snap-none sm:overflow-y-auto sm:gap-3 sm:p-3"
     : "flex flex-col gap-4";
   const baseClass = fullPage
-    ? "group relative flex min-h-0 flex-1 overflow-hidden rounded-[1.75rem] border border-white bg-white ring-1 ring-gray-900/5 transition-all duration-300 md:flex-none"
+    ? "group relative block flex-none overflow-hidden rounded-[1.75rem] border border-white bg-white ring-1 ring-gray-900/5 transition-all duration-300 snap-start snap-always"
     : "group relative block overflow-hidden rounded-3xl bg-white transition-all duration-300";
   const mediaClass = fullPage
-    ? "relative aspect-[4/3] w-full bg-gray-100 md:aspect-square"
+    ? "relative aspect-square w-full bg-gray-100"
     : "relative aspect-[4/3] w-full bg-gray-100";
 
   function BlockInner({ block }: { block: CategoryBlock }) {
@@ -70,7 +71,7 @@ export function CategoryBlocks({ blocks, fullPage = false }: { blocks: CategoryB
           </div>
         )}
 
-        <div className="absolute left-5 top-5 max-w-[70%] text-left">
+        <div className={`absolute left-5 max-w-[70%] text-left ${block.titlePosition === "bottom-left" ? "bottom-5" : "top-5"}`}>
           <h2 className="text-2xl font-black leading-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
             {pick(block.title)}
           </h2>
