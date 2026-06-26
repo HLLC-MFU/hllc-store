@@ -1,10 +1,3 @@
-The snippet you shared includes the Kaniko debug image with the `--entrypoint /busybox/sh` change. Since that still errors out due to the compiled dynamic `glibc` requirements of GitHub's NodeJS workspace orchestration engine, swapping the core container base to a native `ubuntu:24.04` image and fetching Kaniko inline handles it all gracefully.
-
-Here is the complete, working production file incorporating **Choice 1** from top to bottom.
-
-### File Path: `.github/workflows/deploy.yml`
-
-```yaml
 name: Deploy HLLC Store
 
 on:
@@ -190,5 +183,3 @@ jobs:
 
       - name: Apply manifests
         run: kubectl apply -k k8s
-
-```
