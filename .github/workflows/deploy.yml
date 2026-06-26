@@ -21,6 +21,7 @@ jobs:
     # Using Kaniko's debug image allows running standard shell script steps
     container:
       image: gcr.io/kaniko-project/executor:v1.23.0-debug
+      options: --entrypoint /busybox/sh
     steps:
       - name: Checkout
         uses: actions/checkout@v4
