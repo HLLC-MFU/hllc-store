@@ -36,6 +36,8 @@ export default function RootLayout({
       className={`${notoSansThai.variable} ${nunito.variable} h-full antialiased`}
     >
       <head>
+        {/* Redirect browsers too old to run this app (iOS < 15.4, Safari < 15.4) */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){if(location.pathname.includes("/unsupported"))return;try{var ok=[].at&&typeof structuredClone==="function"&&typeof Promise.allSettled==="function";if(!ok)location.replace("/store/unsupported");}catch(e){location.replace("/store/unsupported");}})();` }} />
       </head>
       {/* {process.env.NODE_ENV === "development" && <Agentation />} */}
       <body className="min-h-full">
