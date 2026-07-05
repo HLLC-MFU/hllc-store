@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Image as ImageIcon,
+  WalletCards,
 } from "lucide-react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useLanguage } from "@/lib/client/language-context";
@@ -512,6 +513,7 @@ export default function AdminPage() {
             { label: t("admin.tab.orders"),    icon: ClipboardList,   onClick: () => setActiveTab("orders"),   badge: pendingCount },
             { label: t("admin.tab.products"),  icon: Package,         onClick: () => setActiveTab("products") },
             { label: t("admin.tab.storefront"), icon: ImageIcon,      onClick: () => setActiveTab("storefront") },
+            { label: "Card-bottle", icon: WalletCards, onClick: () => { window.location.href = appPath("/card-bottle/index.html"); } },
             ...(currentUser?.role === "superAdmin"
               ? [
                   { label: "จัดการหลังบ้าน", icon: LayoutDashboard, onClick: () => setActiveTab("superAdmin") } as NavItem,

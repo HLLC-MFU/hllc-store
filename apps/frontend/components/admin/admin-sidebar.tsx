@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ClipboardList, Images, LayoutDashboard, LogOut, Package, Settings, Users } from "lucide-react";
+import { ClipboardList, Images, LayoutDashboard, LogOut, Package, Settings, Users, WalletCards } from "lucide-react";
 import { useLanguage } from "@/lib/client/language-context";
 import { appPath } from "@/lib/client/app-path";
 
@@ -55,6 +55,14 @@ export function AdminSidebar({ onLogout,
       count: null,
       badge: null,
     },
+    {
+      key: "cardBottle",
+      icon: WalletCards,
+      label: "Card-bottle",
+      href: "/card-bottle/index.html",
+      count: null,
+      badge: null,
+    },
     ...(isSuperAdmin
       ? [
           {
@@ -87,12 +95,18 @@ export function AdminSidebar({ onLogout,
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
-        {navItems.map(({ key, icon: Icon, label, count, badge }) => {
+        {navItems.map(({ key, icon: Icon, label, href, count, badge }) => {
           const active = activeTab === key;
           return (
             <button
               key={key}
-              onClick={() => setActiveTab(key)}
+              onClick={() => {
+                if (href) {
+                  window.location.href = appPath(href);
+                  return;
+                }
+                setActiveTab(key);
+              }}
               className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all cursor-pointer text-left ${
                 active
                   ? "bg-gray-900 text-white shadow-sm"

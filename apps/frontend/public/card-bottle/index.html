@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Card-bottle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Charmonman:wght@400;700&family=Noto+Sans+Tai+Tham:wght@400;700&family=Noto+Serif+Thai:wght@500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./atropos.min.css">
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="admin-shell">
+      <header class="admin-header">
+        <h1 class="admin-title">Card-bottle</h1>
+      </header>
+
+      <section class="simple-grid" id="cardGrid"></section>
+    </main>
+
+    <dialog class="qr-dialog" id="qrDialog">
+      <div class="qr-modal">
+        <div class="qr-modal-head">
+          <strong id="qrTitle">QR Code</strong>
+          <button class="icon-btn" id="closeQr" type="button">×</button>
+        </div>
+        <div class="qr-box large" id="qrBox"></div>
+        <div class="url-box" id="urlBox"></div>
+        <div class="button-row">
+          <button class="btn" id="downloadQr" type="button">Download QR</button>
+          <button class="btn secondary" id="copyUrl" type="button">Copy URL</button>
+        </div>
+      </div>
+    </dialog>
+
+    <script src="./cards.js"></script>
+    <script src="./qrcode-lib.js"></script>
+    <script src="./qr.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
