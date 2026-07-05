@@ -97,45 +97,43 @@
     const cardIndex = Math.max(0, cards.findIndex((item) => item.id === card.id));
     const look = cardLooks[cardIndex] || cardLooks[0];
     const number = cardIndex + 1;
+    const { meaningText, storyText } = splitMessage(message);
     if (side === "back") {
       return `
-        <article class="blessing-card back accent-${look.accent}" style="--card-accent: ${look.color}">
-          <div class="card-corner top-left"></div>
-          <div class="card-corner top-right"></div>
-          <div class="card-corner bottom-left"></div>
-          <div class="card-corner bottom-right"></div>
-          <div class="number-badge">${number}</div>
-          <h2>${escapeHtml(title)}</h2>
-          <p>${escapeHtml(message).replace(/\n/g, "<br>")}</p>
+        <article class="blessing-card back accent-${look.accent}" style="--card-accent: ${look.color}; --card-back-image: url('${escapeAttr(card.backImage || "./cards/backofcard.png")}')">
+          <div class="back-copy">
+            <div class="back-number">${number}</div>
+            <h2>${escapeHtml(title)}</h2>
+            <div class="phonetic">${escapeHtml(lang === "th" ? "คำอวยพรล้านนา" : "Lanna blessing")}</div>
+            <section>
+              <strong>${lang === "th" ? "ความหมาย" : "Meaning"}</strong>
+              <p>${escapeHtml(meaningText)}</p>
+            </section>
+            <section>
+              <strong>${lang === "th" ? "เรื่องราว" : "Story"}</strong>
+              <p>${escapeHtml(storyText)}</p>
+            </section>
+          </div>
         </article>
       `;
     }
     return `
-      <article class="blessing-card front ${card.frontImage ? "has-image" : ""} accent-${look.accent}" style="--card-accent: ${look.color}">
-        <div class="card-corner top-left"></div>
-        <div class="card-corner top-right"></div>
-        <div class="card-corner bottom-left"></div>
-        <div class="card-corner bottom-right"></div>
-        <div class="number-badge">${number}</div>
-        ${card.frontImage ? `
-          <div class="front-image-face">
-            <img class="front-image-bg" src="${escapeAttr(card.frontImage)}" alt="">
-            <img class="front-image-main" src="${escapeAttr(card.frontImage)}" alt="${escapeAttr(title)}" loading="lazy" decoding="async">
-          </div>
-        ` : `
-          <div class="lanna-sigil" aria-hidden="true">${look.sigil}</div>
-          <div class="card-landscape" aria-hidden="true">
-            <span class="mountain m1"></span>
-            <span class="mountain m2"></span>
-            <span class="sun"></span>
-            <span class="temple"></span>
-            <span class="flower-bed"></span>
-          </div>
-          <h2>${escapeHtml(title)}</h2>
-          <div class="card-ornament" aria-hidden="true">✦</div>
-        `}
+      <article class="blessing-card front image-front" style="--card-accent: ${look.color}">
+        ${card.frontImage ? `<img class="card-front-image" src="${escapeAttr(card.frontImage)}" alt="${escapeAttr(title)}" loading="lazy" decoding="async">` : `<h2>${escapeHtml(title)}</h2>`}
       </article>
     `;
+  }
+
+  function splitMessage(message) {
+    const [meaning = "", story = ""] = String(message || "").split(/\n\s*\n/);
+    return {
+      meaningText: stripMessageLabel(meaning),
+      storyText: stripMessageLabel(story),
+    };
+  }
+
+  function stripMessageLabel(value) {
+    return String(value || "").replace(/^[^:：]{1,28}[:：]\s*/, "").trim();
   }
 
   function escapeHtml(value) {
