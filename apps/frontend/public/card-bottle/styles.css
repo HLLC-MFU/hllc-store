@@ -481,17 +481,9 @@ button {
 .card-atropos {
   width: min(calc(100vw - 28px), calc((100dvh - 92px) * 0.463), 360px);
   aspect-ratio: 853 / 1844;
+  position: relative;
+  perspective: 1400px;
   border-radius: clamp(16px, 4.8vw, 26px);
-}
-
-.full-card.is-switching .card-atropos {
-  animation: cardSwitch 300ms cubic-bezier(.2,.8,.2,1);
-}
-
-@keyframes cardSwitch {
-  0% { transform: rotateY(0deg) scale(1); opacity: 1; }
-  45% { transform: rotateY(72deg) scale(0.985); opacity: 0.68; }
-  100% { transform: rotateY(0deg) scale(1); opacity: 1; }
 }
 
 .blessing-card {
@@ -512,6 +504,44 @@ button {
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   color: #4b2517;
+}
+
+.card-atropos .card-face {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transition: transform 620ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 620ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.card-atropos:not(.is-back) .card-face-front,
+.card-atropos.is-back .card-face-back {
+  pointer-events: auto;
+}
+
+.card-atropos .card-face-front {
+  transform: rotateY(0deg) translateZ(0.1px);
+}
+
+.card-atropos .card-face-back {
+  transform: rotateY(180deg) translateZ(0.1px);
+}
+
+.card-atropos.is-back .card-face-front {
+  transform: rotateY(-180deg) translateZ(0.1px);
+}
+
+.card-atropos.is-back .card-face-back {
+  transform: rotateY(0deg) translateZ(0.1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-atropos .card-face {
+    transition-duration: 1ms;
+  }
 }
 
 .blessing-card::before {

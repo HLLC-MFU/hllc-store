@@ -6,7 +6,6 @@
   const cardIndex = Math.max(0, cards.findIndex((item) => item.id === card.id));
   let lang = localStorage.getItem("hllc-card-bottle-lang") || "th";
   let side = "front";
-  let switching = false;
 
   const cardLooks = [
     { color: "#9b5a08", sigil: "ᩋ", accent: "daisy" },
@@ -29,7 +28,7 @@
     const { meaningText, storyText } = splitMessage(message);
 
     return `
-      <article class="blessing-card ${side === "front" ? "front image-front" : "back"} accent-${look.accent}" style="--card-accent: ${look.color}; --card-back-image: url('${escapeAttr(card.backImage || "./cards/backofcard.png")}')">
+      <article class="blessing-card card-face ${side === "front" ? "front image-front card-face-front" : "back card-face-back"} accent-${look.accent}" style="--card-accent: ${look.color}; --card-back-image: url('${escapeAttr(card.backImage || "./cards/backofcard.png")}')">
         ${side === "front" ? `
           ${card.frontImage ? `<img class="card-front-image" src="${escapeAttr(card.frontImage)}" alt="${escapeAttr(title)}" decoding="async" fetchpriority="high">` : `<h2>${escapeHtml(title)}</h2>`}
         ` : `
@@ -54,18 +53,40 @@
   function render() {
     document.documentElement.lang = lang;
     $("title").textContent = lang === "th" ? card.titleTh : card.titleEn;
+    $("stage").innerHTML = `
+      <div class="full-card">
+        <div class="card-atropos">
+          ${renderCardMarkup(card, lang, "front")}
+          ${renderCardMarkup(card, lang, "back")}
+        </div>
+      </div>
+    `;
+    $("stage").querySelectorAll(".blessing-card").forEach((face) => {
+      face.addEventListener("click", toggleSide);
+    });
+    updateControls();
+  }
+
+  function preloadCardAssets() {
+    [card.frontImage, card.backImage || "./cards/backofcard.png"].filter(Boolean).forEach((src) => {
+      const image = new Image();
+      image.decoding = "async";
+      image.src = src;
+    });
+  }
+
+  function updateControls() {
     $("thBtn").classList.toggle("is-active", lang === "th");
     $("enBtn").classList.toggle("is-active", lang === "en");
     $("frontBtn").classList.toggle("is-active", side === "front");
     $("backBtn").classList.toggle("is-active", side === "back");
-    $("stage").innerHTML = `
-      <div class="full-card ${switching ? "is-switching" : ""}">
-        <div class="card-atropos">
-          ${renderCardMarkup(card, lang, side)}
-        </div>
-      </div>
-    `;
-    $("stage").querySelector(".blessing-card")?.addEventListener("click", toggleSide);
+    $("stage").querySelector(".card-atropos")?.classList.toggle("is-back", side === "back");
+  }
+
+  function setSide(nextSide) {
+    if (side === nextSide) return;
+    side = nextSide;
+    updateControls();
   }
 
   function splitMessage(message) {
@@ -100,27 +121,16 @@
       render();
     });
     $("frontBtn").addEventListener("click", () => {
-      side = "front";
-      render();
+      setSide("front");
     });
     $("backBtn").addEventListener("click", () => {
-      side = "back";
-      render();
+      setSide("back");
     });
+    preloadCardAssets();
     render();
   });
 
   function toggleSide() {
-    if (switching) return;
-    switching = true;
-    $("stage").querySelector(".full-card")?.classList.add("is-switching");
-    side = side === "front" ? "back" : "front";
-    setTimeout(() => {
-      render();
-      setTimeout(() => {
-        switching = false;
-        $("stage").querySelector(".full-card")?.classList.remove("is-switching");
-      }, 220);
-    }, 150);
+    setSide(side === "front" ? "back" : "front");
   }
 })();
