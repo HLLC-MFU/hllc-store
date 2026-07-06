@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Card-bottle View</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Charmonman:wght@400;700&family=Noto+Sans+Tai+Tham:wght@400;700&family=Noto+Serif+Thai:wght@500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="viewer">
+      <header class="viewer-toolbar">
+        <div class="viewer-title" id="title">Blessing Card</div>
+        <div class="viewer-actions">
+          <div class="segmented" aria-label="Card side">
+            <button id="frontBtn" type="button">หน้า</button>
+            <button id="backBtn" type="button">หลัง</button>
+          </div>
+          <div class="segmented" aria-label="Language">
+            <button id="thBtn" type="button">TH</button>
+            <button id="enBtn" type="button">EN</button>
+          </div>
+        </div>
+      </header>
+      <section class="viewer-stage" id="stage"></section>
+    </main>
+
+    <script src="./cards.js"></script>
+    <script src="./view.js"></script>
+  </body>
+</html>

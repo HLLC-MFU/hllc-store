@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Card-bottle</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="admin-shell">
+      <header class="admin-header">
+        <div>
+          <h1 class="admin-title">Card-bottle</h1>
+          <p class="admin-subtitle">ใส่รูปด้านหน้า/ด้านหลังของ Blessing card แล้วสร้าง QR เป็น path เต็มสำหรับเปิดการ์ดเต็มจอ</p>
+        </div>
+        <div class="admin-actions">
+          <button class="btn secondary" id="exportJson" type="button">Export JSON</button>
+          <button class="btn secondary" id="duplicateCard" type="button">Duplicate</button>
+          <button class="btn accent" id="addCard" type="button">Add Card</button>
+        </div>
+      </header>
+
+      <section class="layout">
+        <aside class="panel">
+          <div class="card-list" id="cardList"></div>
+        </aside>
+
+        <section class="panel editor">
+          <div class="field-grid">
+            <div class="field">
+              <label for="cardId">Path ID</label>
+              <input id="cardId" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="titleTh">ชื่อการ์ด TH</label>
+              <input id="titleTh" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="titleEn">Card name EN</label>
+              <input id="titleEn" autocomplete="off">
+            </div>
+          </div>
+
+          <div class="field-grid">
+            <div class="field">
+              <label for="messageTh">ข้อความ TH</label>
+              <textarea id="messageTh"></textarea>
+            </div>
+            <div class="field">
+              <label for="messageEn">Message EN</label>
+              <textarea id="messageEn"></textarea>
+            </div>
+          </div>
+
+          <div class="field-grid">
+            <div class="field">
+              <label for="frontImage">รูปด้านหน้า</label>
+              <div class="upload-row">
+                <input id="frontImage" placeholder="/uploads/front.png">
+                <button class="btn secondary" type="button" onclick="document.getElementById('frontUpload').click()">Upload</button>
+              </div>
+              <input id="frontUpload" type="file" accept="image/*" hidden>
+            </div>
+            <div class="field">
+              <label for="backImage">รูปด้านหลัง</label>
+              <div class="upload-row">
+                <input id="backImage" placeholder="/uploads/back.png">
+                <button class="btn secondary" type="button" onclick="document.getElementById('backUpload').click()">Upload</button>
+              </div>
+              <input id="backUpload" type="file" accept="image/*" hidden>
+            </div>
+          </div>
+
+          <div class="preview-grid">
+            <div class="preview-box" id="frontPreview"></div>
+            <div class="preview-box" id="backPreview"></div>
+          </div>
+
+          <div class="button-row">
+            <button class="btn accent" id="genQr" type="button">Gen QR Code</button>
+            <button class="btn" id="openCard" type="button">Open Full Card</button>
+            <button class="btn secondary" id="downloadQr" type="button" disabled>Download QR</button>
+            <button class="btn secondary" id="copyUrl" type="button" disabled>Copy URL</button>
+          </div>
+
+          <div class="qr-output">
+            <div class="qr-box" id="qrBox"></div>
+            <div class="url-box" id="urlBox"></div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="./cards.js"></script>
+    <script src="./qr.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

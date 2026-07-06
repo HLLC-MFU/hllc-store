@@ -4,11 +4,20 @@ const isDev = process.env.NODE_ENV !== "production";
 
 const nextConfig: NextConfig = {
   // Allow LAN access for mobile testing (pnpm dev --hostname 0.0.0.0)
-  allowedDevOrigins: ["172.25.43.90"],
+  allowedDevOrigins: ["172.20.10.2"],
   devIndicators: false,
   basePath: "/store",
   output: "standalone",
   experimental: {},
+  async redirects() {
+    return [
+      {
+        source: "/card-bottle",
+        destination: "/card-bottle/index.html",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     const securityHeaders = [
       { key: "X-Frame-Options", value: "DENY" },
