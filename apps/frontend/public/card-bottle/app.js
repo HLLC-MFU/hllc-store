@@ -119,8 +119,17 @@
     }
     return `
       <article class="blessing-card front image-front" style="--card-accent: ${look.color}">
-        ${card.frontImage ? `<img class="card-front-image" src="${escapeAttr(card.frontImage)}" alt="${escapeAttr(title)}" loading="lazy" decoding="async">` : `<h2>${escapeHtml(title)}</h2>`}
+        ${card.frontImage ? `<img class="card-front-image" src="${escapeAttr(card.frontImage)}" alt="${escapeAttr(title)}" loading="lazy" decoding="async">` : ""}
+        ${renderFrontBlessing(title, lang)}
       </article>
+    `;
+  }
+
+  function renderFrontBlessing(title, lang) {
+    return `
+      <div class="front-blessing-panel" aria-label="${escapeAttr(lang === "th" ? "คำอวยพร" : "Blessing")}">
+        <h2 class="front-blessing-title">${escapeHtml(title)}</h2>
+      </div>
     `;
   }
 
