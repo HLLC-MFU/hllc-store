@@ -30,7 +30,8 @@
     return `
       <article class="blessing-card card-face ${side === "front" ? "front image-front card-face-front" : "back card-face-back"} accent-${look.accent}" style="--card-accent: ${look.color}; --card-back-image: url('${escapeAttr(card.backImage || "./cards/backofcard.png")}')">
         ${side === "front" ? `
-          ${card.frontImage ? `<img class="card-front-image" src="${escapeAttr(card.frontImage)}" alt="${escapeAttr(title)}" decoding="async" fetchpriority="high">` : `<h2>${escapeHtml(title)}</h2>`}
+          ${card.frontImage ? `<img class="card-front-image" src="${escapeAttr(card.frontImage)}" alt="${escapeAttr(title)}" decoding="async" fetchpriority="high">` : ""}
+          ${renderFrontBlessing(title, lang)}
         ` : `
           <div class="back-copy">
             <div class="back-number">${number}</div>
@@ -47,6 +48,14 @@
           </div>
         `}
       </article>
+    `;
+  }
+
+  function renderFrontBlessing(title, lang) {
+    return `
+      <div class="front-blessing-panel" aria-label="${escapeAttr(lang === "th" ? "คำอวยพร" : "Blessing")}">
+        <h2 class="front-blessing-title">${escapeHtml(title)}</h2>
+      </div>
     `;
   }
 
