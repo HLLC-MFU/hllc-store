@@ -336,7 +336,10 @@ export async function getOrdersSummary(deliveryMode?: "delivery" | "pickup") {
   }
 
   return {
-    totalOrders: Object.values(byStatus).reduce((s, c) => s + c, 0),
+    totalOrders: Object.entries(byStatus).reduce(
+      (sum, [status, count]) => status === "cancelled" ? sum : sum + count,
+      0,
+    ),
     byStatus,
     shippedDelivery,
     shippedPickup,
@@ -696,6 +699,7 @@ export async function addAdminNote(
 
 export async function listAllOrdersForExport(filters?: {
   status?: OrderStatus;
+  excludeStatuses?: OrderStatus[];
   search?: string;
   sortOrder?: "asc" | "desc";
   deliveryMode?: "delivery" | "pickup";
@@ -705,6 +709,8 @@ export async function listAllOrdersForExport(filters?: {
 
   if (filters?.status) {
     query.status = filters.status;
+  } else if (filters?.excludeStatuses?.length) {
+    query.status = { $nin: filters.excludeStatuses };
   }
   if (filters?.deliveryMode) {
     query.deliveryMode = filters.deliveryMode;
