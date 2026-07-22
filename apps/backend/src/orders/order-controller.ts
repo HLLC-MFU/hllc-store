@@ -85,11 +85,12 @@ export async function listAdminOrders(request: Request) {
   const sortOrder = url.searchParams.get("sort") === "asc" ? "asc" : "desc";
   const rawMode = url.searchParams.get("deliveryMode");
   const deliveryMode = rawMode === "delivery" || rawMode === "pickup" ? rawMode : undefined;
+  const requestedStatus = status && orderService.isOrderStatus(status) ? status : undefined;
 
   try {
     const result = await orderService.listOrders({
-      status: status && orderService.isOrderStatus(status) ? status : undefined,
-      excludeStatuses: status ? undefined : undefined,
+      status: requestedStatus,
+      excludeStatuses: requestedStatus ? undefined : ["cancelled"],
       page,
       limit,
       search,
@@ -120,10 +121,12 @@ export async function exportAdminOrders(request: Request) {
   const sortOrder = url.searchParams.get("sort") === "asc" ? "asc" : "desc";
   const rawMode = url.searchParams.get("deliveryMode");
   const deliveryMode = rawMode === "delivery" || rawMode === "pickup" ? rawMode : undefined;
+  const requestedStatus = status && orderService.isOrderStatus(status) ? status : undefined;
 
   try {
     const orders = await orderService.listAllOrdersForExport({
-      status: status && orderService.isOrderStatus(status) ? status : undefined,
+      status: requestedStatus,
+      excludeStatuses: requestedStatus ? undefined : ["cancelled"],
       search,
       sortOrder,
       deliveryMode,
