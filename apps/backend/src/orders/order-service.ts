@@ -130,7 +130,7 @@ export async function createOrder(input: CreateOrderInput) {
     productId: item.productId,
     quantity: item.quantity,
     selectedOption: item.selectedOption ?? "",
-    customName: item.customName?.trim() ?? "",
+    customName: item.customName?.trim().startsWith("charm:") ? "" : item.customName?.trim() ?? "",
   }));
 
   const products = await db
@@ -170,13 +170,12 @@ export async function createOrder(input: CreateOrderInput) {
       throw new Error(`not enough option stock: ${matchedOption.label}`);
     }
 
-    const addon = charmAddonPrice(item.customName || undefined);
     return {
       productId: product._id,
       quantity: item.quantity,
       selectedOption,
       customName: item.customName,
-      _price: product.price + addon,
+      _price: product.price,
     };
   });
 

@@ -3,7 +3,7 @@ import {
   ProductDetailView,
   type ProductDetailProduct,
 } from "@/components/shop/product-detail-view";
-import { listStoreProducts, getCharmSettings, getHomeContent } from "@/lib/data/backend-ssr";
+import { listStoreProducts, getHomeContent } from "@/lib/data/backend-ssr";
 
 // Always read fresh products so admin edits show up immediately (no build cache).
 export const dynamic = "force-dynamic";
@@ -23,9 +23,8 @@ function getBlockId(category: string | undefined, group?: string | null): string
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { productId } = await params;
-  const [products, charmSettings, content] = await Promise.all([
+  const [products, content] = await Promise.all([
     listStoreProducts(),
-    getCharmSettings().catch(() => ({ images: {} })),
     getHomeContent().catch(() => null),
   ]);
   const product = products.find((item) => item.id === productId);
@@ -56,7 +55,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
     options: product.options,
     allowCustomName: product.allowCustomName,
     customNameMaxLength: product.customNameMaxLength,
-    charmImages: product.allowCustomName ? charmSettings.images : undefined,
     imageUrls: product.imageUrls,
     comingSoon,
   };

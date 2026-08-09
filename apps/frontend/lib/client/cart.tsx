@@ -56,6 +56,23 @@ function sameCartLine(
   );
 }
 
+function charmAddonPrice(customName?: string) {
+  if (!customName?.startsWith("charm:")) return 0;
+  const letters = customName.split(":")[2] ?? "";
+  return 30 + Math.max(0, letters.length - 2) * 10;
+}
+
+function withoutKeychain(item: CartItem): CartItem {
+  const addon = charmAddonPrice(item.customName);
+  if (!addon) return { ...item, allowCustomName: false };
+  return {
+    ...item,
+    customName: undefined,
+    allowCustomName: false,
+    price: Math.max(0, item.price - addon),
+  };
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [ready, setReady] = useState(false);
@@ -64,7 +81,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     queueMicrotask(() => {
       try {
         const stored = localStorage.getItem("shop-cart");
-        if (stored) setItems(JSON.parse(stored) as CartItem[]);
+        if (stored) setItems((JSON.parse(stored) as CartItem[]).map(withoutKeychain));
       } catch {}
       setReady(true);
     });
@@ -75,23 +92,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items, ready]);
 
   function addItem(item: Omit<CartItem, "quantity">) {
+    const cartItem = withoutKeychain({ ...item, quantity: 1 });
     setItems((prev) => {
       const found = prev.find((i) =>
-        sameCartLine(i, item.productId, item.selectedOption, item.customName),
+        sameCartLine(i, cartItem.productId, cartItem.selectedOption, cartItem.customName),
       );
-      const maxQty = item.stock ?? Number.MAX_SAFE_INTEGER;
+      const maxQty = cartItem.stock ?? Number.MAX_SAFE_INTEGER;
       // count ALL lines with same productId (regardless of customName/option) toward stock
       const totalQtyInCart = prev
-        .filter((i) => i.productId === item.productId)
+        .filter((i) => i.productId === cartItem.productId)
         .reduce((s, i) => s + i.quantity, 0);
       if (found)
         return prev.map((i) =>
-          sameCartLine(i, item.productId, item.selectedOption, item.customName)
-            ? { ...i, ...item, quantity: Math.min(i.quantity + 1, maxQty) }
+          sameCartLine(i, cartItem.productId, cartItem.selectedOption, cartItem.customName)
+            ? { ...i, ...cartItem, quantity: Math.min(i.quantity + 1, maxQty) }
             : i
         );
       if (totalQtyInCart >= maxQty) return prev;
-      return [...prev, { ...item, quantity: 1 }];
+      return [...prev, cartItem];
     });
   }
 
@@ -124,7 +142,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           ? product.options?.find((o) => o.label === item.selectedOption)
           : undefined;
         const stock = option ? (option.stock ?? product.stock) : product.stock;
-        return {
+        return withoutKeychain({
           ...item,
           name: product.name,
           description: product.description,
@@ -132,7 +150,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           stock,
           imageUrl: option?.imageUrl ?? product.imageUrl ?? item.imageUrl,
           quantity: stock > 0 ? Math.min(item.quantity, stock) : item.quantity,
-        };
+        });
       }),
     );
   }, []);

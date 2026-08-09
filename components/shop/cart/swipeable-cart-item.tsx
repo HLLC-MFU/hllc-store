@@ -12,6 +12,7 @@ const FREE_LETTERS = 2;
 const LETTER_PRICE = 10;
 const MAX_LETTERS = 12;
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+const KEYCHAIN_ORDERING_ENABLED = false;
 
 type CharmOption = { label: string; labelEn?: string; imageUrl?: string };
 
@@ -142,10 +143,10 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
   const tempCharmAddon = CHARM_PRICE + tempExtraLetters * LETTER_PRICE;
   const tempCharmOption = charmOptions?.find((o) => o.label === tempColor);
 
-  const charmInfo = parseCharm(item.customName);
+  const charmInfo = KEYCHAIN_ORDERING_ENABLED ? parseCharm(item.customName) : null;
   const charmExtra = charmInfo ? Math.max(0, charmInfo.letters.length - FREE_LETTERS) : 0;
   const charmTotal = charmInfo ? CHARM_PRICE + charmExtra * LETTER_PRICE : 0;
-  const isBottleNoCharm = item.allowCustomName && !charmInfo;
+  const isBottleNoCharm = KEYCHAIN_ORDERING_ENABLED && item.allowCustomName && !charmInfo;
   const MAX = isBottleNoCharm ? 148 : 80;
 
   function removeCharmOnly() {
@@ -425,7 +426,7 @@ export const SwipeableCartItem = memo(function SwipeableCartItem({
       )}
 
       {/* Charm edit modal — matches product-detail-view design */}
-      {charmOpen && (
+      {KEYCHAIN_ORDERING_ENABLED && charmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setCharmOpen(false)} />
           <div className="relative w-full max-w-md bg-white rounded-4xl shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden max-h-[85vh] overflow-y-auto">

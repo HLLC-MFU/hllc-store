@@ -68,6 +68,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
 
   const images = product.imageUrls ?? [];
   const options = product.options ?? [];
+  const keychainOrderingEnabled = false;
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -106,7 +107,6 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
   const charmExtraLetters = Math.max(0, charmLetters.length - FREE_LETTERS);
   const charmAddon = charmColor ? CHARM_PRICE + charmExtraLetters * LETTER_PRICE : 0;
   const unitPrice = product.price + charmAddon;
-  const charmCustomName = charmColor ? `charm:${charmColor}:${charmLetters.join("")}` : undefined;
   const tempExtraLetters = Math.max(0, tempLetters.length - FREE_LETTERS);
   const tempCharmAddon = tempColor ? CHARM_PRICE + tempExtraLetters * LETTER_PRICE : 0;
   const charmOptions = product.options ?? [];
@@ -149,7 +149,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
     if (!pendingAction.current || !charmColor) return;
     const action = pendingAction.current;
     pendingAction.current = null;
-    handleAddToCart(action.sourceEl ?? undefined, true);
+    handleAddToCart(action.sourceEl ?? undefined);
     if (action.type === "buy") router.push("/cart?selectAll=1");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [charmColor]);
@@ -160,14 +160,13 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
       .filter(
         (i) =>
           i.productId === product.id &&
-          (i.selectedOption ?? "") === (selectedOption?.label ?? "") &&
-          (i.customName ?? "") === (product.allowCustomName ? (charmCustomName ?? "") : ""),
+          (i.selectedOption ?? "") === (selectedOption?.label ?? ""),
       )
       .reduce((sum, i) => sum + i.quantity, 0),
-    [items, product.id, selectedOption, product.allowCustomName, charmCustomName],
+    [items, product.id, selectedOption],
   );
 
-  function handleAddToCart(sourceEl?: HTMLElement | null, skipCharmPrompt = false): boolean {
+  function handleAddToCart(sourceEl?: HTMLElement | null): boolean {
     vibrateTap();
     if (mustSelectOption) {
       showToast("alert", t("product.select_option_first"));
@@ -181,12 +180,6 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
     const remaining = selectedOptionStock - cartQty;
     if (remaining <= 0) {
       showToast("alert", t("product.stock_limit", { stock: selectedOptionStock }));
-      return false;
-    }
-
-    if (!skipCharmPrompt && product.allowCustomName && !charmColor) {
-      pendingSourceEl.current = sourceEl ?? addBtnRef.current;
-      setCharmPrompt("cart");
       return false;
     }
 
@@ -206,8 +199,8 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         islandShippingAdditionalItem: product.islandShippingAdditionalItem ?? 0,
         imageUrl: displayImages[0] ?? "",
         selectedOption: selectedOption?.label ?? "",
-        customName: product.allowCustomName ? charmCustomName : undefined,
-        allowCustomName: product.allowCustomName,
+        customName: undefined,
+        allowCustomName: false,
       });
     }
     const flySource = sourceEl ?? addBtnRef.current;
@@ -226,11 +219,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
       showToast("alert", t("product.out_of_stock_toast"));
       return;
     }
-    if (product.allowCustomName && !charmColor) {
-      setCharmPrompt("buy");
-      return;
-    }
-    if (!handleAddToCart(undefined, true)) return;
+    if (!handleAddToCart(undefined)) return;
     router.push("/cart?selectAll=1");
   }
 
@@ -394,7 +383,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
 
 
           {/* Charm add-on */}
-          {product.allowCustomName && (
+          {keychainOrderingEnabled && product.allowCustomName && (
             <>
               <div className="border-t border-gray-100" />
               {charmColor && selectedCharmOption ? (
@@ -529,7 +518,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
         </div>
 
         {/* Charm Modal */}
-        {product.allowCustomName && charmOpen && (
+        {keychainOrderingEnabled && product.allowCustomName && charmOpen && (
               <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
                 <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={cancelCharmModal} />
                 <div className="relative w-full max-w-md bg-white rounded-4xl shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden max-h-[85vh] overflow-y-auto">
@@ -783,7 +772,7 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
     <ShopFooter />
 
     {/* Charm prompt modal */}
-    {charmPrompt && (
+    {keychainOrderingEnabled && charmPrompt && (
       <div
         className="fixed inset-0 z-50 flex items-center justify-center px-6 bg-black/40 backdrop-blur-sm"
         onClick={() => setCharmPrompt(null)}
@@ -821,10 +810,10 @@ export function ProductDetailView({ product }: { product: ProductDetailProduct }
               onClick={() => {
                 setCharmPrompt(null);
                 if (charmPrompt === "buy") {
-                  handleAddToCart(undefined, true);
+                  handleAddToCart(undefined);
                   router.push("/cart?selectAll=1");
                 } else {
-                  handleAddToCart(pendingSourceEl.current, true);
+                  handleAddToCart(pendingSourceEl.current);
                 }
               }}
               className="w-full rounded-2xl border border-gray-200 py-3 text-sm font-bold text-gray-600 cursor-pointer"
