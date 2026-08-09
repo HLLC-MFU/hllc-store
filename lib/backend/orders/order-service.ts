@@ -120,7 +120,7 @@ export async function createOrder(input: CreateOrderInput) {
     productId: item.productId,
     quantity: item.quantity,
     selectedOption: item.selectedOption ?? "",
-    customName: item.customName?.trim() ?? "",
+    customName: item.customName?.trim().startsWith("charm:") ? "" : item.customName?.trim() ?? "",
   }));
 
   const products = await db

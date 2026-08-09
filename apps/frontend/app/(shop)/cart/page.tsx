@@ -9,7 +9,7 @@ import { safeParseWithLang, checkoutFormSchema, normalizePhone, normalizeEmail }
 import type { Lang } from "@hllc/shared/validation/schemas-i18n";
 import { attachPaymentSlip, cancelPublicOrder, createOrder } from "@/lib/modules/orders";
 import { fetchStoreProducts } from "@/lib/modules/products/api";
-import { fetchShippingSettings, fetchCharmSettings, fetchHomeContent, type ShippingSettings } from "@/lib/modules/settings";
+import { fetchShippingSettings, fetchHomeContent, type ShippingSettings } from "@/lib/modules/settings";
 import { calcShippingFee, DEFAULT_SHIPPING_RATES } from "@/lib/config/shipping";
 import { isRemoteArea } from "@hllc/shared/data/remote-areas";
 import { isIslandArea } from "@hllc/shared/data/island-areas";
@@ -53,14 +53,7 @@ export default function CartPage() {
   const allSelected = useMemo(() => selectableItems.length > 0 && selectableItems.every(i => selectedIds.has(itemKey(i))), [selectableItems, selectedIds]);
   const { selectedItems, selectedTotal, selectedCount, hasOutOfStock, hasBlocked } = useMemo(() => {
     const selected = items.filter(i => selectedIds.has(itemKey(i)));
-    const total = selected.reduce((sum, i) => {
-      let charm = 0;
-      if (i.customName?.startsWith("charm:")) {
-        const letters = i.customName.slice(6).split(":")[1] ?? "";
-        charm = 30 + Math.max(0, letters.length - 2) * 10;
-      }
-      return sum + (i.price + charm) * i.quantity;
-    }, 0);
+    const total = selected.reduce((sum, i) => sum + i.price * i.quantity, 0);
     const count = selected.reduce((sum, i) => sum + i.quantity, 0);
     const hasOutOfStock = selected.some(
       (i) => i.stock !== undefined && i.quantity > i.stock,
@@ -70,9 +63,6 @@ export default function CartPage() {
   }, [items, selectedIds, blockedProductIds]);
 
   const [shippingRates, setShippingRates] = useState<ShippingSettings>(DEFAULT_SHIPPING_RATES);
-  const [charmImages, setCharmImages] = useState<Record<string, string>>({});
-  const [charmOptions, setCharmOptions] = useState<Array<{ label: string; labelEn?: string; imageUrl?: string }>>([]);
-
   const autoSelected = useRef(false);
   useEffect(() => {
     if (autoSelected.current || items.length === 0) return;
@@ -104,19 +94,6 @@ export default function CartPage() {
     synced.current = true;
     Promise.all([fetchStoreProducts(), fetchHomeContent().catch(() => null)]).then(([products, homeContent]) => {
       syncFromProducts(products);
-      // Build charm image map from product options (label → imageUrl) for option-based charm products
-      const optionImages: Record<string, string> = {};
-      const opts: Array<{ label: string; labelEn?: string; imageUrl?: string }> = [];
-      for (const p of products) {
-        if (p.allowCustomName && p.options) {
-          for (const opt of p.options) {
-            if (opt.label && opt.imageUrl) optionImages[opt.label] = opt.imageUrl;
-            if (opt.label && !opts.find(o => o.label === opt.label)) opts.push({ label: opt.label, labelEn: opt.labelEn, imageUrl: opt.imageUrl });
-          }
-        }
-      }
-      setCharmImages(prev => ({ ...prev, ...optionImages }));
-      if (opts.length) setCharmOptions(opts);
       // Build blocked product IDs from block status or product.comingSoon
       const blocked = new Set<string>();
       for (const p of products) {
@@ -131,7 +108,6 @@ export default function CartPage() {
       setBlockedProductIds(blocked);
     }).catch(() => { });
     fetchShippingSettings().then(setShippingRates).catch(() => { });
-    fetchCharmSettings().then(r => setCharmImages(prev => ({ ...prev, ...(r.images ?? {}) }))).catch(() => { });
   }, [syncFromProducts]);
 
   const toggleSelectAll = useCallback(() => {
@@ -141,18 +117,6 @@ export default function CartPage() {
   const toggleSelect = useCallback((item: CartItem) => {
     const key = itemKey(item);
     setSelectedIds(prev => { const next = new Set(prev); if (next.has(key)) { next.delete(key); } else { next.add(key); } return next; });
-  }, []);
-
-  const handleCharmEdit = useCallback((item: CartItem) => (oldCustomName: string | undefined, newCustomName: string) => {
-    const oldKey = itemKey({ ...item, customName: oldCustomName });
-    const newKey = itemKey({ ...item, customName: newCustomName });
-    setSelectedIds(prev => {
-      if (!prev.has(oldKey)) return prev;
-      const next = new Set(prev);
-      next.delete(oldKey);
-      next.add(newKey);
-      return next;
-    });
   }, []);
 
   const [step, setStep] = useState<Step>("cart");
@@ -320,7 +284,7 @@ export default function CartPage() {
           name, phone: rawPhone, email: rawEmail, address: fullAddress,
           ...(deliveryMode === "delivery" ? { province: prov, district, postalCode: postal } : {}),
         },
-        items: selectedItems.map((item) => ({ productId: item.productId, quantity: item.quantity, selectedOption: item.selectedOption || undefined, customName: item.customName || undefined })),
+        items: selectedItems.map((item) => ({ productId: item.productId, quantity: item.quantity, selectedOption: item.selectedOption || undefined })),
         deliveryMode,
         lang,
       });
@@ -377,9 +341,6 @@ export default function CartPage() {
                     selected={selectedIds.has(itemKey(item))} onSelect={toggleSelect}
                     onDecrease={decreaseQty} onIncrease={(i) => { const total = items.filter((c) => c.productId === i.productId).reduce((s, c) => s + c.quantity, 0); if (i.stock === undefined || total < i.stock) updateQty(i.productId, i.quantity + 1, i.selectedOption, i.customName); }}
                     onRemove={(i) => removeItem(i.productId, i.selectedOption, i.customName)}
-                    onCharmEdit={handleCharmEdit(item)}
-                    charmImages={charmImages}
-                    charmOptions={charmOptions}
                     isBlocked={blockedProductIds.has(item.productId)}
                   />
                 ))}
